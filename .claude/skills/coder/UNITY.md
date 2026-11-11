@@ -2,12 +2,16 @@
 
 Adapted from the `unity-coder` skill of `where-it-went`.
 
-- **Editor lock.** If the project is open in the Unity Editor, a batchmode run fails or stalls.
-  Check the log for the lock error; on a lock, stop retrying and report **tests NOT run: Editor
-  open, human must run them**.
-- **Tests:** Unity Test Framework, EditMode first: pure logic (order building, coordinate mapping,
-  pricing) lives in plain C# classes with no `MonoBehaviour`, which makes it the cheapest place to
-  test. Run batchmode with results written outside the repo.
+- **Tests:** read `Docs/unity/TESTING.md` before your first run. Two suites: EditMode
+  (`JewelryShop.Tests`) and PlayMode (`JewelryShop.PlayModeTests`) under
+  `Assets/Scripts/JewelryShop/Tests/`. Pure logic (order building, coordinate mapping, pricing,
+  protocol messages) lives in `JewelryShop.Core` (`noEngineReferences`), the cheapest place to test.
+- **Editor open → `unity-mcp`.** Batchmode fails while the Editor holds the project. Run tests and
+  read the Console through `unity-mcp` (`Unity_RunCommand`, `Unity_GetConsoleLogs`) as
+  `Docs/unity/TESTING.md` §B shows. If `unity-mcp` is not connected either, report **tests NOT run: Editor open, human must
+  run them**.
+- **`unity-mcp` does not lift the editor pen.** Use it to read state, compile, and run tests; do
+  not create, move, or wire scene/prefab objects with it.
 - **Compile errors first.** When the build is red, fix with the smallest diff that turns it green
   (an import, a type, a missing reference) before any refactor. Compile errors hide test results.
 - **Input:** Quest controllers drive tele-op (ADR-0003); keep hand tracking working for the

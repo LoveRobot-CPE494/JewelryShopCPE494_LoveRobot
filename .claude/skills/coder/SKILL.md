@@ -40,4 +40,6 @@ Quest ↔ PC protocol), finish your side, then report the other side as a follow
 - **Safety is a feature** (brief §2, graded). Motion and actuator code carries its limits in code:
   workspace bounds, a minimum Z, speed caps, a deadman, an E-stop path. A change that removes or
   loosens a limit is reported as such.
+- **Review every change.** Run `code-review` on your diff before you report, whatever its size,
+  and fix its findings with tests green. A report without review findings is not done.
 - Any agent you start passes `effort: medium`.
