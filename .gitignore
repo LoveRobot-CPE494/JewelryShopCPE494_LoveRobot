@@ -36,6 +36,9 @@ venv/
 *.hex
 *.elf
 
+# Scratch folder for screenshots and temporary files
+_Temp/
+
 # Secrets and per-machine settings
 .env
 .env.*
