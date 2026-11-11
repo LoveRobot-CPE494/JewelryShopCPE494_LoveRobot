@@ -28,6 +28,58 @@ CPE494 Class Project: ร้านอัญมณีบน Meta Quest 3 (AR) + �
 
 กลุ่มมี 5 คน จึงไม่ต้องทำ Digital Twin (โจทย์ข้อ 7 บังคับเฉพาะกลุ่ม 6 คนขึ้นไป)
 
+## วิธีทำงาน (ทุกคนทำแบบนี้)
+
+**ห้าม push เข้า `main` ตรง ๆ** ทุกงานแตก branch แล้ว merge ผ่าน PR เท่านั้น กันงานชนกัน (merge conflict) และกัน `main` พัง
+
+### 1. ก่อนเริ่มงาน
+
+```powershell
+git switch main
+git pull
+git switch -c <ประเภท>/<เรื่องสั้น ๆ>
+```
+
+ชื่อ branch: `feat/…` ของใหม่, `fix/…` แก้บั๊ก, `docs/…` เอกสาร, `chore/…` งานจุกจิก เช่น `feat/012-03-order-builder`
+(ถ้าทำตาม ticket ให้ใส่เลข ticket ไว้ในชื่อ)
+
+### 2. ระหว่างทำงาน (กับ Claude Code)
+
+| ขั้น | พิมพ์ใน Claude Code | ได้อะไร |
+|---|---|---|
+| 1. คิดงานใหม่ | `/grill-with-docs` (หรือ `/grill-me`) | Claude ซักจนแนวคิดชัด บันทึก ADR / glossary |
+| 2. เขียน spec | `/to-spec` | issue `NNN spec: …` บน GitHub |
+| 3. แตก ticket | `/to-tickets` | issue `NNN-MM ticket: …` ติด `ready-for-agent` + `area:unity/dobot/uno` |
+| 4. ลงมือทำ | `/grab-ticket <เลข issue>` | Claude สรุปความเข้าใจ ticket ให้ยืนยัน (ถามเพิ่มถ้าไม่ชัด) แล้วส่ง Role ประจำสายไปเขียนโค้ด + เทสต์ (tdd) |
+| 5. รีวิว | `/code-review` | รีวิวทุกครั้งที่มีการแก้ ไม่ว่าจะเล็กแค่ไหน (`grab-ticket` รันให้แล้ว แต่งานที่แก้เองต้องสั่งเอง) |
+
+- งานเล็ก/งานจุกจิก (แก้คำผิด, เปลี่ยนค่าคงที่) ข้ามขั้น 1–3 ได้ แต่ **ห้ามข้ามขั้น 5**
+- `/clear` ระหว่าง ticket แต่ละใบ จะได้เริ่มใหม่สะอาด ๆ
+- งาน Unity ต้องผ่าน Test Runner ทั้ง EditMode และ PlayMode ก่อนเปิด PR (ดู [`Docs/unity/TESTING.md`](Docs/unity/TESTING.md))
+- Claude แก้แค่ไฟล์ในเครื่อง ส่วนที่ต้องใช้คน (ต่อสายใน Inspector, รันกับ MG400/Arduino ตัวจริง) Claude จะบอกเป็นงานให้คนทำ
+
+### 3. ส่งงาน
+
+```powershell
+git status                      # เช็กว่าไม่มีไฟล์ที่ Unity แก้เองติดไปด้วย
+git add <ไฟล์ที่ตั้งใจแก้>
+git commit -m "<สรุปสิ่งที่เปลี่ยน>"
+git push -u origin <ชื่อ branch>
+```
+
+จากนั้นพิมพ์ใน Claude Code ว่า **"เขียน PR ให้หน่อย"** (ใช้ skill `pr`) แล้วรันคำสั่ง `gh pr create …` ที่ Claude ให้
+
+- ไฟล์ที่ Unity มักแก้เองและ**ไม่ควร** commit ถ้าไม่ได้ตั้งใจ: `.vscode/`, `ProjectSettings/*.asset`, `Assets/Settings/*.asset`, `Assets/InitTestScene*.unity`
+- ใน PR: แนะนำให้เพื่อนดูก่อน merge, ถ้าขึ้น conflict ให้ `git pull origin main` ใน branch ตัวเองแล้วแก้ก่อน
+
+### 4. หลัง merge
+
+```powershell
+git switch main
+git pull
+git branch -d <ชื่อ branch>
+```
+
 ## ทำงานกับ Claude Code
 
 Workflow เต็มอยู่ใน [`CLAUDE.md`](CLAUDE.md): `grill-with-docs` / `grill-me` → `to-spec` → `to-tickets` → `grab-ticket` → `code-review` (รันทุกครั้งที่มีการแก้ ไม่ว่าจะเล็กแค่ไหน)
@@ -46,4 +98,4 @@ Role (sub-agent ประจำสาย) อยู่ใน [`.claude/agents/`]
 
 เทสต์ Unity: ดู [`Docs/unity/TESTING.md`](Docs/unity/TESTING.md) (Test Runner: EditMode + PlayMode)
 
-**กติกา:** คนถือ **GitHub pen** (commit / PR / merge), **editor pen** (Inspector, จัดวาง scene) และ **robot pen** (รันโค้ดกับ MG400 / Arduino ตัวจริง)
+**กติกา:** คนถือ **GitHub pen** (commit / push / PR / merge — ห้าม push เข้า `main` ตรง), **editor pen** (Inspector, จัดวาง scene) และ **robot pen** (รันโค้ดกับ MG400 / Arduino ตัวจริง)
