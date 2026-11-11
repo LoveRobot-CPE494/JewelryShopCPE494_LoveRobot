@@ -1,0 +1,69 @@
+# Unity generated folders
+**/[Ll]ibrary/
+**/[Tt]emp/
+**/[Oo]bj/
+**/[Bb]uild/
+**/[Bb]uilds/
+**/[Ll]ogs/
+**/[Uu]ser[Ss]ettings/
+**/[Mm]emoryCaptures/
+**/[Rr]ecordings/
+
+**/[Ee]xportedObj/
+**/.utmp/
+**/.gradle/
+**/sysinfo.txt
+**/crashlytics-build.properties
+**/[Aa]ssets/[Ss]treamingAssets/aa/
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+*.tmp
+*.userprefs
+*.unityproj
+
+# Python (Dobot/)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Arduino (UNO/) build output
+*.hex
+*.elf
+
+# Secrets and per-machine settings
+.env
+.env.*
+.claude/settings.local.json
+
+# IDE / generated project files
+.vs/
+.idea/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
