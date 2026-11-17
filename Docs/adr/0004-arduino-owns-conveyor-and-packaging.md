@@ -2,15 +2,15 @@
 status: accepted
 ---
 
-# Arduino UNO คุมสายพานและการบรรจุ ส่วน MG400 คุมเฉพาะการหยิบวาง
+# The Arduino UNO runs the conveyor and packaging; the MG400 only picks and places
 
-แบ่งหน้าที่ฮาร์ดแวร์ดังนี้
-- **MG400:** ขยับแขน + ดูด/ปล่อย (ผ่าน DO ของตัวเอง)
-- **Arduino UNO:** มอเตอร์สายพาน, เซนเซอร์หยุดถุงหน้าแขนกล และ Bag Closer (servo ปิดปากถุง ดู [ADR-0005](0005-paper-gift-bag.md))
+Hardware duties are split as follows:
+- **MG400:** moves the arm + suck/release (through its own DO)
+- **Arduino UNO:** the conveyor motor, the sensor that stops the bag in front of the arm, and the Bag Closer (a servo that closes the bag mouth, see [ADR-0005](0005-paper-gift-bag.md))
 
-ทั้งสองไม่สั่งกันเอง ต้องผ่าน PC ตาม [ADR-0001](0001-pc-orchestrator-hub.md) เหตุผลคือแยกส่วนให้ทดสอบทีละระบบได้ (เข้าเกณฑ์ "Working of individual system") และ suction ไม่ต้องรอจังหวะข้ามบอร์ด
+The two never command each other; everything goes through the PC per [ADR-0001](0001-pc-orchestrator-hub.md). The reasons: the parts can be tested one system at a time (meets the criterion "Working of individual system"), and suction does not have to wait on timing across boards.
 
 ## Consequences
 
-- servo และมอเตอร์ต้องใช้แหล่งจ่ายไฟแยก ห้ามดึงไฟ 5V จาก UNO ถ้า servo หลายตัวควรใช้ PCA9685
-- ต้องมีปุ่ม E-stop ที่ตัดไฟสายพานและ servo ได้จริง (ข้อ 2 ความปลอดภัย)
+- The servo and motor need a separate power supply; do not draw 5V from the UNO. With several servos, consider a PCA9685.
+- There must be an E-stop button that really cuts power to the conveyor and servo (item 2, safety).

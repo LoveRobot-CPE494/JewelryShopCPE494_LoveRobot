@@ -2,12 +2,12 @@
 status: accepted
 ---
 
-# บรรจุลงถุงกระดาษที่อาจารย์ให้มา ไม่ใช่กล่องพับ
+# Pack into the paper bag the instructor provided, not a folded box
 
-brief ข้อ 5 เขียนว่า "กล่องกระดาษที่พับเสร็จแล้ว" และ "ปิดฝากล่อง" แต่ภาชนะที่อาจารย์ให้มาจริงเป็นถุงกระดาษ ระบบจึงออกแบบรอบถุง ได้แก่ วางถุงบนสายพาน → MG400 ใส่ Gem Piece ทุกชิ้นของ Order ลงถุง → Bag Closer (มือ servo) ปิดปากถุง → ส่งไปปลายสายพาน บันทึกไว้เพราะคนที่อ่าน brief อย่างเดียวจะคาดว่าเป็นกล่องที่มีฝา
+Brief item 5 says "a pre-folded paper box" and "close the box lid", but the container the instructor actually provided is a paper bag. The system is therefore designed around the bag: place the bag on the conveyor → the MG400 puts every Gem Piece of the Order into the bag → the Bag Closer (a servo hand) closes the bag mouth → send it to the end of the conveyor. This is recorded because someone reading only the brief would expect a box with a lid.
 
 ## Consequences
 
-- ไม่มีกลไกดันฝากล่อง ใช้ Bag Closer แทน
-- ปากถุงต้องเปิดค้างไว้ตอนแขนวางของ และถุงต้องตั้งได้นิ่งบนสายพาน ต้องทดสอบ
-- **โบว์ยังไม่ได้ตัดสิน:** brief ข้อ 5 กำหนดให้ "ติดโบว์" และข้อ 5 ต้องทำได้ครบทุกข้อถึงจะได้ 15 คะแนน ต้องถามอาจารย์ว่ายังต้องติดโบว์บนถุงหรือไม่ ระหว่างนี้ยังไม่ออกแบบกลไกโบว์
+- There is no lid-pushing mechanism; the Bag Closer is used instead.
+- The bag mouth must be held open while the arm places items, and the bag must stand steady on the conveyor; this must be tested.
+- **The ribbon is undecided:** brief item 5 requires "attach a ribbon", and every part of item 5 must work for the 15 points. We must ask the instructor whether a ribbon is still required on the bag. Until then, no ribbon mechanism is designed.
