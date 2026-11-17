@@ -2,6 +2,7 @@ using System.Linq;
 using NUnit.Framework;
 using JewelryShop.Storefront;
 using Unity.XR.CoreUtils;
+using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -86,6 +87,17 @@ namespace JewelryShop.Tests
                 .SelectMany(r => r.GetComponentsInChildren<GemModelKeyRotator>(true)).SingleOrDefault();
             Assert.That(rotator, Is.Not.Null, "GemModelKeyRotator on the right Controller");
             Assert.That(rotator.name, Is.EqualTo("Right Controller"));
+        }
+
+        [Test]
+        public void GemModelKeyRotator_HasControllerVisualWired()
+        {
+            var rotator = _scene.GetRootGameObjects()
+                .SelectMany(r => r.GetComponentsInChildren<GemModelKeyRotator>(true)).Single();
+            var visual = new SerializedObject(rotator).FindProperty("_controllerVisual")
+                .objectReferenceValue as Transform;
+            Assert.That(visual, Is.Not.Null, "_controllerVisual wired (#61)");
+            Assert.That(visual.name, Is.EqualTo("Right Controller Visual"));
         }
 
         [Test]

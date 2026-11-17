@@ -87,7 +87,7 @@ Point And Click only aims the Controller, so on its own a held Gem Model turns l
 | Move the mouse up / down | Tilt the Gem Model up / down (pitch) |
 | Scroll the wheel | Roll the Gem Model |
 
-While `Left Alt` is held the Controller stops following the cursor, and the grab stays. Release `Left Alt`: the Gem Model keeps its rotation and the Controller follows the cursor again. Release `Left Alt` before you let go of the left mouse button: while `Alt` is held the Simulator doesn't see the release. Let go of the Gem Model and the rotation resets, so the next grab starts fresh. Speeds are on the `GemModelKeyRotator` component of the `Right Controller` (**Degrees Per Pixel**, **Degrees Per Scroll Unit**); you can change them during Play. This only works in the Editor with the Simulator; on a Quest the wrist turns the Gem Model.
+While `Left Alt` is held the Controller stops following the cursor, and the grab stays. The Controller model (`Right Controller Visual`) turns with the Gem Model, as the wrist does on a Quest; the ray does not turn. Release `Left Alt`: the Gem Model keeps its rotation and the Controller follows the cursor again. Release `Left Alt` before you let go of the left mouse button: while `Alt` is held the Simulator doesn't see the release. Let go of the Gem Model and both rotations reset (the Controller model snaps back), so the next grab starts fresh. Speeds are on the `GemModelKeyRotator` component of the `Right Controller` (**Degrees Per Pixel**, **Degrees Per Scroll Unit**); you can change them during Play. This only works in the Editor with the Simulator; on a Quest the wrist turns the Gem Model.
 
 ## Team and division of work
 
