@@ -8,6 +8,7 @@ Shared rules: [CODING_STANDARDS.md](../../CODING_STANDARDS.md). Base style and d
 | Thing | Style |
 |---|---|
 | Types, methods, properties, public members, constants | `PascalCase` |
+| Interfaces | `I` + `PascalCase` (e.g. `IConveyor`) |
 | Locals, parameters | `camelCase` |
 | Private fields, including `[SerializeField]` | `_camelCase` |
 | Private statics | `s_camelCase` |
@@ -30,7 +31,9 @@ Shared rules: [CODING_STANDARDS.md](../../CODING_STANDARDS.md). Base style and d
 
 ## Enforcement
 
-`.editorconfig` naming rules, shown in the IDE only. Unity is not in CI. Added by #34.
+`Unity/JewelryShop/Assets/Scripts/.editorconfig` holds the naming rules and requires explicit
+accessibility modifiers. They are warnings in the IDE only, not enforced at Unity's compile.
+Unity is not in CI. Added by #34.
 Anything the IDE does not flag is checked by `code-review`.
 
 ## Sources
