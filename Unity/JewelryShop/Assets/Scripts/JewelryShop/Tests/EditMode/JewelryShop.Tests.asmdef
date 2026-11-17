@@ -5,7 +5,8 @@
         "JewelryShop.Core",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Unity.XR.Interaction.Toolkit"
+        "Unity.XR.Interaction.Toolkit",
+        "Unity.XR.CoreUtils"
     ],
     "includePlatforms": [
         "Editor"
