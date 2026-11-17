@@ -53,8 +53,13 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 
 Repo: `LoveRobot-CPE494/JewelryShopCPE494_LoveRobot` (one monorepo, one tracker).
 
+- **Grill:** `NNN grill: …`, a topic waiting for `/grill-with-docs`. It reserves the feature
+  number: the spec it produces reuses the same `NNN`, and the grill issue is closed with a link
+  to that spec. Next `NNN` = highest existing grill/spec number + 1.
 - **Spec:** `NNN spec: …`, the what/why of a feature (`to-spec`).
 - **Ticket:** `NNN-MM ticket: …`, one implementable unit, linked to its blockers by native `blocked_by` (`to-tickets`).
 - **Bug:** `NNN-MM-K Bug: …`, labelled `bug`, referencing its ticket.
+- **Question:** `Q-NN question: …`, an open question for the instructor or team, labelled
+  `question`, naming the ADR or issue its answer settles. Own sequence, not tied to a feature.
 - **Area label**, exactly one per ticket: `area:unity`, `area:dobot`, `area:uno`. A ticket that needs two areas is split into two.
 - An agent-ready ticket carries `ready-for-agent` and is implemented with `grab-ticket`, never edited on GitHub by an agent.
