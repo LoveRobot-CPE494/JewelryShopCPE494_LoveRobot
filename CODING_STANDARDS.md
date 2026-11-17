@@ -60,3 +60,6 @@ Frameworks, naming and run commands are on each language page.
   decoded.
 - Every bug fix starts with a failing test that reproduces the bug.
 - No automated tests for visuals or scene wiring; check those by hand.
+- Hardware is checked on the real Packing Station with the
+  [Packing Station bench test](Docs/standards/packing-station-bench-test.md) before every demo
+  and after any change to motion or actuator code.
