@@ -11,7 +11,7 @@ The jewelry store in the virtual world where a Customer browses and buys through
 _Avoid_: AR shop, shop scene, AR storefront
 
 **Controller**:
-The handheld controller that ships with Quest 3, used as the "hand" of both the Customer and the Maintenance Operator
+The single right-hand controller that ships with the team's Quest 3 (there is no left Controller), used as the "hand" of both the Customer and the Maintenance Operator
 _Avoid_: gripper (that word means the arm's end effector, see Suction Cup), joystick, hand
 
 **Customer**:
