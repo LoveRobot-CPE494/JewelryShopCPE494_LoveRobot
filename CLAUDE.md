@@ -32,6 +32,8 @@ A **Role** is a subagent in `.claude/agents/` (the only list), named
 
 ## The three pens (humans only)
 
+- **Language:** GitHub artifacts (issues, branch names, commit messages, PR titles and bodies) are
+  in English. Chat replies are in English unless the user asks for Thai.
 - **GitHub pen:** commit, push, branch, PR, issue and label edits. **Nothing is pushed to
   `main` directly:** every change goes on a branch and merges through a PR whose body is
   written with the `pr` skill. Agents draft the branch name, commit message and PR body; the
