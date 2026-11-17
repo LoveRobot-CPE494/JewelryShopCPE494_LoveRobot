@@ -36,6 +36,15 @@ A **Role** is a subagent in `.claude/agents/` (the only list), named
   `main` directly:** every change goes on a branch and merges through a PR whose body is
   written with the `pr` skill. Agents draft the branch name, commit message and PR body; the
   human runs the commands.
+  **Handoff:** once `code-review` is clean, end the work with one PowerShell block the human
+  pastes as-is from the repo root. First write the commit message to `.git/COMMIT_MSG` and the
+  `pr`-skill body to `.git/PR_BODY.md`, then print:
+  `git fetch origin`, `git switch -c <branch> origin/main` (local `main` is often stale; skip
+  when already on this change's branch),
+  `git add` naming each file of this change (the tree often holds unrelated edits),
+  `git commit -F .git/COMMIT_MSG`, `git push -u origin <branch>`,
+  `gh pr create --base main --title '<title>' --body-file .git/PR_BODY.md` (single quotes: PowerShell
+  expands `$` and mangles `"` inside double quotes).
 - **Editor pen:** Inspector wiring, placing or connecting scene/prefab elements.
 - **Robot pen:** running code against the real MG400 or a real Arduino.
 

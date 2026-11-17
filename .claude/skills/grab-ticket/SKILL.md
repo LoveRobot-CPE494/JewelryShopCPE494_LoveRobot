@@ -111,7 +111,7 @@ adds its own rules on top. The prompt contains:
 
 Summarise: ticket, area, Role (and whether `role=` or `pick-role` chose it), model, comments and
 grill-check answers that changed the work, files changed, criteria met vs. needing a human, and
-the next step (the human commits and opens the PR). Leave the issue untouched.
+the Handoff (`CLAUDE.md`, GitHub pen) for the human to run. Leave the issue untouched.
 
 Call a criterion met only when the evidence shows the full loop ran. A missing `coder: loaded`
 canary, a skipped test run, or `tdd skipped` on a logic change → mark those criteria

@@ -1,6 +1,6 @@
 # JewelryShopCPE494_LoveRobot
 
-CPE494 Class Project: ร้านอัญมณีบน Meta Quest 3 (AR) + ระบบบรรจุอัญมณีลงกล่องของขวัญอัตโนมัติ ด้วย Dobot MG400 และ Arduino UNO
+CPE494 Class Project: ร้านอัญมณีบน Meta Quest 3 (AR) + ระบบบรรจุอัญมณีลงถุงของขวัญอัตโนมัติ ด้วย Dobot MG400 และ Arduino UNO
 โจทย์ฉบับเต็มอยู่ที่ [`Docs/brief/`](Docs/brief/)
 
 ## โครงสร้าง (monorepo)
@@ -9,7 +9,7 @@ CPE494 Class Project: ร้านอัญมณีบน Meta Quest 3 (AR) + �
 .
 ├── Unity/JewelryShop/   Unity project บน Meta Quest 3: หน้าร้าน AR (4a) + บังคับแขนกลทางไกล (4b)
 ├── Dobot/               Python บน PC: ตัวกลางสั่งงาน (ADR-0001) + ควบคุม MG400 ผ่าน TCP/IP
-├── UNO/                 Arduino UNO firmware: สายพาน, เซนเซอร์, servo ปิดฝา, โบว์ (ADR-0004)
+├── UNO/                 Arduino UNO firmware: สายพาน, เซนเซอร์, Bag Closer (ADR-0004, ADR-0005)
 ├── Docs/
 │   ├── brief/           โจทย์จากอาจารย์ (PDF) + สรุป
 │   └── adr/             บันทึกการตัดสินใจ (Architecture Decision Records)
@@ -60,14 +60,7 @@ git switch -c <ประเภท>/<เรื่องสั้น ๆ>
 
 ### 3. ส่งงาน
 
-```powershell
-git status                      # เช็กว่าไม่มีไฟล์ที่ Unity แก้เองติดไปด้วย
-git add <ไฟล์ที่ตั้งใจแก้>
-git commit -m "<สรุปสิ่งที่เปลี่ยน>"
-git push -u origin <ชื่อ branch>
-```
-
-จากนั้นพิมพ์ใน Claude Code ว่า **"เขียน PR ให้หน่อย"** (ใช้ skill `pr`) แล้วรันคำสั่ง `gh pr create …` ที่ Claude ให้
+พอ `code-review` ผ่าน Claude จะจบงานด้วยบล็อก **Handoff**: เขียน commit message ไว้ที่ `.git/COMMIT_MSG` และ PR body (skill `pr`) ไว้ที่ `.git/PR_BODY.md` แล้วพิมพ์คำสั่ง PowerShell ชุดเดียว (`git switch -c` → `git add` ทีละไฟล์ → `git commit -F` → `git push -u` → `gh pr create --body-file`) ให้คนตรวจแล้ว copy ไปรันเอง Claude ไม่ commit หรือ push เอง (กติกาเต็มอยู่ใน `CLAUDE.md` หัวข้อ GitHub pen)
 
 - ไฟล์ที่ Unity มักแก้เองและ**ไม่ควร** commit ถ้าไม่ได้ตั้งใจ: `.vscode/`, `ProjectSettings/*.asset`, `Assets/Settings/*.asset`, `Assets/InitTestScene*.unity`
 - ใน PR: แนะนำให้เพื่อนดูก่อน merge, ถ้าขึ้น conflict ให้ `git pull origin main` ใน branch ตัวเองแล้วแก้ก่อน
