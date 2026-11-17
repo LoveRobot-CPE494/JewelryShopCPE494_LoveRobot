@@ -1,0 +1,27 @@
+name: uno
+
+on:
+  pull_request:
+    paths: ['UNO/**', '.github/workflows/uno.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: UNO
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install clang-format==23.1.5
+      - run: clang-format --dry-run --Werror UnoFirmware/UnoFirmware.ino UnoFirmware/src/* test/*.cpp
+      - run: g++ -std=c++17 -Wall -Wextra -o uno_test test/command_parser_test.cpp UnoFirmware/src/CommandParser.cpp
+      - run: ./uno_test
+      - uses: arduino/setup-arduino-cli@v2
+      - run: arduino-cli core install arduino:avr
+      - run: arduino-cli compile --fqbn arduino:avr:uno UnoFirmware

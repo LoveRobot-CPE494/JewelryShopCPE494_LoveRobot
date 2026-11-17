@@ -5,6 +5,8 @@ Language page: [C++ / UNO standards](../../../Docs/standards/cpp-uno.md).
 The UNO owns the conveyor, the bag sensor and the Bag Closer servo (ADR-0004, ADR-0005). It obeys
 the PC over Serial; it never talks to the MG400 directly.
 
+- **Board:** the team's board is an i-Duino R3B, UNO-compatible, so the target stays
+  `arduino:avr:uno`. Upload notes (CH340 driver, bootloader fallback) are in `UNO/README.md`.
 - **Build check:** `arduino-cli compile --fqbn arduino:avr:uno UNO/<sketch>`. Uploading to the board
   is the robot pen: the human does it.
 - **Testable core:** keep command parsing and the sequence logic in plain C++ (`.h`/`.cpp` with no
