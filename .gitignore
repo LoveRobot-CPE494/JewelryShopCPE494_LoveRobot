@@ -70,3 +70,6 @@ _Temp/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Local graphify knowledge graph (rebuilt by `git gpull`)
+graphify-out/
