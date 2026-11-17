@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hub"
+version = "0.1.0"
+description = "PC Hub: Quest to MG400 (TCP/IP) and UNO (Serial)"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["ruff==0.17.5", "pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F/W/I: pycodestyle, pyflakes, import order. N: naming. D: docstrings. ANN: annotations.
+# TD: TODO shape. B: bugbear (cheap, catches real bugs).
+select = ["E", "F", "W", "I", "N", "D", "ANN", "TD", "B"]
+# TD002/TD003: no author / issue link required by ruff; the TODO(#NN) shape is checked in review.
+ignore = ["TD002", "TD003"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Test names say what they check; one-line docstrings on every test would be noise.
+"tests/**" = ["D"]
