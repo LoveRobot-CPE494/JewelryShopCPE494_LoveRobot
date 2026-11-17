@@ -33,48 +33,61 @@ Not listed: `TextMesh Pro/`, `TutorialInfo/` and `Readme.asset` (Unity template 
 
 Open `Assets/Scenes/Storefront.unity` and press Play. The XR Interaction Simulator drives the XR Origin with keyboard and mouse; the panel in the corner of the Game view shows what you are moving. The Customer has only a **right** Controller (#30). Keys come from the Simulator sample in `Samples/XR Interaction Toolkit/3.6.1/`.
 
-**Required setting:** on the `XR Interaction Simulator` object in the Storefront scene, **Use Point And Click** must be off. With it on, the Controller only aims at the mouse cursor and the mouse turns the view, so a Gem Model cannot be rotated freely.
+**Point And Click is on** (the Simulator's default): the right Controller always aims at the mouse cursor, and **left-click** grabs what the cursor points at.
 
 **Two modes: `Tab` switches between them**
 
-| Mode | What `W` `A` `S` `D` and the mouse move |
+| Mode | `W` `A` `S` `D` move | Hold right mouse button + mouse turns |
+|---|---|---|
+| Body (start) | The whole Customer; the Controller stays in front of you | The whole Customer |
+| Controller | The right Controller on its own | The view only |
+
+You can do everything in Body mode; Controller mode only helps to move the Controller closer to something. `]` also switches to Controller mode. **Press it only once:** a second `]` switches to simulated hands, which this project doesn't have (no XR Hands package), so the Controller stops responding until you stop and restart Play. Also avoid `[` and holding `Shift`: they target the left Controller, which the Customer doesn't have. `H` moves the head alone (press `H` again to return); you rarely need it.
+
+**Mouse**
+
+| Input | Does |
 |---|---|
-| Body | The whole Customer: view and Controller move together, the Controller stays in front of you |
-| Controller | The right Controller on its own; the view stays still |
+| Move the cursor | The Controller aims at it (a held Gem Model turns with the Controller) |
+| Hold left button | Grab what the cursor points at (Grip), or press a world-space button (Trigger); release to let go |
+| Hold right button + move | Turn (see the modes table); the Controller stops following the cursor while you do |
+| Hold right button + scroll | Move forward / back (Body mode); in Controller mode it tilts the view sideways instead, so avoid it there |
 
-`]` also switches to Controller mode. **Press it only once:** a second `]` switches to simulated hands, which this project doesn't have (no XR Hands package), so the Controller stops responding until you stop and restart Play. Also avoid `[` and holding `Shift`: they target the left Controller, which the Customer doesn't have. `H` moves the head alone (press `H` again to return); you rarely need it.
-
-**Move and rotate** (whatever the current mode moves)
+**Keyboard**
 
 | Key | Does |
 |---|---|
 | `W` `A` `S` `D` | Forward / left / back / right |
 | `Q` / `E` | Down / up |
-| Hold right mouse button + move mouse | Turn (Body) or rotate the Controller (Controller) |
-| Arrow keys | Same as the mouse, without holding a button |
-| Hold right mouse button + scroll | Move forward / back (Body) or roll the Controller (Controller) |
-| Hold `Z` / `C` / `V` | Rotate around the Z / Y / X axis only (rotation, not movement; `Z` works in Controller mode only) |
+| Arrow keys | Turn, like holding the right mouse button |
+| Hold `C` / `V` | While turning: turn only left-right / only up-down |
 | `R` | Put the Controller back in front of the head |
-
-**Controller buttons** (these work in both modes)
-
-| Key | Does |
-|---|---|
-| `G` (hold) | Grip: grab; let go of `G` to release |
+| `G` (hold) | Grip, the same as holding the left mouse button |
 | `T` (hold) | Trigger |
 | `I` | Right stick forward: aim a teleport, release to go there |
 | `J` / `L` | Right stick left / right: snap turn |
-| `` ` `` then `Space` | `` ` `` (Controller mode only) picks a quick action (Trigger, Grip, Primary, Secondary); `Space` latches it on or off, so you don't have to hold the key |
+| `` ` `` then `Space` | Controller mode: `` ` `` picks a quick action (Trigger, Grip, Primary, Secondary); `Space` latches it on or off |
 | `1` / `2` | Primary / secondary button |
 | `M` | Menu button |
 
-**Grab and rotate a Gem Model**
+**Grab and turn a Gem Model**
 
-1. In Body mode, walk to the Display Case (`W` `A` `S` `D`; hold right mouse button to look around).
-2. Press `Tab` (or `]` once) for Controller mode, and move the Controller onto a Gem Model with `W` `A` `S` `D` `Q` `E`.
-3. Hold `G` to grab it. To keep it held without holding the key: press `` ` `` until the panel shows Grip, then press `Space`.
-4. Hold right mouse button and move the mouse, or use the arrow keys: the Controller rotates and the Gem Model turns with it. Hold right mouse button + scroll to roll it. Hold `Z`, `C` or `V` to rotate around one axis only.
-5. Release `G` (or press `Space` again) to let go.
+1. Walk to the Display Case (`W` `A` `S` `D`; hold right mouse button to look around).
+2. Point the cursor at a Gem Model and **hold the left mouse button** (or hold `G`) to grab it.
+3. Keep holding and move the cursor: the Controller aims at the cursor and the Gem Model turns with it.
+4. Release the button to let go.
+
+**Turn a held Gem Model (`Left Alt`)**
+
+Point And Click only aims the Controller, so on its own a held Gem Model turns left-right and up-down but cannot roll. To see every side, **hold `Left Alt` while you hold a Gem Model**:
+
+| Input (with `Left Alt` held) | Does |
+|---|---|
+| Move the mouse left / right | Turn the Gem Model left / right (yaw) |
+| Move the mouse up / down | Tilt the Gem Model up / down (pitch) |
+| Scroll the wheel | Roll the Gem Model |
+
+While `Left Alt` is held the Controller stops following the cursor, and the grab stays. Release `Left Alt`: the Gem Model keeps its rotation and the Controller follows the cursor again. Release `Left Alt` before you let go of the left mouse button: while `Alt` is held the Simulator doesn't see the release. Let go of the Gem Model and the rotation resets, so the next grab starts fresh. Speeds are on the `GemModelKeyRotator` component of the `Right Controller` (**Degrees Per Pixel**, **Degrees Per Scroll Unit**); you can change them during Play. This only works in the Editor with the Simulator; on a Quest the wrist turns the Gem Model.
 
 ## Team and division of work
 
