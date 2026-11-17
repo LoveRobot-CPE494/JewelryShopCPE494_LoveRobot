@@ -29,6 +29,53 @@ Third-party art and samples under `Unity/JewelryShop/Assets/`. Models and textur
 
 Not listed: `TextMesh Pro/`, `TutorialInfo/` and `Readme.asset` (Unity template defaults), and `XR/`, `XRI/` (settings, not art). The Storefront (`Assets/Scenes/Storefront.unity`) keeps the #20 `Greybox` objects: on `DisplayCase` and `CheckoutCounter` their renderers are hidden and real art sits beside them (#22); `CardReader`, `StaffCallButton` and `StaffSpot` are still greybox.
 
+## Playing the Storefront without a headset (XR Interaction Simulator)
+
+Open `Assets/Scenes/Storefront.unity` and press Play. The XR Interaction Simulator drives the XR Origin with keyboard and mouse; the panel in the corner of the Game view shows what you are moving. The Customer has only a **right** Controller (#30). Keys come from the Simulator sample in `Samples/XR Interaction Toolkit/3.6.1/`.
+
+**Required setting:** on the `XR Interaction Simulator` object in the Storefront scene, **Use Point And Click** must be off. With it on, the Controller only aims at the mouse cursor and the mouse turns the view, so a Gem Model cannot be rotated freely.
+
+**Two modes: `Tab` switches between them**
+
+| Mode | What `W` `A` `S` `D` and the mouse move |
+|---|---|
+| Body | The whole Customer: view and Controller move together, the Controller stays in front of you |
+| Controller | The right Controller on its own; the view stays still |
+
+`]` also switches to Controller mode. **Press it only once:** a second `]` switches to simulated hands, which this project doesn't have (no XR Hands package), so the Controller stops responding until you stop and restart Play. Also avoid `[` and holding `Shift`: they target the left Controller, which the Customer doesn't have. `H` moves the head alone (press `H` again to return); you rarely need it.
+
+**Move and rotate** (whatever the current mode moves)
+
+| Key | Does |
+|---|---|
+| `W` `A` `S` `D` | Forward / left / back / right |
+| `Q` / `E` | Down / up |
+| Hold right mouse button + move mouse | Turn (Body) or rotate the Controller (Controller) |
+| Arrow keys | Same as the mouse, without holding a button |
+| Hold right mouse button + scroll | Move forward / back (Body) or roll the Controller (Controller) |
+| Hold `Z` / `C` / `V` | Rotate around the Z / Y / X axis only (rotation, not movement; `Z` works in Controller mode only) |
+| `R` | Put the Controller back in front of the head |
+
+**Controller buttons** (these work in both modes)
+
+| Key | Does |
+|---|---|
+| `G` (hold) | Grip: grab; let go of `G` to release |
+| `T` (hold) | Trigger |
+| `I` | Right stick forward: aim a teleport, release to go there |
+| `J` / `L` | Right stick left / right: snap turn |
+| `` ` `` then `Space` | `` ` `` (Controller mode only) picks a quick action (Trigger, Grip, Primary, Secondary); `Space` latches it on or off, so you don't have to hold the key |
+| `1` / `2` | Primary / secondary button |
+| `M` | Menu button |
+
+**Grab and rotate a Gem Model**
+
+1. In Body mode, walk to the Display Case (`W` `A` `S` `D`; hold right mouse button to look around).
+2. Press `Tab` (or `]` once) for Controller mode, and move the Controller onto a Gem Model with `W` `A` `S` `D` `Q` `E`.
+3. Hold `G` to grab it. To keep it held without holding the key: press `` ` `` until the panel shows Grip, then press `Space`.
+4. Hold right mouse button and move the mouse, or use the arrow keys: the Controller rotates and the Gem Model turns with it. Hold right mouse button + scroll to roll it. Hold `Z`, `C` or `V` to rotate around one axis only.
+5. Release `G` (or press `Space` again) to let go.
+
 ## Team and division of work
 
 | Member | Side | Role | Main folders |
