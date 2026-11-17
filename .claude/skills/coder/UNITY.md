@@ -13,7 +13,8 @@ Adapted from the `unity-coder` skill of `where-it-went`.
   `Docs/unity/TESTING.md` §B shows. If `unity-mcp` is not connected either, report **tests NOT run: Editor open, human must
   run them**.
 - **`unity-mcp` does not lift the editor pen.** Use it to read state, compile, and run tests; do
-  not create, move, or wire scene/prefab objects with it.
+  not create, move, or wire scene/prefab objects with it. (ADR-0014's rough-layout
+  exception belongs to the main session only, never to a Role sub-agent.)
 - **Compile errors first.** When the build is red, fix with the smallest diff that turns it green
   (an import, a type, a missing reference) before any refactor. Compile errors hide test results.
 - **Input:** Quest Controllers drive both tele-op and the Storefront grab (ADR-0003). Read input
