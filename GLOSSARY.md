@@ -39,8 +39,12 @@ The 3D model of a Gem in the Display Case. It is a catalog entry: buying it does
 _Avoid_: virtual gem, 3D gem, display item
 
 **Order**:
-The list of Gems (each with its Cut + Color) that a Customer pays for in one payment. Every Gem in an Order goes into the same Gift Bag
+The list of Gems (each with its Cut + Color, repeats allowed) that a Customer pays for in one payment. Every Gem in an Order goes into the same Gift Bag
 _Avoid_: purchase, cart
+
+**Order Tray**:
+The tray on the Checkout Counter that holds the Gems the Customer has added to the Order
+_Avoid_: basket, cart, drop zone
 
 **Gem Details**:
 The catalog facts of one Cut + Color, such as its name, carat and clarity, shown to the Customer
@@ -98,11 +102,15 @@ _Avoid_: real gem, block, cube
 
 **Gem Stock**:
 The storage for Gem Pieces on the Packing Station, made up of several Stock Slots
-_Avoid_: storage, inventory, tray
+_Avoid_: storage, inventory, tray (that is the Order Tray)
 
 **Stock Slot**:
 One position in the Gem Stock for a single Cut + Color. It carries a label people can read and can hold several Gem Pieces
 _Avoid_: bin, cell, compartment
+
+**Stock Count**:
+The number of Gem Pieces of one Cut + Color that the Staff say are in its Stock Slot. It is entered by people, not measured
+_Avoid_: quantity, stock level
 
 **Gift Bag**:
 The paper bag on the conveyor. One bag receives every Gem Piece of one Order
