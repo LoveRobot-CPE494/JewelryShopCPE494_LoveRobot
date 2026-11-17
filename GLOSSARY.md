@@ -50,6 +50,10 @@ _Avoid_: basket, cart, drop zone
 The catalog facts of one Cut + Color, such as its name, carat and clarity, shown to the Customer
 _Avoid_: gem info, spec sheet, stats
 
+**Gem Details Panel**:
+The floating panel beside a held Gem Model that shows its Gem Details
+_Avoid_: info card, card (that is the Payment Card), popup, tooltip
+
 **Checkout**:
 The step where the Customer pays for an Order by tapping the Payment Card on the Card Terminal. It is approved only once the Hub has accepted the Order
 _Avoid_: payment, paying
