@@ -34,6 +34,8 @@ CPE494 Class Project: ร้านอัญมณีบน Meta Quest 3 (AR) + �
 
 ### 1. ก่อนเริ่มงาน
 
+ครั้งแรกในเครื่องใหม่: `git lfs install` ก่อน clone (ไฟล์ asset อย่าง `.fbx`, `.png`, `.wav` เก็บผ่าน Git LFS ดู `.gitattributes`) ถ้า clone ไปก่อนแล้ว texture ขึ้นสีชมพู ให้รัน `git lfs pull`
+
 ```powershell
 git switch main
 git pull
