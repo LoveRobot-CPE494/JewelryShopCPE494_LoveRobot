@@ -49,7 +49,10 @@ A **Role** is a subagent in `.claude/agents/` (the only list), named
   (single quotes: PowerShell expands `$` and mangles `"` inside double quotes). Labels,
   comma-separated: one of `bug` / `enhancement` / `documentation`, plus every `area:` label
   (`area:unity`, `area:dobot`, `area:uno`) whose folder the change touches.
-- **Editor pen:** Inspector wiring, placing or connecting scene/prefab elements.
+- **Editor pen:** Inspector wiring, placing or connecting scene/prefab elements. One exception
+  ([ADR-0014](Docs/adr/0014-claude-rough-layout-via-unity-mcp.md)): the main session alone may
+  create, place and move objects through Unity MCP for a rough layout. Wiring and saving stay with
+  the human, who adjusts the layout, checks it, and saves the scene.
 - **Robot pen:** running code against the real MG400 or a real Arduino.
 
 Agents edit code, logic, and tests locally, author seams with safe fallbacks, and hand each pen
@@ -59,7 +62,8 @@ back as an explicit human task.
 
 The official Unity MCP (`unity-mcp`, from `com.unity.ai.assistant`) is configured at user scope.
 Use it to read the Console, check compilation, and run tests while the Editor is open
-(see `Docs/unity/TESTING.md`). It does not lift the editor pen.
+(see `Docs/unity/TESTING.md`). It does not lift the Editor pen beyond the rough-layout
+exception above.
 
 ## Agent skills
 
