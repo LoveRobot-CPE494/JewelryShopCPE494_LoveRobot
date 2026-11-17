@@ -1,5 +1,7 @@
 # UNO know-how (`UNO/`, Arduino UNO firmware)
 
+Language page: [C++ / UNO standards](../../../Docs/standards/cpp-uno.md).
+
 The UNO owns the conveyor, the bag sensor and the Bag Closer servo (ADR-0004, ADR-0005). It obeys
 the PC over Serial; it never talks to the MG400 directly.
 

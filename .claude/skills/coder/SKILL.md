@@ -28,6 +28,10 @@ Quest ↔ PC protocol), finish your side, then report the other side as a follow
 
 - **Read the decisions first:** every ADR in `Docs/adr/` that touches your area. Respect them; when
   one blocks the ticket, stop and report the conflict.
+- **Standards:** follow [CODING_STANDARDS.md](../../../CODING_STANDARDS.md) and the language page
+  your know-how file links.
+- **Ponytail:** work in the `ponytail` skill at `full`: the smallest change that fully solves the
+  ticket. YAGNI: build only what the ticket needs. Rule of Three: `CODING_STANDARDS.md` §Patterns.
 - **Git is read-only.** `status`, `diff`, `log` only: the human commits, branches, and opens PRs.
 - **The human holds three pens**, and you hand each back as an explicit human task:
   - **GitHub pen:** commit, push, PR, issues.
