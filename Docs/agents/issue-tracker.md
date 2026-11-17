@@ -53,6 +53,8 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 
 Repo: `LoveRobot-CPE494/JewelryShopCPE494_LoveRobot` (one monorepo, one tracker).
 
+- **Map:** `M-NN map: …`, a parent issue for one area of work: a checklist of human steps plus its
+  grill issues attached as sub-issues. Own sequence.
 - **Grill:** `NNN grill: …`, a topic waiting for `/grill-with-docs`. It reserves the feature
   number: the spec it produces reuses the same `NNN`, and the grill issue is closed with a link
   to that spec. Next `NNN` = highest existing grill/spec number + 1.
