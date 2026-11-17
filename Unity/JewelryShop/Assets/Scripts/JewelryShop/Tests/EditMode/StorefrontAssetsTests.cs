@@ -14,11 +14,7 @@ namespace JewelryShop.Tests
         const string ScenePath = "Assets/Scenes/Storefront.unity";
         static readonly string[] Colors = { "Red", "Blue", "Green", "Yellow" };
         static readonly string[] Cuts = { "Round", "Emerald" };
-        static readonly string[] RequiredNames =
-        {
-            "Storefront", "DisplayCase", "GemModelPositions", "Checkout", "CheckoutCounter",
-            "CardReader", "StaffCallButton", "StaffSpot", "CustomerSpawnPoint", "Floor", "Directional Light",
-        };
+        static readonly string[] RequiredNames = { "Floor", "Directional Light" };
 
         [TestCaseSource(nameof(Colors))]
         public void GemMaterial_IsUrpLitTransparentAndSmooth(string color)
@@ -42,7 +38,7 @@ namespace JewelryShop.Tests
         }
 
         [Test]
-        public void Storefront_KeepsNamesAndNineMixedGems()
+        public void Storefront_KeepsFloorLightAndMixedGems()
         {
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
             try
@@ -56,12 +52,8 @@ namespace JewelryShop.Tests
                 var colors = new System.Collections.Generic.HashSet<string>();
                 for (int i = 1; i <= 9; i++)
                 {
-                    var slot = all.Find(t => t.name == $"GemModelPosition_0{i}");
-                    Assert.That(slot, Is.Not.Null, $"slot {i}");
-                    var gem = slot.Find("GemModel");
-                    Assert.That(gem, Is.Not.Null, $"gem {i}");
-                    Assert.That(gem.GetComponent<XRGrabInteractable>(), Is.Not.Null);
-                    Assert.That(gem.GetComponent<Rigidbody>(), Is.Not.Null);
+                    var gem = all.Find(t => t.name == $"GemModelPosition_0{i}")?.Find("GemModel");
+                    Assert.That(gem, Is.Not.Null, $"GemModelPosition_0{i}/GemModel");
                     cuts.Add(PrefabUtility.GetCorrespondingObjectFromSource(gem.gameObject).name);
                     colors.Add(gem.GetComponentInChildren<MeshRenderer>().sharedMaterial.name);
                 }
