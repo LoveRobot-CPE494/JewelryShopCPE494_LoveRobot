@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0009
 ---
 
 # Staff Call plays a pre-recorded clip; live chat is not built yet
@@ -9,3 +9,5 @@ Brief item 4a.iii wants the staff member's video and audio "in real time" and aw
 ## Consequences
 
 - Risk of losing the 5 points of item 4a.iii if the examiners test it live.
+
+Superseded by [ADR-0009](0009-live-staff-via-staff-console.md).

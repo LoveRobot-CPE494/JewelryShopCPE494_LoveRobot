@@ -42,16 +42,32 @@ _Avoid_: virtual gem, 3D gem, display item
 The list of Gems (each with its Cut + Color) that a Customer pays for in one payment. Every Gem in an Order goes into the same Gift Bag
 _Avoid_: purchase, cart
 
+**Gem Details**:
+The catalog facts of one Cut + Color, such as its name, carat and clarity, shown to the Customer
+_Avoid_: gem info, spec sheet, stats
+
 **Checkout**:
-The spot in the Storefront where the Customer taps a card on a virtual terminal to pay
+The step where the Customer pays for an Order by tapping a card on a virtual terminal
+_Avoid_: payment, paying
+
+**Checkout Counter**:
+The spot in the Storefront where the Checkout takes place
 _Avoid_: payment area, cashier
 
 **Staff**:
-The store's sales assistant whom the Customer meets in the Storefront. Does not control the robot arm
+The real person who serves the Customer live from the Staff Console, appearing in the Storefront as the Staff Avatar. Does not control the robot arm
 _Avoid_: salesperson, employee (ambiguous with Maintenance Operator)
 
+**Staff Avatar**:
+The 3D figure in the Storefront that the Staff speaks and acts through
+_Avoid_: NPC, bot, character
+
+**Staff Console**:
+The Staff's workstation outside the Storefront, from which they serve a Customer live
+_Avoid_: staff app, admin panel, dashboard
+
 **Staff Call**:
-A Customer's request for Staff to come and talk with them in the Storefront
+A Customer's request for the Staff to come and serve them live in the Storefront
 _Avoid_: call button, help
 
 ### Packing station
@@ -95,7 +111,7 @@ _Avoid_: server, orchestrator, backend
 ### Remote maintenance
 
 **Maintenance Operator**:
-The staff member who wears a Quest and drives the robot arm remotely to retrieve a Dropped Gem
+The team member who wears a Quest and drives the robot arm remotely to retrieve a Dropped Gem
 _Avoid_: technician, admin, driver
 
 **Teleop**:
