@@ -1,0 +1,82 @@
+# C# naming rules from Docs/standards/csharp-unity.md (ADR-0007). IDE-only: Unity's compiler
+# ignores them. Sits in Assets/Scripts so Samples, TextMesh Pro and Packages are not covered;
+# root = true so nothing above this folder leaks in.
+# Acronym casing (IO, Tcp, Mg400) cannot be expressed here; code-review checks it.
+root = true
+
+[*.cs]
+
+# Write `private` (and every other accessibility) explicitly, except on interface members (IDE0040)
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+
+# --- Symbol groups ---
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+
+dotnet_naming_symbols.types.applicable_kinds = class, struct, enum, delegate
+
+dotnet_naming_symbols.constants.applicable_kinds = field, local
+dotnet_naming_symbols.constants.required_modifiers = const
+
+dotnet_naming_symbols.private_static_fields.applicable_kinds = field
+dotnet_naming_symbols.private_static_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_static_fields.required_modifiers = static
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+dotnet_naming_symbols.members.applicable_kinds = method, local_function, property, event, field
+
+dotnet_naming_symbols.locals_and_parameters.applicable_kinds = local, parameter
+
+# --- Styles ---
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_style.i_pascal_case.required_prefix = I
+dotnet_naming_style.i_pascal_case.capitalization = pascal_case
+
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+
+dotnet_naming_style.s_camel_case.required_prefix = s_
+dotnet_naming_style.s_camel_case.capitalization = camel_case
+
+dotnet_naming_style.camel_case.capitalization = camel_case
+
+# --- Rules ---
+# Roslyn picks the most specific matching rule (accessibility, then modifiers, then kinds),
+# not the first in the file.
+
+# Interfaces: IPascalCase
+dotnet_naming_rule.interfaces_rule.symbols = interfaces
+dotnet_naming_rule.interfaces_rule.style = i_pascal_case
+dotnet_naming_rule.interfaces_rule.severity = warning
+
+# Types: PascalCase
+dotnet_naming_rule.types_rule.symbols = types
+dotnet_naming_rule.types_rule.style = pascal_case
+dotnet_naming_rule.types_rule.severity = warning
+
+# Constants (fields and locals, any accessibility): PascalCase
+dotnet_naming_rule.constants_rule.symbols = constants
+dotnet_naming_rule.constants_rule.style = pascal_case
+dotnet_naming_rule.constants_rule.severity = warning
+
+# Private statics: s_camelCase
+dotnet_naming_rule.private_static_fields_rule.symbols = private_static_fields
+dotnet_naming_rule.private_static_fields_rule.style = s_camel_case
+dotnet_naming_rule.private_static_fields_rule.severity = warning
+
+# Private fields, [SerializeField] included: _camelCase
+dotnet_naming_rule.private_fields_rule.symbols = private_fields
+dotnet_naming_rule.private_fields_rule.style = underscore_camel_case
+dotnet_naming_rule.private_fields_rule.severity = warning
+
+# Methods, local functions, properties, events, non-private fields: PascalCase
+dotnet_naming_rule.members_rule.symbols = members
+dotnet_naming_rule.members_rule.style = pascal_case
+dotnet_naming_rule.members_rule.severity = warning
+
+# Locals and parameters: camelCase
+dotnet_naming_rule.locals_and_parameters_rule.symbols = locals_and_parameters
+dotnet_naming_rule.locals_and_parameters_rule.style = camel_case
+dotnet_naming_rule.locals_and_parameters_rule.severity = warning
