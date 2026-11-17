@@ -17,6 +17,7 @@
 *.[gG][lL][bB] filter=lfs diff=lfs merge=lfs -text
 *.[dD][aA][eE] filter=lfs diff=lfs merge=lfs -text
 *.3[dD][sS] filter=lfs diff=lfs merge=lfs -text
+*.[vV][rR][mM] filter=lfs diff=lfs merge=lfs -text
 
 # Images and textures
 *.[pP][nN][gG] filter=lfs diff=lfs merge=lfs -text

@@ -14,4 +14,4 @@ Supersedes [ADR-0006](0006-prerecorded-staff-clip.md). Brief item 4a.iii awards 
 ## Consequences
 
 - The Quest build must leave the Staff Console scene out, and the Windows build must leave out the XR rig.
-- The voice technology and the transport are open for [#13](https://github.com/LoveRobot-CPE494/JewelryShopCPE494_LoveRobot/issues/13), as is whether the Staff Console uses ADR-0008's networking Facade. A direct Quest ↔ Staff Console link would be a second path next to the Hub, so it would partly depart from ADR-0001.
+- The voice technology and the transport are open for [#13](https://github.com/LoveRobot-CPE494/JewelryShopCPE494_LoveRobot/issues/13), as is whether the Staff Console uses ADR-0008's networking Facade. A direct Quest ↔ Staff Console link would be a second path next to the Hub, so it would partly depart from ADR-0001. Settled in [ADR-0010](0010-staff-call-direct-netcode-link.md).
