@@ -23,11 +23,11 @@ Third-party art and samples under `Unity/JewelryShop/Assets/`. Models and textur
 | Folder | What it is | Source / License | Planned for | Notes |
 |---|---|---|---|---|
 | `Samples/XR Interaction Toolkit/3.6.1/` | Starter Assets (XR Origin, Controller input) + XR Interaction Simulator | Unity XR Interaction Toolkit samples | In use: XR Origin and headset-free testing in the Storefront (#18) | |
-| `jewelry_shop/` | Jewelry-shop interior: shop shell, display cases, props (models, prefabs, textures, a demo scene) | Unity Asset Store, free | Storefront interior (#22), not in the scene yet | Materials are URP Lit, except `DemoScene/0/sky.mat` |
-| `ThirdParty/TinyTreats/` | Tiny Treats Bakery Interior 1.1: the Unity FBX models and their textures (display cases, cash register, counters, …) | CC0, see `License.txt` | Extra props such as the Checkout counter and cash register (#22), not in the scene yet | |
-| `Low poly Gems/` | 6 low-poly gems (`Stone1`–`Stone6`): meshes, materials, prefabs, textures, a demo scene | Unity Asset Store, free | Candidate Gem Models (#22), not in the scene yet | Materials use the Built-in Standard shader (pink in URP until converted to URP Lit); textures are 2048², too heavy for Quest 3 at gem size |
+| `jewelry_shop/` | Jewelry-shop interior: shop shell, display cases, props (models, prefabs, textures, a demo scene) | Unity Asset Store, free | In use: Storefront interior (#22): `SM_shop` shell, `SM_showcase_1` display case | Materials are URP Lit, except `DemoScene/0/sky.mat`; the two atlas textures `T_`/`T_1` are set to max 512, compressed (ASTC on Android) |
+| `ThirdParty/TinyTreats/` | Tiny Treats Bakery Interior 1.1: the Unity FBX models and their textures (display cases, cash register, counters, …) | CC0, see `License.txt` | In use: `countertop_straight_A_short` as the Checkout counter (#22) | Texture set to max 512, compressed |
+| `Low poly Gems/` | 6 low-poly gems (`Stone1`–`Stone6`): meshes, materials, prefabs, textures, a demo scene | Unity Asset Store, free | In use: meshes only, Gem Models (#22): `Stone4` is Round, `Stone1` is Emerald (`Assets/Prefabs/GemModel_*.prefab`) | The pack's own materials and textures are not used (Standard shader, 2048²); gems use `Assets/Materials/Gems/Gem_*.mat` (URP Lit, Transparent) |
 
-Not listed: `TextMesh Pro/`, `TutorialInfo/` and `Readme.asset` (Unity template defaults), and `XR/`, `XRI/` (settings, not art). The Storefront itself is still a greybox (`Assets/Scenes/Storefront.unity`, #20); real art replaces the `Greybox` children in #22.
+Not listed: `TextMesh Pro/`, `TutorialInfo/` and `Readme.asset` (Unity template defaults), and `XR/`, `XRI/` (settings, not art). The Storefront (`Assets/Scenes/Storefront.unity`) keeps the #20 `Greybox` objects: on `DisplayCase` and `CheckoutCounter` their renderers are hidden and real art sits beside them (#22); `CardReader`, `StaffCallButton` and `StaffSpot` are still greybox.
 
 ## Team and division of work
 
