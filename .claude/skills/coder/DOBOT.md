@@ -1,5 +1,7 @@
 # Dobot know-how (`Dobot/`, Python on the PC)
 
+Language page: [Python / Dobot standards](../../../Docs/standards/python-dobot.md).
+
 The PC is the hub (ADR-0001): Quest → PC → MG400 (TCP/IP) and PC → UNO (Serial).
 
 - **MG400 ports:** 29999 dashboard (enable, clear error, DO for suction per ADR-0002),

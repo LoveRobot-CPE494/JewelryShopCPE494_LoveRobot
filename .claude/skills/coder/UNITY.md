@@ -1,5 +1,7 @@
 # Unity know-how (`Unity/JewelryShop/`)
 
+Language page: [C# / Unity standards](../../../Docs/standards/csharp-unity.md).
+
 Adapted from the `unity-coder` skill of `where-it-went`.
 
 - **Tests:** read `Docs/unity/TESTING.md` before your first run. Two suites: EditMode
