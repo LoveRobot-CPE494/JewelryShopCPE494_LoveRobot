@@ -1,9 +1,11 @@
 using System.Linq;
 using NUnit.Framework;
+using JewelryShop.Storefront;
 using Unity.XR.CoreUtils;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.XR.Interaction.Toolkit.Inputs.Simulation;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace JewelryShop.Tests
@@ -75,6 +77,23 @@ namespace JewelryShop.Tests
                 Assert.That(g.GetComponent<XRGrabInteractable>(), Is.Not.Null, $"{g.parent.name}: XRGrabInteractable");
                 Assert.That(g.GetComponent<Rigidbody>(), Is.Not.Null, $"{g.parent.name}: Rigidbody");
             }
+        }
+
+        [Test]
+        public void RightController_HasGemModelKeyRotator()
+        {
+            var rotator = _scene.GetRootGameObjects()
+                .SelectMany(r => r.GetComponentsInChildren<GemModelKeyRotator>(true)).SingleOrDefault();
+            Assert.That(rotator, Is.Not.Null, "GemModelKeyRotator on the right Controller");
+            Assert.That(rotator.name, Is.EqualTo("Right Controller"));
+        }
+
+        [Test]
+        public void Simulator_PointAndClickIsOn()
+        {
+            var sim = _scene.GetRootGameObjects()
+                .SelectMany(r => r.GetComponentsInChildren<XRInteractionSimulator>(true)).Single();
+            Assert.That(sim.usePointAndClick, Is.True, "Point And Click stays on (#59)");
         }
     }
 }

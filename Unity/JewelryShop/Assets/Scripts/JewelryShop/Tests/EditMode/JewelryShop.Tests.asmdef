@@ -3,6 +3,7 @@
     "rootNamespace": "JewelryShop.Tests",
     "references": [
         "JewelryShop.Core",
+        "JewelryShop.Storefront",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Unity.XR.Interaction.Toolkit",
