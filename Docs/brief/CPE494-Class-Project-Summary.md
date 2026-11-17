@@ -1,96 +1,96 @@
-# สรุปโจทย์ CPE494 Class Project
+# CPE494 Class Project Summary
 
 > CPE494 Special Topic IV: Industry Automation and Robotics for Computer Engineering
-> ที่มา: [`CPE494-Class-Project-Brief.pdf`](CPE494-Class-Project-Brief.pdf)
+> Source: [`CPE494-Class-Project-Brief.pdf`](CPE494-Class-Project-Brief.pdf)
 
-## ภาพรวม
+## Overview
 
-- ทำงานกลุ่มละ **5–6 คน**
-- สร้าง **ระบบขายอัญมณีด้วย AR (Meta Quest 3)** คู่กับ **ระบบบรรจุอัญมณีลงกล่องของขวัญแบบอัตโนมัติ 100%**
-- ระบบต้อง**ปลอดภัย**ทั้งด้านโครงสร้างทางกล ไฟฟ้า และโปรแกรม
-- **ที่มาของโจทย์:** ร้านอัญมณีย่านบางมดย้ายไปขายออนไลน์ เพราะค่าเช่าที่แพงขึ้น เจ้าของร้านอยากให้ลูกค้าใส่ Meta Quest 3 แล้วรู้สึกเหมือนมาซื้อที่ร้านจริง และอยากใช้ระบบอัตโนมัติบรรจุของขวัญแทนการจ้างพนักงาน
+- Work in groups of **5–6 people**
+- Build an **AR jewelry sales system (Meta Quest 3)** paired with a **100% automatic gem-packing system that packs gems into gift boxes**
+- The system must be **safe** in its mechanical structure, electrical side and software
+- **Background:** a jewelry shop in the Bang Mod area is moving online because rents are rising. The owner wants customers to wear a Meta Quest 3 and feel as if they are buying in the real shop, and wants an automatic system to pack gifts instead of hiring staff
 
-## คะแนนรวม
+## Total score
 
-| ส่วน | คะแนน |
+| Part | Points |
 |---|---|
-| 4a ระบบหน้าร้าน AR | 30 |
-| 4b ระบบบำรุงรักษาทางไกล | 15 |
-| 5 ระบบทางกล | 15 |
-| 6 รายงานและการนำเสนอ | 30 |
-| **รวม** | **90** |
+| 4a AR storefront system | 30 |
+| 4b Remote maintenance system | 15 |
+| 5 Mechanical system | 15 |
+| 6 Reports and presentation | 30 |
+| **Total** | **90** |
 
-## 4a. ระบบหน้าร้าน AR (30 คะแนน)
+## 4a. AR storefront system (30 points)
 
-### i. ตู้จัดแสดงอัญมณี
-ตู้วางอัญมณีได้ 9 ชิ้น มีทั้งทรง **Round** และ **Emerald** คละทรงและสี ผู้ซื้อหยิบชิ้นไหนก็ได้มาดูแบบ 3 มิติ
-- [ ] หมุนดูอัญมณีได้ครบทุกมุมแบบ 3 มิติ (5)
-- [ ] มุมมองของอัญมณีเปลี่ยนตามการขยับมือของผู้ซื้อ (5)
+### i. Gem display case
+A case holds 9 gems, in both **Round** and **Emerald** cuts, with mixed cuts and colors. The buyer can pick up any piece and view it in 3D.
+- [ ] Rotate the gem to view it from every angle in 3D (5)
+- [ ] The gem's view changes with the movement of the buyer's hand (5)
 
-### ii. พื้นที่จ่ายเงิน
-ผู้ซื้อหยิบบัตรไปแตะจ่ายกับเครื่องในโลกเสมือน
-- [ ] มีชุดการเคลื่อนไหว (animation) ตอนจ่ายเงิน (5)
-- [ ] สร้างประสบการณ์ที่ดีให้ผู้ซื้อตอนจ่ายเงิน (5)
+### ii. Payment area
+The buyer picks up a card and taps it on a terminal in the virtual world to pay.
+- [ ] There is an animation sequence during payment (5)
+- [ ] Create a good buyer experience during payment (5)
 
-### iii. ปุ่มเรียกพนักงาน
-กดแล้วแสดงภาพเคลื่อนไหวและเสียงของพนักงานแบบเรียลไทม์
-- [ ] กดปุ่มแล้วคุยกับพนักงานได้จริง (5)
+### iii. Staff call button
+Pressing it shows the staff member's animation and audio in real time.
+- [ ] Pressing the button lets the user actually talk with the staff (5)
 
-### iv. ฟังก์ชันเสริม
-- [ ] ฟังก์ชันเพิ่มอีก 1 อย่างที่ช่วยเพิ่มยอดขายหรือทำให้ผู้ซื้อได้ประสบการณ์ที่ดีขึ้น (5)
+### iv. Extra feature
+- [ ] One additional feature that increases sales or gives the buyer a better experience (5)
 
-## 4b. ระบบบำรุงรักษาทางไกล (15 คะแนน)
+## 4b. Remote maintenance system (15 points)
 
-### i. หยิบของที่หล่น
-เมื่ออัญมณีไปอยู่ในตำแหน่งที่ไม่ได้วางแผนไว้ พนักงานซ่อมบำรุงต้องบังคับแขนกลผ่าน Meta Quest (แบบ AR) จากจุดใดจุดหนึ่งของสถานีเพื่อหยิบขึ้นมา ติดป้ายหรือชิ้นส่วนเสริมไว้ระบุตำแหน่งอัญมณีได้
-- [ ] หยิบของหล่นได้จริง โดยกรรมการเป็นคนสุ่มตำแหน่ง (5)
-- [ ] หยิบของหล่นได้จริง โดยตำแหน่งที่หยิบเป็นไปตามตำแหน่งมือของผู้บังคับ (10)
+### i. Picking up a dropped gem
+When a gem ends up in an unplanned position, the maintenance staff must drive the robot arm through a Meta Quest (AR) from some point of the station to pick it up. Markers or extra parts may be attached to identify the gem's position.
+- [ ] Actually pick up a dropped gem, with the examiners choosing the position at random (5)
+- [ ] Actually pick up a dropped gem, with the pick position following the operator's hand position (10)
 
-## 5. ระบบทางกล (15 คะแนน)
+## 5. Mechanical system (15 points)
 
-ต้องทำได้**ครบทุกข้อ**ถึงจะได้คะแนน
-1. กล่องกระดาษที่พับเสร็จแล้วถูกลำเลียงมาตามสายพาน และหยุดตรงหน้าแขนกล
-2. แขนกลหยิบอัญมณีจากที่เก็บตาม**ทรงและสีที่ลูกค้าเลือก** แล้ววางลงกล่อง
-3. ปิดฝากล่อง **ติดโบว์** แล้วลำเลียงกล่องไปที่ปลายสายพาน
+**All** of the following must work to receive any points
+1. A pre-folded paper box is carried along the conveyor and stops in front of the robot arm
+2. The arm picks gems from the storage according to the **cut and color the customer chose**, and places them in the box
+3. Close the box lid, **attach a ribbon**, then carry the box to the end of the conveyor
 
-> ℹ️ **ของจริงต่างจาก brief:** อาจารย์ให้ถุงกระดาษมาแทนกล่อง เรื่องโบว์ยังไม่ได้ตัดสิน ดู [ADR-0005](../adr/0005-paper-gift-bag.md)
+> ℹ️ **Reality differs from the brief:** the instructor provided a paper bag instead of a box. The ribbon is undecided. See [ADR-0005](../adr/0005-paper-gift-bag.md)
 
-## 6. รายงานและการนำเสนอ (30 คะแนน)
+## 6. Reports and presentation (30 points)
 
-| งาน | กำหนดส่ง | ไฟล์ | เนื้อหา |
+| Task | Deadline | File | Content |
 |---|---|---|---|
-| รายงานความคืบหน้าครั้งที่ 1 | **พ. 18 พ.ย. 2569, 23:59 น.** | PDF | แรงบันดาลใจ, แผนการทำงาน, ภาพรวมการออกแบบระบบ, การเปรียบเทียบอุปกรณ์, การเปรียบเทียบเทคนิคของข้อ 4 และ 5 (ทั้งทางกลและโปรแกรม), ส่วนที่ติดปัญหา/แก้ไม่ได้ และส่วนที่ยังไม่ได้ทำ |
-| รายงานความคืบหน้าครั้งที่ 2 + วิดีโอสาธิต | **พ. 25 พ.ย. 2569, 23:59 น.** | PDF + MP4 | ต้องคืบหน้า **อย่างน้อย 50%** ของฟังก์ชันทั้งหมด และ**ระบบทางกลต้องทำงานได้สมบูรณ์** ตัวแทนกลุ่มนำเสนอวันเดียวกัน เวลา 13:30–16:30 น. |
-| นำเสนอผลงาน | **พ. 9 ธ.ค. 2569, 13:30–16:30 น.** | – | กรรมการ 3 คนให้คะแนนความสมบูรณ์ของระบบ |
-| รายงานสรุป + วิดีโอสรุป | **ศ. 11 ธ.ค. 2569, 23:59 น.** | PDF + MP4 | ไม่บังคับรูปแบบ |
+| Progress report 1 | **Wed 18 Nov 2026, 23:59** | PDF | Inspiration, work plan, system design overview, equipment comparison, comparison of techniques for items 4 and 5 (both mechanical and software), parts that are stuck or cannot be solved, and parts not yet done |
+| Progress report 2 + demo video | **Wed 25 Nov 2026, 23:59** | PDF + MP4 | Must be **at least 50%** complete across all functions, and the **mechanical system must work completely**. A group representative presents the same day, 13:30–16:30 |
+| Final presentation | **Wed 9 Dec 2026, 13:30–16:30** | - | 3 examiners score how complete the system is |
+| Summary report + summary video | **Fri 11 Dec 2026, 23:59** | PDF + MP4 | No required format |
 
-ทุกรายงาน**ไม่บังคับรูปแบบเอกสาร** ออกแบบได้อิสระ
+Every report has **no required document format**; design it freely.
 
-## เงื่อนไขอื่น
+## Other conditions
 
-- **กลุ่มที่มี 6 คนขึ้นไป:** ต้องทำโปรแกรมจำลองการทำงานของแขนกลแบบเรียลไทม์ในลักษณะ **Digital Twin** (ใช้ RoboDK, ROS, Python หรือเครื่องมืออื่นก็ได้)
-- **งานตามข้อ 4–6** ถ้าส่งไม่ครบหรือไม่ตรงเวลา จะไม่ได้คะแนนในหัวข้อนั้น
-- **วันสาธิต:** กรรมการทดสอบระบบเองระหว่างที่กลุ่มนำเสนอ จากนั้นจะ**ถามคำถามเทคนิคเป็นรายบุคคล**
+- **Groups of 6 or more:** must build a real-time simulation of the robot arm as a **Digital Twin** (RoboDK, ROS, Python or any other tool is fine)
+- **Work for items 4-6:** if not submitted in full or on time, no points are given for that part
+- **Demo day:** the examiners test the system themselves while the group presents, then **ask technical questions to each person individually**
 
-> ✅ **วันสาธิต:** เอกสารเขียนวันขัดกัน (ข้อ 9 บอก 25 พ.ย. ข้อ 6c บอก 9 ธ.ค.) ทีมยืนยันแล้วว่าสาธิตระบบที่สมบูรณ์วัน **พ. 9 ธ.ค. 2569** ส่วนวันที่ 25 พ.ย. ยังต้องส่งรายงานครั้งที่ 2 ตามตาราง
+> ✅ **Demo day:** the documents contradict each other (item 9 says 25 Nov, item 6c says 9 Dec). The team confirmed it will demo the complete system on **Wed 9 Dec 2026**. On 25 Nov the second report is still due per the table.
 
-## เกณฑ์ประเมินเนื้อหาในการนำเสนอและรายงาน
+## Criteria for assessing presentation and report content
 
-| หัวข้อ | สิ่งที่กรรมการดู |
+| Topic | What the examiners look for |
 |---|---|
-| **Design Planning** | มีหลักการทางวิศวกรรมอ้างอิงการตัดสินใจออกแบบ, มีแผนผังการทำงานของระบบ, มีแบบร่าง 3D ของชิ้นงานที่ออกแบบเอง, ใส่ใจด้านความปลอดภัยและการซ่อมบำรุง, อุปกรณ์ที่โจทย์ไม่ได้กำหนดต้องเปรียบเทียบกับอุปกรณ์ที่ใกล้เคียงกัน |
-| **Job Description** | ระบุตำแหน่งและหน้าที่ของสมาชิกแต่ละคนชัดเจน (เช่น นาย ก. ค้นหาข้อมูลและเขียนโปรแกรม) |
-| **Working of individual system** | แต่ละอุปกรณ์ทำงานได้ตามแบบ เช่น อ่านค่าเซนเซอร์ได้, สั่งแขนกลไปตำแหน่งที่กำหนดได้, แสดงค่าเซนเซอร์บนคอมพิวเตอร์ได้ |
-| **System integration** | ระบบที่รวมกันแล้วทำงานได้จริง, มีผลการทดสอบ, วิเคราะห์ปัญหาทั้งที่แก้แล้วและยังแก้ไม่ได้ (พร้อมแนวทางแก้), งานประกอบประณีต (เก็บสายไฟ, ต่อวงจร, ชิ้นส่วนทางกลแข็งแรง) |
-| **Presentation** | อธิบายครอบคลุมและตรงประเด็น, อธิบายสมการหรือแนวคิดได้ถูกต้องและเข้าใจง่าย, ใช้ภาพหรือวิดีโอประกอบ, จัดหน้าอ่านง่าย, วิดีโอภาพและเสียงคมชัด ตัดต่อประณีต |
+| **Design Planning** | Engineering principles back the design decisions, a system workflow diagram, 3D drafts of the self-designed parts, attention to safety and maintenance, and equipment the brief does not specify is compared with similar equipment |
+| **Job Description** | Each member's position and duties are clearly stated (e.g. Mr. A researches and writes the program) |
+| **Working of individual system** | Each device works as designed, e.g. reads sensor values, commands the arm to a given position, shows sensor values on the computer |
+| **System integration** | The combined system really works, there are test results, analysis of problems both solved and unsolved (with proposed fixes), and neat assembly (tidy wiring, tidy circuits, sturdy mechanical parts) |
+| **Presentation** | Covers the material completely and stays on point, explains equations or concepts correctly and clearly, uses images or video, has a readable layout, and has sharp video and audio with neat editing |
 
-## ไทม์ไลน์ (นับจากวันนี้ 11 พ.ย. 2569)
+## Timeline (counted from today, 11 Nov 2026)
 
 ```
-11 พ.ย.  ── วันนี้
-18 พ.ย.  ── ส่งรายงานความคืบหน้าครั้งที่ 1 (PDF)                    [+7 วัน]
-25 พ.ย.  ── ส่งรายงานครั้งที่ 2 + วิดีโอ, นำเสนอ 13:30–16:30         [+14 วัน]
-            (คืบหน้า ≥50% และระบบทางกลต้องเสร็จ)
- 9 ธ.ค.  ── นำเสนอผลงานจริง 13:30–16:30 (กรรมการ 3 คน)              [+28 วัน]
-11 ธ.ค.  ── ส่งรายงานสรุป + วิดีโอสรุป (PDF + MP4)                  [+30 วัน]
+11 Nov  ── today
+18 Nov  ── submit progress report 1 (PDF)                              [+7 days]
+25 Nov  ── submit report 2 + video, present 13:30–16:30                [+14 days]
+           (≥50% done and the mechanical system must be finished)
+ 9 Dec  ── final presentation 13:30–16:30 (3 examiners)                [+28 days]
+11 Dec  ── submit summary report + summary video (PDF + MP4)           [+30 days]
 ```

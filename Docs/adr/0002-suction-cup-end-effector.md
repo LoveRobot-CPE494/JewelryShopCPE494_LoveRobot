@@ -2,16 +2,16 @@
 status: accepted
 ---
 
-# MG400 ใช้ suction cup ไม่ใช้ gripper
+# The MG400 uses a suction cup, not a gripper
 
-หัวจับของ MG400 เป็น suction cup + ปั๊มลม/โซลินอยด์วาล์ว สั่งดูด/ปล่อยผ่าน DO ของ MG400 โดยตรง เหตุผลคืออัญมณีชิ้นเล็กและลื่น และทั้งทรง Round และ Emerald มีหน้า table ด้านบนแบนให้ดูดได้ ข้อดีหลักคือไม่ต้องหมุนแกน J4 ให้ตรงด้านของ Emerald ซึ่งสำคัญมากตอนหยิบของหล่น (ข้อ 4b) ที่ทิศของชิ้นเป็นแบบสุ่ม
+The MG400's end effector is a suction cup + air pump/solenoid valve, switched on and off directly through the MG400's DO. The reasons: the gems are small and slippery, and both the Round and Emerald cuts have a flat table face on top that can be sucked. The main advantage is that J4 does not need to rotate to line up with the Emerald's sides, which matters a lot when picking up a dropped gem (item 4b), where the piece's orientation is random.
 
 ## Considered Options
 
-- **Electric gripper (เช่น DH-Robotics PGE):** แม่นยำ แต่ราคาสูง และต้องจัดทิศของ Emerald ก่อนคีบ
-- **Servo gripper พิมพ์ 3D ต่อกับ Arduino:** ถูก แต่คีบชิ้นเล็กที่ลื่นได้ไม่มั่นคง และต้องคุมจังหวะข้ามบอร์ด
+- **Electric gripper (e.g. DH-Robotics PGE):** accurate, but expensive, and the Emerald's orientation must be aligned before gripping.
+- **3D-printed servo gripper wired to the Arduino:** cheap, but grips small slippery pieces unreliably and needs timing control across boards.
 
 ## Consequences
 
-- ถ้วยดูดต้องเล็กกว่าหน้า table ของอัญมณีชิ้นที่เล็กที่สุด
-- อัญมณีที่หล่นแบบคว่ำหรือตะแคง (หน้า table ไม่หงายขึ้น) อาจดูดไม่ได้ ต้องทดสอบและเขียนไว้ในรายงาน
+- The suction cup must be smaller than the table face of the smallest gem.
+- A gem that lands upside down or on its side (table face not facing up) may not be suckable; this must be tested and written up in the report.

@@ -1,96 +1,96 @@
 # JewelryShopCPE494_LoveRobot
 
-CPE494 Class Project: ร้านอัญมณีบน Meta Quest 3 (AR) + ระบบบรรจุอัญมณีลงถุงของขวัญอัตโนมัติ ด้วย Dobot MG400 และ Arduino UNO
-โจทย์ฉบับเต็มอยู่ที่ [`Docs/brief/`](Docs/brief/)
+CPE494 Class Project: a jewelry store on Meta Quest 3 (AR) + a system that automatically packs gems into gift bags with a Dobot MG400 and an Arduino UNO
+The full brief is in [`Docs/brief/`](Docs/brief/)
 
-## โครงสร้าง (monorepo)
+## Structure (monorepo)
 
 ```
 .
-├── Unity/JewelryShop/   Unity project บน Meta Quest 3: หน้าร้าน AR (4a) + บังคับแขนกลทางไกล (4b)
-├── Dobot/               Python บน PC: ตัวกลางสั่งงาน (ADR-0001) + ควบคุม MG400 ผ่าน TCP/IP
-├── UNO/                 Arduino UNO firmware: สายพาน, เซนเซอร์, Bag Closer (ADR-0004, ADR-0005)
+├── Unity/JewelryShop/   Unity project on Meta Quest 3: AR storefront (4a) + remote arm control (4b)
+├── Dobot/               Python on the PC: hub (ADR-0001) + MG400 control over TCP/IP
+├── UNO/                 Arduino UNO firmware: conveyor, sensors, Bag Closer (ADR-0004, ADR-0005)
 ├── Docs/
-│   ├── brief/           โจทย์จากอาจารย์ (PDF) + สรุป
-│   └── adr/             บันทึกการตัดสินใจ (Architecture Decision Records)
-└── .claude/skills/      skills ของ Claude Code (ดูหัวข้อด้านล่าง)
+│   ├── brief/           Brief from the instructor (PDF) + summary
+│   └── adr/             Decision records (Architecture Decision Records)
+└── .claude/skills/      Claude Code skills (see the section below)
 ```
 
-## ทีมและการแบ่งงาน
+## Team and division of work
 
-| สมาชิก | ฝ่าย | หน้าที่ | โฟลเดอร์หลัก |
+| Member | Side | Role | Main folders |
 |---|---|---|---|
-| Heart | Software | VR / AR บน Meta Quest 3 ใน Unity | `Unity/` |
-| Focus | Hardware | Dobot MG400 และ Arduino UNO | `Dobot/`, `UNO/` |
-| Tangmo | Hardware | Dobot MG400 และ Arduino UNO | `Dobot/`, `UNO/` |
-| Taxi | Design | ออกแบบร้าน Jewelry | `Unity/` (scene, assets) |
-| Earth | 3D / Support | โมเดล 3D ของสถานี Dobot และชิ้นส่วนประกอบ, ซัพพอร์ตทีม | — |
+| Heart | Software | VR / AR on Meta Quest 3 in Unity | `Unity/` |
+| Focus | Hardware | Dobot MG400 and Arduino UNO | `Dobot/`, `UNO/` |
+| Tangmo | Hardware | Dobot MG400 and Arduino UNO | `Dobot/`, `UNO/` |
+| Taxi | Design | Designs the jewelry store | `Unity/` (scene, assets) |
+| Earth | 3D / Support | 3D models of the Dobot station and its parts, team support | - |
 
-กลุ่มมี 5 คน จึงไม่ต้องทำ Digital Twin (โจทย์ข้อ 7 บังคับเฉพาะกลุ่ม 6 คนขึ้นไป)
+The group has 5 members, so no Digital Twin is needed (brief item 7 requires it only for groups of 6 or more)
 
-## วิธีทำงาน (ทุกคนทำแบบนี้)
+## How we work (everyone does it this way)
 
-**ห้าม push เข้า `main` ตรง ๆ** ทุกงานแตก branch แล้ว merge ผ่าน PR เท่านั้น กันงานชนกัน (merge conflict) และกัน `main` พัง
+**Never push to `main` directly.** Every piece of work gets a branch and merges through a PR only, to avoid merge conflicts and keep `main` from breaking.
 
-### 1. ก่อนเริ่มงาน
+### 1. Before starting
 
-ครั้งแรกในเครื่องใหม่: `git lfs install` ก่อน clone (ไฟล์ asset อย่าง `.fbx`, `.png`, `.wav` เก็บผ่าน Git LFS ดู `.gitattributes`) ถ้า clone ไปก่อนแล้ว texture ขึ้นสีชมพู ให้รัน `git lfs pull`
+First time on a new machine: run `git lfs install` before cloning (asset files such as `.fbx`, `.png`, `.wav` are stored through Git LFS, see `.gitattributes`). If you cloned first and textures show up pink, run `git lfs pull`.
 
 ```powershell
 git switch main
 git pull
-git switch -c <ประเภท>/<เรื่องสั้น ๆ>
+git switch -c <type>/<short-topic>
 ```
 
-ชื่อ branch: `feat/…` ของใหม่, `fix/…` แก้บั๊ก, `docs/…` เอกสาร, `chore/…` งานจุกจิก เช่น `feat/012-03-order-builder`
-(ถ้าทำตาม ticket ให้ใส่เลข ticket ไว้ในชื่อ)
+Branch names: `feat/…` new work, `fix/…` bug fixes, `docs/…` documentation, `chore/…` small chores, e.g. `feat/012-03-order-builder`
+(when working from a ticket, put the ticket number in the name)
 
-### 2. ระหว่างทำงาน (กับ Claude Code)
+### 2. While working (with Claude Code)
 
-| ขั้น | พิมพ์ใน Claude Code | ได้อะไร |
+| Stage | Type in Claude Code | What you get |
 |---|---|---|
-| 1. คิดงานใหม่ | `/grill-with-docs` (หรือ `/grill-me`) | Claude ซักจนแนวคิดชัด บันทึก ADR / glossary |
-| 2. เขียน spec | `/to-spec` | issue `NNN spec: …` บน GitHub |
-| 3. แตก ticket | `/to-tickets` | issue `NNN-MM ticket: …` ติด `ready-for-agent` + `area:unity/dobot/uno` |
-| 4. ลงมือทำ | `/grab-ticket <เลข issue>` | Claude สรุปความเข้าใจ ticket ให้ยืนยัน (ถามเพิ่มถ้าไม่ชัด) แล้วส่ง Role ประจำสายไปเขียนโค้ด + เทสต์ (tdd) |
-| 5. รีวิว | `/code-review` | รีวิวทุกครั้งที่มีการแก้ ไม่ว่าจะเล็กแค่ไหน (`grab-ticket` รันให้แล้ว แต่งานที่แก้เองต้องสั่งเอง) |
+| 1. Think through new work | `/grill-with-docs` (or `/grill-me`) | Claude grills you until the idea is clear and records ADRs / glossary |
+| 2. Write the spec | `/to-spec` | An `NNN spec: …` issue on GitHub |
+| 3. Split into tickets | `/to-tickets` | `NNN-MM ticket: …` issues labeled `ready-for-agent` + `area:unity/dobot/uno` |
+| 4. Implement | `/grab-ticket <issue number>` | Claude summarizes its understanding of the ticket for you to confirm (asking more if unclear), then dispatches the Role for that area to write code + tests (tdd) |
+| 5. Review | `/code-review` | Review after every change, however small (`grab-ticket` already runs it, but work you edit yourself needs you to run it) |
 
-- งานเล็ก/งานจุกจิก (แก้คำผิด, เปลี่ยนค่าคงที่) ข้ามขั้น 1–3 ได้ แต่ **ห้ามข้ามขั้น 5**
-- `/clear` ระหว่าง ticket แต่ละใบ จะได้เริ่มใหม่สะอาด ๆ
-- งาน Unity ต้องผ่าน Test Runner ทั้ง EditMode และ PlayMode ก่อนเปิด PR (ดู [`Docs/unity/TESTING.md`](Docs/unity/TESTING.md))
-- Claude แก้แค่ไฟล์ในเครื่อง ส่วนที่ต้องใช้คน (ต่อสายใน Inspector, รันกับ MG400/Arduino ตัวจริง) Claude จะบอกเป็นงานให้คนทำ
+- For small or chore work (typo fixes, changing a constant) you may skip stages 1-3, but **never skip stage 5**
+- `/clear` between tickets so each one starts clean
+- Unity work must pass the Test Runner in both EditMode and PlayMode before opening a PR (see [`Docs/unity/TESTING.md`](Docs/unity/TESTING.md))
+- Claude only edits local files; anything that needs a human (wiring in the Inspector, running against a real MG400/Arduino) Claude hands back as a task for you
 
-### 3. ส่งงาน
+### 3. Handing off the work
 
-พอ `code-review` ผ่าน Claude จะจบงานด้วยบล็อก **Handoff**: เขียน commit message ไว้ที่ `.git/COMMIT_MSG` และ PR body (skill `pr`) ไว้ที่ `.git/PR_BODY.md` แล้วพิมพ์คำสั่ง PowerShell ชุดเดียว (`git switch -c` → `git add` ทีละไฟล์ → `git commit -F` → `git push -u` → `gh pr create --label … --body-file`) ให้คนตรวจแล้ว copy ไปรันเอง Claude ไม่ commit หรือ push เอง (กติกาเต็มอยู่ใน `CLAUDE.md` หัวข้อ GitHub pen)
+Once `code-review` passes, Claude ends the work with a **Handoff** block: it writes the commit message to `.git/COMMIT_MSG` and the PR body (skill `pr`) to `.git/PR_BODY.md`, then prints one PowerShell command set (`git switch -c` → `git add` file by file → `git commit -F` → `git push -u` → `gh pr create --label … --body-file`) for a human to check, copy and run. Claude does not commit or push itself (full rules are in `CLAUDE.md`, section GitHub pen)
 
-- ไฟล์ที่ Unity มักแก้เองและ**ไม่ควร** commit ถ้าไม่ได้ตั้งใจ: `.vscode/`, `ProjectSettings/*.asset`, `Assets/Settings/*.asset`, `Assets/InitTestScene*.unity`
-- ใน PR: แนะนำให้เพื่อนดูก่อน merge, ถ้าขึ้น conflict ให้ `git pull origin main` ใน branch ตัวเองแล้วแก้ก่อน
+- Files Unity often changes by itself and that you should **not** commit unless you meant to: `.vscode/`, `ProjectSettings/*.asset`, `Assets/Settings/*.asset`, `Assets/InitTestScene*.unity`
+- In a PR: have a teammate look before merging; if a conflict appears, run `git pull origin main` in your own branch and fix it first
 
-### 4. หลัง merge
+### 4. After merging
 
 ```powershell
 git switch main
 git pull
-git branch -d <ชื่อ branch>
+git branch -d <branch name>
 ```
 
-## ทำงานกับ Claude Code
+## Working with Claude Code
 
-Workflow เต็มอยู่ใน [`CLAUDE.md`](CLAUDE.md): `grill-with-docs` / `grill-me` → `to-spec` → `to-tickets` → `grab-ticket` → `code-review` (รันทุกครั้งที่มีการแก้ ไม่ว่าจะเล็กแค่ไหน)
+The full workflow is in [`CLAUDE.md`](CLAUDE.md): `grill-with-docs` / `grill-me` → `to-spec` → `to-tickets` → `grab-ticket` → `code-review` (run after every change, however small)
 
-| Skill | ใช้เมื่อ |
+| Skill | Use when |
 |---|---|
-| `grill-with-docs` / `grill-me` | ซักแนวคิดก่อนเริ่มงาน (บันทึก ADR / glossary) |
-| `to-spec` → `to-tickets` | เขียน spec → แตกเป็น ticket ที่ติด `ready-for-agent` + `area:` |
-| `grab-ticket` | grill check ความเข้าใจ ticket แล้วส่ง Role sub-agent ไปทำ |
-| `pick-role` | แนะนำ Role + model ให้ ticket (`grab-ticket` เรียกให้เอง) |
-| `coder` | กฎประจำของการเขียนโค้ดในแต่ละโฟลเดอร์ (Role โหลดให้เอง) |
-| `code-review` | รีวิว diff ทุกรอบ |
-| `domain-modeling` | บันทึก ADR ลง `Docs/adr/` |
+| `grill-with-docs` / `grill-me` | Grilling an idea before starting work (records ADRs / glossary) |
+| `to-spec` → `to-tickets` | Write a spec → split it into tickets labeled `ready-for-agent` + `area:` |
+| `grab-ticket` | Grill-check understanding of a ticket, then dispatch a Role sub-agent to do it |
+| `pick-role` | Recommends a Role + model for a ticket (`grab-ticket` calls it automatically) |
+| `coder` | Standing rules for writing code in each folder (the Role loads it itself) |
+| `code-review` | Reviews the diff every round |
+| `domain-modeling` | Records ADRs into `Docs/adr/` |
 
-Role (sub-agent ประจำสาย) อยู่ใน [`.claude/agents/`](.claude/agents/): `general-coder-unity`, `general-coder-dobot`, `general-coder-uno`
+Roles (per-area sub-agents) live in [`.claude/agents/`](.claude/agents/): `general-coder-unity`, `general-coder-dobot`, `general-coder-uno`
 
-เทสต์ Unity: ดู [`Docs/unity/TESTING.md`](Docs/unity/TESTING.md) (Test Runner: EditMode + PlayMode)
+Unity tests: see [`Docs/unity/TESTING.md`](Docs/unity/TESTING.md) (Test Runner: EditMode + PlayMode)
 
-**กติกา:** คนถือ **GitHub pen** (commit / push / PR / merge — ห้าม push เข้า `main` ตรง), **editor pen** (Inspector, จัดวาง scene) และ **robot pen** (รันโค้ดกับ MG400 / Arduino ตัวจริง)
+**Rules:** humans hold the **GitHub pen** (commit / push / PR / merge, never push directly to `main`), the **editor pen** (Inspector, laying out scenes) and the **robot pen** (running code against the real MG400 / Arduino)

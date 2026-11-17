@@ -2,17 +2,17 @@
 status: proposed
 ---
 
-# ใช้ PC (Python) เป็นตัวกลางสั่งงานระหว่าง Quest, MG400 และ Arduino
+# Use a PC (Python) as the hub between the Quest, MG400 and Arduino
 
-Quest 3 ไม่ได้คุยกับ MG400 หรือ Arduino โดยตรง แต่ส่ง Order (รายการ Cut + Color) และคำสั่ง Teleop ไปที่โปรแกรม Python บน PC ผ่าน Wi-Fi (WebSocket/MQTT) จากนั้น PC จะสั่ง MG400 ผ่าน TCP/IP (Dobot SDK: พอร์ต 29999 dashboard, 30003 motion, 30004 feedback) และสั่ง Arduino ผ่าน Serial (USB) เหตุผลคือ Unity บน Android/Quest ต่อ Serial ไม่ได้ ขณะที่ Dobot SDK มีของ Python อยู่แล้ว และ Packing Sequence ([ADR-0005](0005-paper-gift-bag.md)) ควรอยู่ใน state machine ที่เดียว ไม่ควรกระจายไปหลายเครื่อง
+The Quest 3 does not talk to the MG400 or the Arduino directly. It sends the Order (a list of Cut + Color) and Teleop commands to a Python program on a PC over Wi-Fi (WebSocket/MQTT). The PC then drives the MG400 over TCP/IP (Dobot SDK: port 29999 dashboard, 30003 motion, 30004 feedback) and the Arduino over Serial (USB). The reasons: Unity on Android/Quest cannot open a Serial connection, the Dobot SDK already exists for Python, and the Packing Sequence ([ADR-0005](0005-paper-gift-bag.md)) should live in one state machine rather than be spread across several machines.
 
 ## Considered Options
 
-- **Quest ต่อ MG400 ตรงผ่าน TCP:** ทำได้ แต่ Quest ยังต่อ Arduino ไม่ได้ และ logic ความปลอดภัยจะไปอยู่ในแว่นที่อาจหลุดการเชื่อมต่อได้
-- **ให้ MG400 สั่ง Arduino ผ่าน DI/DO:** ใช้ได้กับสัญญาณง่ายๆ แต่ debug ยากและส่งข้อมูลได้น้อย
+- **Quest connects to the MG400 directly over TCP:** possible, but the Quest still cannot reach the Arduino, and the safety logic would sit in a headset that can drop its connection.
+- **Let the MG400 command the Arduino over DI/DO:** works for simple signals, but is harder to debug and carries little data.
 
 ## Consequences
 
-- ระหว่างสาธิตต้องเปิด PC ไว้ และทุกเครื่องต้องอยู่ LAN เดียวกัน (ต้องมีเราเตอร์)
-- PC เป็นจุดเดียวที่บังคับใช้ขอบเขตความปลอดภัยของแขนกล เช่น workspace limit, Z ขั้นต่ำ, จำกัดความเร็ว
-- ใช้ข้อมูลจากพอร์ต 30004 ทำ Digital Twin ใน Unity ต่อได้ (ถ้ากลุ่มมี 6 คน)
+- The PC must stay on during the demo, and every device must be on the same LAN (a router is required).
+- The PC is the single place that enforces the arm's safety limits, such as workspace limits, minimum Z and a speed cap.
+- Data from port 30004 can later feed a Digital Twin in Unity (if the group has 6 members).

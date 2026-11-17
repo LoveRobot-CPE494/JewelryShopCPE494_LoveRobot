@@ -2,19 +2,19 @@
 status: accepted
 ---
 
-# บังคับแขนกลทางไกลด้วยคอนโทรลเลอร์ Quest 3 ไม่ใช้ hand tracking
+# Teleoperate the arm with the Quest 3 controllers, not hand tracking
 
-ในโหมดบำรุงรักษาทางไกล (ข้อ 4b) ผู้บังคับใช้คอนโทรลเลอร์ที่มากับ Quest 3 เพราะ hand tracking ใช้ยากและไม่นิ่ง ส่วนคอนโทรลเลอร์ tracking แม่นกว่าและมีปุ่มจริงไว้ทำ deadman และหยุดฉุกเฉิน ตำแหน่งคอนโทรลเลอร์ยังเป็นตำแหน่งมือของผู้บังคับ จึงยังเข้าเกณฑ์ "ตำแหน่งการหยิบเป็นไปตามตำแหน่งมือ" (10 คะแนน)
+In remote maintenance mode (item 4b) the operator uses the controllers that ship with the Quest 3, because hand tracking is hard to use and unstable. Controller tracking is more accurate and has physical buttons for the deadman and the emergency stop. The controller position is still the operator's hand position, so it still meets the criterion "the pick position follows the hand position" (10 points).
 
-| คอนโทรลเลอร์ | MG400 |
+| Controller | MG400 |
 |---|---|
-| ตำแหน่ง (x, y, z) | ตำแหน่งปลายแขน (หลัง calibration) |
-| กดค้าง Grip | เปิดให้แขนเคลื่อนตาม ปล่อยแล้วหยุด (deadman) |
-| Trigger | ดูด / ปล่อย |
-| A / B | Home / หยุดฉุกเฉิน |
-| Thumbstick | ขยับขึ้นลงทีละนิด |
+| Position (x, y, z) | End-effector position (after calibration) |
+| Hold Grip | Enables the arm to follow; release and it stops (deadman) |
+| Trigger | Suck / release |
+| A / B | Home / emergency stop |
+| Thumbstick | Nudge up and down in small steps |
 
 ## Consequences
 
-- **ตัดสินแล้ว:** ข้อ 4a.i (หน้าร้าน) ที่เขียนว่า "เปลี่ยนมุมมองตามการขยับของ**มือ**ผู้ซื้อ" ทีมตีความว่ามือคือคอนโทรลเลอร์ Quest 3 ดังนั้น Storefront ก็ใช้คอนโทรลเลอร์เหมือนกัน
-- หลังดูด Dropped Gem ขึ้นมาแล้ว Maintenance Operator ใช้ Teleop วางคืนลง Stock Slot ที่ถูกต้องเอง ระบบไม่ต้องรู้ Cut + Color ของชิ้นนั้น (ถ้ามีเวลาอาจเพิ่มการวางคืนอัตโนมัติทีหลัง)
+- **Decided:** item 4a.i (storefront) says "the view changes with the movement of the buyer's **hand**". The team reads "hand" as the Quest 3 controller, so the Storefront also uses controllers.
+- After a Dropped Gem is sucked up, the Maintenance Operator uses Teleop to put it back into the correct Stock Slot themselves. The system does not need to know that piece's Cut + Color (automatic put-back may be added later if time allows).

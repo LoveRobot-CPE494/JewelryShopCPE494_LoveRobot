@@ -2,10 +2,10 @@
 status: accepted
 ---
 
-# Staff Call เปิดคลิปที่อัดไว้ก่อน ยังไม่ทำคุยสด
+# Staff Call plays a pre-recorded clip; live chat is not built yet
 
-brief ข้อ 4a.iii ต้องการภาพและเสียงพนักงาน "แบบเรียลไทม์" และให้คะแนน "คุยกับพนักงานได้จริง" (5 คะแนน) แต่ทีมตัดสินใจให้ Staff Call เปิดคลิปภาพและเสียงของ Staff ที่อัดไว้ล่วงหน้าก่อน ถ้ามีเวลาค่อยเพิ่มการคุยสด
+Brief item 4a.iii wants the staff member's video and audio "in real time" and awards points for "actually talking with the staff" (5 points). The team decided that Staff Call first plays a pre-recorded video and audio clip of Staff, and will add live chat if time allows.
 
 ## Consequences
 
-- เสี่ยงไม่ได้ 5 คะแนนของข้อ 4a.iii ถ้ากรรมการถามสด
+- Risk of losing the 5 points of item 4a.iii if the examiners test it live.
