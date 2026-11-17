@@ -51,12 +51,28 @@ The catalog facts of one Cut + Color, such as its name, carat and clarity, shown
 _Avoid_: gem info, spec sheet, stats
 
 **Checkout**:
-The step where the Customer pays for an Order by tapping a card on a virtual terminal
+The step where the Customer pays for an Order by tapping the Payment Card on the Card Terminal. It is approved only once the Hub has accepted the Order
 _Avoid_: payment, paying
 
 **Checkout Counter**:
 The spot in the Storefront where the Checkout takes place
 _Avoid_: payment area, cashier
+
+**Price**:
+The fixed amount in baht of one Gem of a given Cut + Color. An Order's total is the sum of the Prices of its Gems
+_Avoid_: cost, value
+
+**Payment Card**:
+The virtual card on the Checkout Counter that the Customer picks up and taps to pay. It is never declined for its amount
+_Avoid_: credit card, card (alone), wallet
+
+**Card Terminal**:
+The virtual device on the Checkout Counter that shows the Order's total and takes the tap of the Payment Card
+_Avoid_: POS, reader, payment machine, EDC
+
+**Receipt**:
+The slip the Card Terminal gives the Customer after an approved Checkout, listing the Order's Gems, their Prices and its total
+_Avoid_: bill, invoice, slip
 
 **Staff**:
 The real person who serves the Customer live from the Staff Console, appearing in the Storefront as the Staff Avatar. Does not control the robot arm
