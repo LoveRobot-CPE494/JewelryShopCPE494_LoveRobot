@@ -4,7 +4,7 @@ status: proposed
 
 # ใช้ PC (Python) เป็นตัวกลางสั่งงานระหว่าง Quest, MG400 และ Arduino
 
-Quest 3 ไม่ได้คุยกับ MG400 หรือ Arduino โดยตรง แต่ส่งออเดอร์ (ทรง + สี) และคำสั่งบังคับทางไกลไปที่โปรแกรม Python บน PC ผ่าน Wi-Fi (WebSocket/MQTT) จากนั้น PC จะสั่ง MG400 ผ่าน TCP/IP (Dobot SDK: พอร์ต 29999 dashboard, 30003 motion, 30004 feedback) และสั่ง Arduino ผ่าน Serial (USB) เหตุผลคือ Unity บน Android/Quest ต่อ Serial ไม่ได้ ขณะที่ Dobot SDK มีของ Python อยู่แล้ว และลำดับงานบรรจุกล่อง (สายพาน → หยุดกล่อง → หยิบ → ปิดฝา → ติดโบว์ → ส่งออก) ควรอยู่ใน state machine ที่เดียว ไม่ควรกระจายไปหลายเครื่อง
+Quest 3 ไม่ได้คุยกับ MG400 หรือ Arduino โดยตรง แต่ส่ง Order (รายการ Cut + Color) และคำสั่ง Teleop ไปที่โปรแกรม Python บน PC ผ่าน Wi-Fi (WebSocket/MQTT) จากนั้น PC จะสั่ง MG400 ผ่าน TCP/IP (Dobot SDK: พอร์ต 29999 dashboard, 30003 motion, 30004 feedback) และสั่ง Arduino ผ่าน Serial (USB) เหตุผลคือ Unity บน Android/Quest ต่อ Serial ไม่ได้ ขณะที่ Dobot SDK มีของ Python อยู่แล้ว และ Packing Sequence ([ADR-0005](0005-paper-gift-bag.md)) ควรอยู่ใน state machine ที่เดียว ไม่ควรกระจายไปหลายเครื่อง
 
 ## Considered Options
 

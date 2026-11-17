@@ -1,6 +1,6 @@
 # UNO know-how (`UNO/`, Arduino UNO firmware)
 
-The UNO owns the conveyor, the box sensor, the lid servo and the bow mechanism (ADR-0004). It obeys
+The UNO owns the conveyor, the bag sensor and the Bag Closer servo (ADR-0004, ADR-0005). It obeys
 the PC over Serial; it never talks to the MG400 directly.
 
 - **Build check:** `arduino-cli compile --fqbn arduino:avr:uno UNO/<sketch>`. Uploading to the board
