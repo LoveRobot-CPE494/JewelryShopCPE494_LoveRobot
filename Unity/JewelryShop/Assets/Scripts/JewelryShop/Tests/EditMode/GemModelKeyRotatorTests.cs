@@ -11,6 +11,7 @@ namespace JewelryShop.Tests
         private GameObject _go;
         private GemModelKeyRotator _rotator;
         private Transform _attach;
+        private Transform _visual;
 
         [SetUp]
         public void SetUp()
@@ -18,6 +19,7 @@ namespace JewelryShop.Tests
             _go = new GameObject("rotator");
             _rotator = _go.AddComponent<GemModelKeyRotator>();
             _attach = new GameObject("attach").transform;
+            _visual = new GameObject("visual").transform;
         }
 
         [TearDown]
@@ -25,6 +27,7 @@ namespace JewelryShop.Tests
         {
             Object.DestroyImmediate(_go);
             Object.DestroyImmediate(_attach.gameObject);
+            Object.DestroyImmediate(_visual.gameObject);
         }
 
         private static void AssertAngle(Quaternion a, Quaternion b) => Assert.That(Quaternion.Angle(a, b), Is.LessThan(0.01f));
@@ -84,6 +87,56 @@ namespace JewelryShop.Tests
             _rotator.Step(_attach, true, true, new Vector2(10, 10), 120);
             _rotator.Step(_attach, false, false, Vector2.zero, 0);
             AssertAngle(_attach.localRotation, Quaternion.Euler(0, 20, 0));
+        }
+
+        [Test]
+        public void Step_WithVisual_VisualTurnsLikeAttach()
+        {
+            var start = Quaternion.Euler(0, 40, 0);
+            _visual.localRotation = start;
+            _rotator.Step(_attach, true, true, new Vector2(10, 10), 120, _visual);
+            AssertAngle(_visual.localRotation, Quaternion.Euler(3f, -3f, 30f) * start);
+            AssertAngle(_visual.localRotation * Quaternion.Inverse(start), _attach.localRotation);
+        }
+
+        [Test]
+        public void Step_AltReleasedWhileHolding_VisualKeepsRotation()
+        {
+            _rotator.Step(_attach, true, true, new Vector2(10, 0), 0, _visual);
+            var turned = _visual.localRotation;
+            _rotator.Step(_attach, true, false, Vector2.zero, 0, _visual);
+            AssertAngle(_visual.localRotation, turned);
+        }
+
+        [Test]
+        public void Step_GemModelReleased_ResetsVisualRotation()
+        {
+            _visual.localRotation = Quaternion.Euler(0, 20, 0);
+            _rotator.Step(_attach, true, false, Vector2.zero, 0, _visual);
+            _rotator.Step(_attach, true, true, new Vector2(10, 10), 120, _visual);
+            _rotator.Step(_attach, false, false, Vector2.zero, 0, _visual);
+            AssertAngle(_visual.localRotation, Quaternion.Euler(0, 20, 0));
+        }
+
+        [Test]
+        public void Step_NoVisual_OnlyAttachTurns()
+        {
+            Assert.DoesNotThrow(() => _rotator.Step(_attach, true, true, new Vector2(10, 0), 0, null));
+            AssertAngle(_attach.localRotation, Quaternion.Euler(0, -3f, 0));
+        }
+
+        [Test]
+        public void ReleaseHold_MidHold_RestoresBothAndNextGrabStartsFresh()
+        {
+            _rotator.Step(_attach, true, true, new Vector2(10, 10), 120, _visual);
+            _rotator.ReleaseHold(_attach, _visual);
+            AssertAngle(_attach.localRotation, Quaternion.identity);
+            AssertAngle(_visual.localRotation, Quaternion.identity);
+
+            _visual.localRotation = Quaternion.Euler(0, 20, 0);
+            _rotator.Step(_attach, true, false, Vector2.zero, 0, _visual);
+            _rotator.Step(_attach, false, false, Vector2.zero, 0, _visual);
+            AssertAngle(_visual.localRotation, Quaternion.Euler(0, 20, 0));
         }
 
         [Test]
