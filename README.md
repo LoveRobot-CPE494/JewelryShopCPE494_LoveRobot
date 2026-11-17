@@ -60,7 +60,7 @@ git switch -c <ประเภท>/<เรื่องสั้น ๆ>
 
 ### 3. ส่งงาน
 
-พอ `code-review` ผ่าน Claude จะจบงานด้วยบล็อก **Handoff**: เขียน commit message ไว้ที่ `.git/COMMIT_MSG` และ PR body (skill `pr`) ไว้ที่ `.git/PR_BODY.md` แล้วพิมพ์คำสั่ง PowerShell ชุดเดียว (`git switch -c` → `git add` ทีละไฟล์ → `git commit -F` → `git push -u` → `gh pr create --body-file`) ให้คนตรวจแล้ว copy ไปรันเอง Claude ไม่ commit หรือ push เอง (กติกาเต็มอยู่ใน `CLAUDE.md` หัวข้อ GitHub pen)
+พอ `code-review` ผ่าน Claude จะจบงานด้วยบล็อก **Handoff**: เขียน commit message ไว้ที่ `.git/COMMIT_MSG` และ PR body (skill `pr`) ไว้ที่ `.git/PR_BODY.md` แล้วพิมพ์คำสั่ง PowerShell ชุดเดียว (`git switch -c` → `git add` ทีละไฟล์ → `git commit -F` → `git push -u` → `gh pr create --label … --body-file`) ให้คนตรวจแล้ว copy ไปรันเอง Claude ไม่ commit หรือ push เอง (กติกาเต็มอยู่ใน `CLAUDE.md` หัวข้อ GitHub pen)
 
 - ไฟล์ที่ Unity มักแก้เองและ**ไม่ควร** commit ถ้าไม่ได้ตั้งใจ: `.vscode/`, `ProjectSettings/*.asset`, `Assets/Settings/*.asset`, `Assets/InitTestScene*.unity`
 - ใน PR: แนะนำให้เพื่อนดูก่อน merge, ถ้าขึ้น conflict ให้ `git pull origin main` ใน branch ตัวเองแล้วแก้ก่อน

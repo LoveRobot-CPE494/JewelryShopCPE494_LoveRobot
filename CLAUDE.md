@@ -43,8 +43,10 @@ A **Role** is a subagent in `.claude/agents/` (the only list), named
   when already on this change's branch),
   `git add` naming each file of this change (the tree often holds unrelated edits),
   `git commit -F .git/COMMIT_MSG`, `git push -u origin <branch>`,
-  `gh pr create --base main --title '<title>' --body-file .git/PR_BODY.md` (single quotes: PowerShell
-  expands `$` and mangles `"` inside double quotes).
+  `gh pr create --base main --title '<title>' --label '<labels>' --body-file .git/PR_BODY.md`
+  (single quotes: PowerShell expands `$` and mangles `"` inside double quotes). Labels,
+  comma-separated: one of `bug` / `enhancement` / `documentation`, plus every `area:` label
+  (`area:unity`, `area:dobot`, `area:uno`) whose folder the change touches.
 - **Editor pen:** Inspector wiring, placing or connecting scene/prefab elements.
 - **Robot pen:** running code against the real MG400 or a real Arduino.
 
