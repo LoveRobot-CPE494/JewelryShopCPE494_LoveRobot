@@ -66,6 +66,18 @@ _Avoid_: NPC, bot, character
 The Staff's workstation outside the Storefront, from which they serve a Customer live
 _Avoid_: staff app, admin panel, dashboard
 
+**Staff Room**:
+The back room behind the Storefront, out of the Customer's sight, where the Staff Avatar waits while no Staff Call is being served
+_Avoid_: back office, backstage
+
+**Staff Door**:
+The door between the Storefront and the Staff Room
+_Avoid_: back door
+
+**Customer Avatar**:
+The 3D figure that stands in for the Customer on the Staff Console, seen only by the Staff
+_Avoid_: player model, buyer avatar
+
 **Staff Call**:
 A Customer's request for the Staff to come and serve them live in the Storefront
 _Avoid_: call button, help
