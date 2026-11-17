@@ -1,3 +1,10 @@
+# Line endings: normalize all text to LF in the index AND the working tree, whatever
+# core.autocrlf says (Git for Windows defaults it to true). Unity always writes LF, so a
+# CRLF checkout makes every Unity re-save look modified with an empty diff (#28).
+# Keep this block ABOVE the LFS rules: later lines win, and the LFS lines set -text on binaries.
+# If a Windows-only script (.bat, .cmd, .ps1) is ever added, give it an `eol=crlf` override.
+* text=auto eol=lf
+
 # Unity binary assets go through Git LFS (GitHub rejects files over 100 MB).
 # Each teammate runs `git lfs install` once per machine.
 # Patterns are case-insensitive because Asset Store / Sketchfab packs often ship .PNG, .FBX.
