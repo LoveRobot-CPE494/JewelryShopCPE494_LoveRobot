@@ -1,5 +1,6 @@
 using System.Linq;
 using NUnit.Framework;
+using JewelryShop.Core;
 using JewelryShop.Storefront;
 using Unity.XR.CoreUtils;
 using UnityEditor;
@@ -78,6 +79,26 @@ namespace JewelryShop.Tests
                 Assert.That(g.GetComponent<XRGrabInteractable>(), Is.Not.Null, $"{g.parent.name}: XRGrabInteractable");
                 Assert.That(g.GetComponent<Rigidbody>(), Is.Not.Null, $"{g.parent.name}: Rigidbody");
             }
+        }
+
+        // Scene-wiring check on purpose: #76 asks the smoke test to catch an unwired position.
+        [Test]
+        public void GemModels_Wired_PointAtDistinctEntriesOfTheirOwnCut()
+        {
+            var keys = new System.Collections.Generic.List<GemKey>();
+            foreach (var g in Gems())
+            {
+                var model = g.GetComponent<GemModel>();
+                Assert.That(model, Is.Not.Null, $"{g.parent.name}: GemModel component");
+                Assert.That(model.TryGetKey(out var key), Is.True,
+                    $"{g.parent.name}: catalog entry wired (#76)");
+                // GemModel_Round / GemModel_Emerald: the mesh's Cut must match the entry's Cut.
+                var source = PrefabUtility.GetCorrespondingObjectFromSource(g.gameObject);
+                Assert.That(source?.name, Does.EndWith(key.Cut.ToString()),
+                    $"{g.parent.name}: {key} wired to a {source?.name}");
+                keys.Add(key);
+            }
+            Assert.That(keys.Distinct().Count(), Is.EqualTo(9), "9 distinct Cut + Color");
         }
 
         [Test]
