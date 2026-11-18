@@ -110,6 +110,15 @@ After any run, check `git status`: Unity sometimes rewrites tracked project file
 those incidental changes. A PlayMode run started from `unity-mcp` can leave an
 `Assets/InitTestScene<guid>.unity` (+ `.meta`) behind; delete it.
 
+## Vendored UniVRM packages ship without their tests
+
+`Packages/com.vrmc.gltf` and `Packages/com.vrmc.vrm` are embedded copies of UniVRM 0.131.4. Their
+upstream `Tests/` folders are deleted here (UniGLTF.Tests, UniHumanoid.Editor.Tests, VRM10.Tests,
+VrmLib.Tests, VRM10.MToon10.Tests): their sample models live outside the package, and one
+UniJSON test fails under the th-TH locale. Without them, Test Runner lists only `JewelryShop.Tests`.
+The `Editor/TestRunner/` utility in `com.vrmc.gltf` stays. **On a UniVRM upgrade, delete the
+`Tests/` folders again** (each with its `.meta`).
+
 ## When tests cannot run
 
 If neither B nor C works (Editor open and `unity-mcp` not connected), report **tests NOT run** and
