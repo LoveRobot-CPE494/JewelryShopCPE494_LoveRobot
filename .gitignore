@@ -73,3 +73,6 @@ desktop.ini
 
 # Local graphify knowledge graph (rebuilt by `git gpull`)
 graphify-out/
+
+# archify working output (drafts, visual-check screenshots); finished figures go in Docs/
+.archify/

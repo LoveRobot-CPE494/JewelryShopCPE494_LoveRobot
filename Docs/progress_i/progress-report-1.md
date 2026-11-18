@@ -26,6 +26,10 @@
 > 📷 **ใส่รูป 1.1**: ภาพปก/ภาพรวมโปรเจกต์: ภาพหน้าจอร้าน Storefront ใน Unity คู่กับรูปถ่ายแขน MG400 + สายพานจริง (ถ้ามี)
 > คำบรรยาย: "ภาพรวมระบบ: ร้านเสมือนบน Quest 3 และสถานีบรรจุอัญมณีจริง"
 
+![รูป 1.2 ภาพรวมการทำงาน](images/1-2-overview.png)
+
+*รูป 1.2: ภาพรวมการทำงานตั้งแต่ลูกค้าเลือกซื้อในร้านเสมือนจนได้ถุงของขวัญ (วาดด้วย archify; ต้นฉบับแบบโต้ตอบได้ที่ [`images/1-2-overview.html`](images/1-2-overview.html))*
+
 ---
 
 ## 2. สมาชิกและหน้าที่ (Job Description)
@@ -96,19 +100,9 @@ Docs/                โจทย์, ADR (บันทึกการตัด�
 
 ### 4.1 สถาปัตยกรรม
 
-```
-                  Wi-Fi (LAN)                       TCP/IP
- ┌──────────────┐  Order / Teleop  ┌─────────────┐ 29999/30003/30004 ┌────────┐
- │ Meta Quest 3 │ ───────────────▶ │  PC (Hub)   │ ────────────────▶ │ MG400  │──▶ Suction Cup, conveyor, bag sensor (I/O)
- │ (Storefront) │ ◀─────────────── │  Python     │                   └────────┘
- └──────┬───────┘   accept/reply   └──────┬──────┘
-        │ Netcode for GameObjects        │ Serial (USB)
-        │ (voice + Avatar pose)          ▼
- ┌──────▼────────┐                 ┌─────────────┐
- │ Staff Console │                 │ Arduino UNO │──▶ Bag Closer (servo)
- │ (Windows)     │                 └─────────────┘
- └───────────────┘
-```
+![รูป 4.1 แผนผังการเชื่อมต่อระหว่าง Quest 3, PC Hub, MG400, Arduino UNO และ Staff Console](images/4-1-architecture.png)
+
+*รูป 4.1: แผนผังการเชื่อมต่อระหว่าง Quest 3, PC Hub, MG400, Arduino UNO และ Staff Console (วาดด้วย archify; ต้นฉบับแบบโต้ตอบได้ที่ [`images/4-1-architecture.html`](images/4-1-architecture.html))*
 
 หลักการสำคัญ (อ้างอิง ADR ใน `Docs/adr/`):
 
@@ -116,9 +110,6 @@ Docs/                โจทย์, ADR (บันทึกการตัด�
 - **แบ่งหน้าที่ฮาร์ดแวร์ (ADR-0004)**: MG400 หยิบ-วาง + ดูด/ปล่อย และคุมสายพานกับเซนเซอร์หยุดถุงผ่าน I/O ของตัวเอง (สั่งจาก Python บน PC); Arduino UNO คุมแค่ servo ของ Bag Closer; ทั้งสองไม่สั่งกันเอง ทุกอย่างผ่าน PC → ทดสอบทีละระบบได้
 - **Staff Call ต่อตรง Quest ↔ Staff Console (ADR-0010)**: ใช้ Unity Netcode for GameObjects เพราะทั้งสองฝั่งเป็น Unity project เดียวกัน ซิงก์ Avatar และเสียงได้แทบไม่ต้องเขียนโค้ดเอง Hub ดูแลเฉพาะ Packing Station
 - **Checkout อนุมัติเมื่อ Hub รับ Order แล้วเท่านั้น (ADR-0012)**: "Approved" บนเครื่องรูดบัตรจึงหมายถึง Order ถูกส่งไปบรรจุจริง
-
-> 📷 **ใส่รูป 4.1**: วาดแผนผังสถาปัตยกรรมด้านบนใหม่ให้สวย (draw.io / Canva / Figma) แทนกล่องข้อความ
-> คำบรรยาย: "แผนผังการเชื่อมต่อระหว่าง Quest 3, PC Hub, MG400, Arduino UNO และ Staff Console"
 
 ### 4.2 ลำดับการทำงานเมื่อลูกค้าสั่งซื้อ (Packing Sequence)
 
@@ -128,8 +119,9 @@ Docs/                โจทย์, ADR (บันทึกการตัด�
 4. Hub สั่ง MG400 หยิบ Gem Piece จาก Stock Slot ที่ตรงกับ Cut + Color ทีละชิ้นด้วยหัวดูด ใส่ลงถุง
 5. Hub สั่ง Arduino ให้ Bag Closer (servo) ปิดปากถุง แล้วสั่งสายพานผ่าน MG400 ส่งถุงไปปลายทาง
 
-> 📷 **ใส่รูป 4.2**: Flowchart ของ 5 ขั้นตอนข้างบน (กล่อง + ลูกศร)
-> คำบรรยาย: "Flowchart ลำดับการบรรจุหนึ่ง Order"
+![รูป 4.2 ลำดับการบรรจุหนึ่ง Order](images/4-2-packing-sequence.png)
+
+*รูป 4.2: ลำดับการสั่งงานระหว่าง Storefront, PC Hub, MG400 (สายพานและเซนเซอร์ผ่าน I/O) และ Arduino UNO ในการบรรจุหนึ่ง Order (วาดด้วย archify; ต้นฉบับแบบโต้ตอบได้ที่ [`images/4-2-packing-sequence.html`](images/4-2-packing-sequence.html))*
 
 ### 4.3 ระบบ Remote Maintenance (Teleop)
 
@@ -191,7 +183,12 @@ Docs/                โจทย์, ADR (บันทึกการตัด�
 
 ### 5.4 บอร์ดควบคุม Bag Closer (servo): **i-Duino R3B (UNO-compatible, ATmega328P)**
 
-[เติม: เปรียบเทียบกับ ESP32 / Arduino Mega / PLC ถ้าต้องการ, เหตุผลหลักคือ Serial ผ่าน USB กับ PC ง่าย และเป็นบอร์ดที่มีให้]
+เทียบเฉพาะ 2 ตัวที่ทีมมีอยู่จริง
+
+| ตัวเลือก | ข้อดี | ข้อเสีย | ผล |
+|---|---|---|---|
+| **i-Duino R3B (UNO-compatible)** | ต่อ PC ผ่าน USB Serial ได้ทันที (Hub สั่งด้วย Python ตาม ADR-0001), สั่ง servo ด้วย PWM ได้ตรงๆ ผ่าน Servo library, เขียน C++ ใน repo เดียวกันและมี CI build ให้แล้ว, เล็กและติดตั้งง่าย | ไม่ใช่อุปกรณ์เกรดอุตสาหกรรม, ไฟ logic 5V และ I/O น้อย, servo ต้องใช้ไฟเลี้ยงแยก | เลือก |
+| PLC | ทนทานและเชื่อถือได้แบบงานอุตสาหกรรม, I/O 24V ต่อเซนเซอร์อุตสาหกรรมได้ตรง | servo แบบ hobby ต้องการสัญญาณ PWM ซึ่ง PLC ทั่วไปต้องใช้ output ความเร็วสูงหรือโมดูลเสริม, ต่อกับ Python ต้องตั้ง Modbus/Serial เพิ่ม, เขียนด้วย ladder นอก repo ทำให้ทดสอบอัตโนมัติไม่ได้, ใหญ่และต้องใช้ไฟ 24V, เกินความจำเป็นสำหรับ servo ตัวเดียว | ไม่เลือก |
 
 ### 5.5 บรรจุภัณฑ์: **ถุงกระดาษ** แทนกล่อง (ADR-0005)
 
@@ -352,5 +349,6 @@ Docs/                โจทย์, ADR (บันทึกการตัด�
 3. ตัดสิน Q-02 (protocol Quest ↔ Hub) และ Q-04 (วิธี Teleop) แล้วแตก ticket
 4. ถ่ายวิดีโอสาธิตบางส่วน เฉพาะส่วนที่ทำเสร็จ (ยังไม่ใช่ demo ระบบเต็ม)
 
-> 📷 **ใส่รูป 10.1**: Gantt chart หรือตาราง timeline 18 พ.ย. – 11 ธ.ค. แบ่งตามส่วน (Unity / Hub / UNO / ทางกล)
-> คำบรรยาย: "แผนงานถึงวันนำเสนอ"
+![รูป 10.1 Gantt chart แผนงาน](images/10-1-gantt.png)
+
+*รูป 10.1: Gantt chart แผนงาน 11 พ.ย. ถึง 11 ธ.ค. 69 แยกตาม Unity / Hub / UNO / ทางกล / รวมระบบ + ส่งงาน (แก้วันที่ได้ใน [`images/10-1-gantt.py`](images/10-1-gantt.py))*

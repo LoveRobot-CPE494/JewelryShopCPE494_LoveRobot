@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": { "title": "How the Shop Works", "output": ".archify/workflow-shop-overview-en-20261118-105318/shop-overview.html", "quality_profile": "showcase", "locale": "en" },
+  "lanes": [
+    { "id": "customer", "label": "Customer (Quest 3)" },
+    { "id": "station", "label": "Packing Station" },
+    { "id": "staff", "label": "Staff", "variant": "exception" }
+  ],
+  "mainPath": ["browse", "inspect", "pay", "convey", "pick", "seal"],
+  "nodes": [
+    { "id": "browse", "lane": "customer", "col": 0, "type": "frontend", "label": "Browse the shop", "sublabel": "virtual store in VR" },
+    { "id": "inspect", "lane": "customer", "col": 1, "type": "frontend", "label": "Inspect a gem", "sublabel": "into the Order Tray" },
+    { "id": "pay", "lane": "customer", "col": 2, "type": "frontend", "label": "Pay by card", "sublabel": "Card Terminal" },
+    { "id": "convey", "lane": "station", "col": 3, "type": "backend", "label": "Conveyor brings bag", "sublabel": "stops at the arm" },
+    { "id": "pick", "lane": "station", "col": 4, "type": "backend", "label": "Arm picks real gem", "sublabel": "by Cut + Color" },
+    { "id": "seal", "lane": "station", "col": 5, "type": "backend", "label": "Seal the bag", "sublabel": "out to conveyor end" },
+    { "id": "call", "lane": "staff", "col": 1, "type": "external", "label": "Live chat", "sublabel": "Staff Call" },
+    { "id": "teleop", "lane": "staff", "col": 4, "type": "security", "label": "Drive arm with Quest", "sublabel": "Teleop: recover gem" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "browse", "to": "inspect" },
+    { "id": "e2", "from": "inspect", "to": "pay" },
+    { "id": "e3", "from": "pay", "to": "convey", "label": "send Order", "variant": "emphasis" },
+    { "id": "e4", "from": "convey", "to": "pick" },
+    { "id": "e5", "from": "pick", "to": "seal" },
+    { "id": "e6", "from": "inspect", "to": "call", "label": "ask for help", "variant": "dashed", "role": "branch" },
+    { "id": "e7", "from": "pick", "to": "teleop", "label": "gem dropped", "variant": "security", "role": "error" }
+  ]
+}
