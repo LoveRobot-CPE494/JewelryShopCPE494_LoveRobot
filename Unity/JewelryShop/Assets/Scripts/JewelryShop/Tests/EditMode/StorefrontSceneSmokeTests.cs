@@ -128,5 +128,16 @@ namespace JewelryShop.Tests
                 .SelectMany(r => r.GetComponentsInChildren<XRInteractionSimulator>(true)).Single();
             Assert.That(sim.usePointAndClick, Is.True, "Point And Click stays on (#59)");
         }
+
+        [Test]
+        public void Simulator_HasAutoOffPointingAtIt()
+        {
+            var sim = _scene.GetRootGameObjects()
+                .SelectMany(r => r.GetComponentsInChildren<XRInteractionSimulator>(true)).Single();
+            var autoOff = sim.GetComponent<SimulatorAutoOff>();
+            Assert.That(autoOff, Is.Not.Null, "SimulatorAutoOff on the Simulator GameObject (#120)");
+            Assert.That(new SerializedObject(autoOff).FindProperty("_simulator").objectReferenceValue, Is.SameAs(sim),
+                "_simulator wired (#120)");
+        }
     }
 }

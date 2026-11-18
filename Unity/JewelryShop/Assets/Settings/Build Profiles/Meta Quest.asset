@@ -195,7 +195,7 @@ MonoBehaviour:
     - line: '|   androidApplicationEntry: 2'
     - line: '|   defaultIsNativeResolution: 1'
     - line: '|   macRetinaSupport: 1'
-    - line: '|   runInBackground: 0'
+    - line: '|   runInBackground: 1'
     - line: '|   callOnDisableOnAssetBundleUnload: 1'
     - line: '|   muteOtherAudioSources: 0'
     - line: '|   Prepare IOS For Recording: 0'
@@ -258,7 +258,10 @@ MonoBehaviour:
     - line: '|   visionOSBundleVersion: 1.0'
     - line: '|   tvOSBundleVersion: 1.0'
     - line: '|   bundleVersion: 0.1.0'
-    - line: '|   preloadedAssets: []'
+    - line: '|   preloadedAssets:'
+    - line: '|   - {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}'
+    - line: '|   - {fileID: -5507975920964373903, guid: 54b5f97654cf22c449a8ec52705b08e3, type: 2}'
+    - line: '|   - {fileID: 6633974990732385459, guid: fe43a397c4d57dc46b75461d7275fe58, type: 2}'
     - line: '|   metroInputSource: 0'
     - line: '|   wsaTransparentSwapchain: 0'
     - line: '|   xboxOneDisableKinectGpuReservation: 1'
@@ -289,11 +292,11 @@ MonoBehaviour:
     - line: '|   overrideDefaultApplicationIdentifier: 1'
     - line: '|   AndroidBundleVersionCode: 1'
     - line: '|   AndroidMinSdkVersion: 29'
-    - line: '|   AndroidTargetSdkVersion: 32'
+    - line: '|   AndroidTargetSdkVersion: 0'
     - line: '|   AndroidPreferredInstallLocation: 1'
     - line: '|   AndroidPreferredDataLocation: 1'
     - line: '|   aotOptions: '
-    - line: '|   stripEngineCode: 1'
+    - line: '|   stripEngineCode: 0'
     - line: '|   iPhoneStrippingLevel: 0'
     - line: '|   iPhoneScriptCallOptimization: 0'
     - line: '|   ForceInternetPermission: 0'
@@ -882,7 +885,9 @@ MonoBehaviour:
     - line: '|   webWasm2023: 1'
     - line: '|   webEnableSubmoduleStrippingCompatibility: 0'
     - line: '|   webProgressiveAssetLoading: 0'
-    - line: '|   scriptingDefineSymbols: {}'
+    - line: '|   scriptingDefineSymbols:'
+    - line: '|     Android: USE_INPUT_SYSTEM_POSE_CONTROL;USE_STICK_CONTROL_THUMBSTICKS'
+    - line: '|     Standalone: USE_INPUT_SYSTEM_POSE_CONTROL;USE_STICK_CONTROL_THUMBSTICKS'
     - line: '|   additionalCompilerArguments: {}'
     - line: '|   platformArchitecture: {}'
     - line: '|   scriptingBackend:'
@@ -1030,7 +1035,7 @@ MonoBehaviour:
         m_DebugSymbolFormat: 5
         m_CurrentDeploymentTargetId: __builtin__target_default
         m_BuildType: 2
-        m_LinkTimeOptimization: 0
+        m_LinkTimeOptimization: 1
         m_BuildAppBundle: 0
         m_ProfileableShell: 0
         m_IPAddressToConnect: 
