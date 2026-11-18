@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using JewelryShop.Storefront;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
@@ -12,7 +13,8 @@ namespace JewelryShop.Tests
     public class StorefrontAssetsTests
     {
         const string ScenePath = "Assets/Scenes/Storefront.unity";
-        static readonly string[] Colors = { "Red", "Blue", "Green", "Yellow" };
+        static readonly string[] Colors =
+            { "Red", "Blue", "Green", "Yellow", "Clear", "Pink", "Purple", "Orange" };
         static readonly string[] Cuts = { "Round", "Emerald" };
         static readonly string[] RequiredNames = { "Floor", "Directional Light" };
 
@@ -54,11 +56,14 @@ namespace JewelryShop.Tests
                 {
                     var gem = all.Find(t => t.name == $"GemModelPosition_0{i}")?.Find("GemModel");
                     Assert.That(gem, Is.Not.Null, $"GemModelPosition_0{i}/GemModel");
-                    cuts.Add(PrefabUtility.GetCorrespondingObjectFromSource(gem.gameObject).name);
+                    // Cut from the catalog entry (#76): each position is its own variant.
+                    Assert.That(gem.GetComponent<GemModel>().TryGetKey(out var key), Is.True,
+                        gem.parent.name);
+                    cuts.Add(key.Cut.ToString());
                     colors.Add(gem.GetComponentInChildren<MeshRenderer>().sharedMaterial.name);
                 }
                 Assert.That(cuts.Count, Is.EqualTo(2));
-                Assert.That(colors.Count, Is.EqualTo(4));
+                Assert.That(colors.Count, Is.EqualTo(8)); // one color per catalog Color
             }
             finally { EditorSceneManager.CloseScene(scene, true); }
         }

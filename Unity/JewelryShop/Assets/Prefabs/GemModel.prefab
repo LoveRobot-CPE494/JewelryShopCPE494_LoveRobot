@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6835816071813413350}
   - component: {fileID: 751919127905973668}
   - component: {fileID: 3843014433289124097}
+  - component: {fileID: 7175709397444650757}
   m_Layer: 0
   m_Name: GemModel
   m_TagString: Untagged
@@ -213,6 +214,19 @@ MonoBehaviour:
   m_LimitAngularVelocity: 0
   m_MaxLinearVelocityDelta: 10
   m_MaxAngularVelocityDelta: 20
+--- !u!114 &7175709397444650757
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1570091640118461951}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 858c8dd50fe96804fbaaa7996f4233e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JewelryShop.Storefront::JewelryShop.Storefront.GemModel
+  _entry: {fileID: 0}
 --- !u!1 &7109474900593336613
 GameObject:
   m_ObjectHideFlags: 0

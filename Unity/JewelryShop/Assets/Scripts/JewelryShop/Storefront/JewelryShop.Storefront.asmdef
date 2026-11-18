@@ -2,6 +2,7 @@
     "name": "JewelryShop.Storefront",
     "rootNamespace": "JewelryShop.Storefront",
     "references": [
+        "JewelryShop.Core",
         "Unity.XR.Interaction.Toolkit",
         "Unity.InputSystem"
     ],
