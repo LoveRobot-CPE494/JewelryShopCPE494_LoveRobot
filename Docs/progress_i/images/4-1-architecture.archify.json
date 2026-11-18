@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Jewelry Shop System Architecture",
+    "output": ".archify/architecture-packing-station-20261118-102827/system-architecture.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    { "id": "quest", "type": "frontend", "label": "Meta Quest 3", "sublabel": "Storefront (Unity)", "pos": [40, 60], "size": [150, 64] },
+    { "id": "staff", "type": "frontend", "label": "Staff Console", "sublabel": "Windows (Unity)", "pos": [40, 260], "size": [150, 64] },
+    { "id": "hub", "type": "backend", "label": "PC Hub", "sublabel": "Python orchestrator", "pos": [340, 60], "size": [160, 64], "tag": "safety limits" },
+    { "id": "mg400", "type": "backend", "label": "Dobot MG400", "sublabel": "arm + I/O", "pos": [680, 60], "size": [150, 64] },
+    { "id": "suction", "type": "external", "label": "Suction Cup", "sublabel": "end effector", "pos": [940, 60], "size": [140, 64] },
+    { "id": "conveyor", "type": "external", "label": "Conveyor", "sublabel": "bag transport", "pos": [600, 260], "size": [140, 64] },
+    { "id": "sensor", "type": "external", "label": "Bag Sensor", "sublabel": "bag-stop", "pos": [800, 260], "size": [140, 64] },
+    { "id": "uno", "type": "backend", "label": "Arduino UNO", "sublabel": "i-Duino R3B", "pos": [340, 260], "size": [160, 64] },
+    { "id": "closer", "type": "external", "label": "Bag Closer", "sublabel": "servo", "pos": [340, 440], "size": [160, 64] }
+  ],
+  "connections": [
+    { "id": "order", "from": "quest", "to": "hub", "label": "Order / Teleop", "variant": "emphasis" },
+    { "id": "reply", "from": "hub", "to": "quest", "label": "accept / reply" },
+    { "id": "call", "from": "quest", "to": "staff", "label": "Netcode: voice + pose", "variant": "dashed" },
+    { "id": "tcp", "from": "hub", "to": "mg400", "label": "TCP 29999/30003/30004", "variant": "emphasis" },
+    { "id": "vacuum", "from": "mg400", "to": "suction", "label": "DO vacuum" },
+    { "id": "belt", "from": "mg400", "to": "conveyor", "label": "DO run" },
+    { "id": "stop", "from": "sensor", "to": "mg400", "label": "DI bag" },
+    { "id": "serial", "from": "hub", "to": "uno", "label": "Serial USB" },
+    { "id": "servo", "from": "uno", "to": "closer", "label": "PWM" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "PC is the hub (ADR-0001)", "items": ["Quest never talks to MG400 or UNO directly", "One Packing Sequence state machine", "Arm safety limits enforced on PC"] },
+    { "dot": "emerald", "title": "Hardware split", "items": ["MG400: pick-place, suction, conveyor and bag sensor via its own I/O", "UNO: Bag Closer servo only", "MG400 and UNO never command each other"] },
+    { "dot": "rose", "title": "Staff Call (ADR-0010)", "items": ["Quest and Staff Console connect directly via Netcode for GameObjects", "Hub handles only the Packing Station"] }
+  ]
+}

@@ -1,0 +1,175 @@
+{
+ "schema_version": 1,
+ "diagram_type": "sequence",
+ "meta": {
+  "title": "ลำดับการบรรจุหนึ่ง Order (Packing Sequence)",
+  "output": ".archify/sequence-packing-20261118-104154/packing-sequence.html",
+  "quality_profile": "showcase",
+  "locale": "th"
+ },
+ "participants": [
+  {
+   "id": "customer",
+   "type": "external",
+   "label": "ลูกค้า",
+   "sublabel": "ใส่ Quest 3"
+  },
+  {
+   "id": "quest",
+   "type": "frontend",
+   "label": "Storefront",
+   "sublabel": "Card Terminal"
+  },
+  {
+   "id": "hub",
+   "type": "backend",
+   "label": "PC Hub",
+   "sublabel": "Python"
+  },
+  {
+   "id": "mg400",
+   "type": "backend",
+   "label": "MG400",
+   "sublabel": "แขนกล + I/O"
+  },
+  {
+   "id": "belt",
+   "type": "external",
+   "label": "สายพาน + เซนเซอร์",
+   "sublabel": "ต่อ I/O MG400"
+  },
+  {
+   "id": "uno",
+   "type": "backend",
+   "label": "Arduino UNO",
+   "sublabel": "servo Bag Closer"
+  }
+ ],
+ "segments": [
+  {
+   "from": 150,
+   "to": 262,
+   "label": "1-2 Checkout"
+  },
+  {
+   "from": 268,
+   "to": 370,
+   "label": "3 ถุงมาหยุดหน้าแขน"
+  },
+  {
+   "from": 380,
+   "to": 474,
+   "label": "4 หยิบ-วาง"
+  },
+  {
+   "from": 480,
+   "to": 616,
+   "label": "5 ปิดถุงและส่งออก"
+  }
+ ],
+ "messages": [
+  {
+   "id": "m1",
+   "from": "customer",
+   "to": "quest",
+   "y": 165,
+   "label": "แตะ Payment Card"
+  },
+  {
+   "id": "m2",
+   "from": "quest",
+   "to": "hub",
+   "y": 195,
+   "label": "Order (Cut + Color)",
+   "variant": "emphasis"
+  },
+  {
+   "id": "m3",
+   "from": "hub",
+   "to": "quest",
+   "y": 225,
+   "label": "รับ Order แล้ว",
+   "variant": "return",
+   "note": "จอแสดง Approved + ออก Receipt"
+  },
+  {
+   "id": "m4",
+   "from": "hub",
+   "to": "mg400",
+   "y": 285,
+   "label": "เดินสายพาน",
+   "variant": "emphasis"
+  },
+  {
+   "id": "m5",
+   "from": "mg400",
+   "to": "belt",
+   "y": 313,
+   "label": "DO: เปิดสายพาน"
+  },
+  {
+   "id": "m6",
+   "from": "belt",
+   "to": "mg400",
+   "y": 341,
+   "label": "DI: ถุงถึงจุดหยุด",
+   "variant": "return"
+  },
+  {
+   "id": "m7",
+   "from": "mg400",
+   "to": "hub",
+   "y": 366,
+   "label": "ถุงพร้อม",
+   "variant": "return"
+  },
+  {
+   "id": "m8",
+   "from": "hub",
+   "to": "mg400",
+   "y": 398,
+   "label": "หยิบ Gem Piece ตาม Stock Slot",
+   "variant": "emphasis",
+   "note": "ดูดด้วย Suction Cup ทีละชิ้น ใส่ลงถุง"
+  },
+  {
+   "id": "m9",
+   "from": "mg400",
+   "to": "hub",
+   "y": 462,
+   "label": "วางครบทุกชิ้น",
+   "variant": "return"
+  },
+  {
+   "id": "m10",
+   "from": "hub",
+   "to": "uno",
+   "y": 492,
+   "label": "Serial: ปิดถุง",
+   "variant": "emphasis",
+   "note": "servo กดปิดปากถุง"
+  },
+  {
+   "id": "m11",
+   "from": "uno",
+   "to": "hub",
+   "y": 544,
+   "label": "ปิดเสร็จ",
+   "variant": "return"
+  },
+  {
+   "id": "m12",
+   "from": "hub",
+   "to": "mg400",
+   "y": 572,
+   "label": "ส่งถุงออก"
+  },
+  {
+   "id": "m13",
+   "from": "mg400",
+   "to": "belt",
+   "y": 600,
+   "label": "DO: เดินสายพานไปปลายทาง"
+  }
+ ]
+}
