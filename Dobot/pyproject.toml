@@ -21,6 +21,9 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# shortcut: teleop/ is the teammate's working Teleop scripts, kept as-is; bring it up to
+# standard (and add safety-rule tests) when it moves into src/hub (ADR-0017).
+extend-exclude = ["teleop"]
 
 [tool.ruff.lint]
 # E/F/W/I: pycodestyle, pyflakes, import order. N: naming. D: docstrings. ANN: annotations.

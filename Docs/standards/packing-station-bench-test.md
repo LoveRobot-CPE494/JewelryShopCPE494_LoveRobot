@@ -3,13 +3,14 @@
 Checks for the [Packing Station](../../GLOSSARY.md) on the real hardware. Shared rules:
 [CODING_STANDARDS.md](../../CODING_STANDARDS.md). Why the E-stop and Controller checks exist:
 [ADR-0003](../adr/0003-quest-controllers-for-teleoperation.md),
-[ADR-0004](../adr/0004-arduino-owns-conveyor-and-packaging.md).
+[ADR-0016](../adr/0016-mg400-io-runs-conveyor-uno-only-bag-closer.md),
+[ADR-0017](../adr/0017-teleop-udp-bridge-relative-mapping.md).
 
 ## When to run
 
 - Before every demo.
 - After any change to motion code (Dobot, Teleop mapping, safety limiter) or actuator code
-  (UNO conveyor, sensor, Bag Closer, Suction Cup).
+  (conveyor and sensor on the MG400 I/O, UNO Bag Closer, Suction Cup).
 
 Run every check in order. If one fails, do not run the demo. Fix it, then run the whole test
 again.

@@ -1,6 +1,6 @@
 # UNO (Arduino firmware)
 
-Runs the conveyor, the bag-stop sensor and the Bag Closer (a servo that closes the bag mouth). Takes commands from the PC over Serial ([ADR-0004](../Docs/adr/0004-arduino-owns-conveyor-and-packaging.md), [ADR-0005](../Docs/adr/0005-paper-gift-bag.md))
+Runs only the Bag Closer (a servo that closes the bag mouth). The conveyor and the bag-stop sensor run through the MG400's I/O instead. Takes commands from the PC over Serial ([ADR-0016](../Docs/adr/0016-mg400-io-runs-conveyor-uno-only-bag-closer.md), [ADR-0005](../Docs/adr/0005-paper-gift-bag.md))
 
 ## Board
 

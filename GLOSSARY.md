@@ -157,7 +157,7 @@ The mechanism that closes the mouth of the Gift Bag
 _Avoid_: lid servo, gripper, lid-closing hand
 
 **Hub**:
-The intermediary that receives Orders and Teleop commands from the Quest, then commands the MG400 and the Arduino
+The intermediary that receives Orders from the Quest, then commands the MG400 and the Arduino. Teleop goes to the Teleop Bridge instead
 _Avoid_: server, orchestrator, backend
 
 ### Remote maintenance
@@ -169,6 +169,10 @@ _Avoid_: technician, admin, driver
 **Teleop**:
 The mode in which the Maintenance Operator's Controller position is mapped to the MG400 end-effector position
 _Avoid_: remote control, manual mode
+
+**Teleop Bridge**:
+The PC program that receives Teleop messages from the Quest over UDP, clamps them to the safe workspace and drives the MG400 (`Dobot/teleop/mg400_bridge.py`)
+_Avoid_: relay, teleop server
 
 **Dropped Gem**:
 A Gem Piece lying on the MG400's table or on the Gem Stock but not in any Stock Slot

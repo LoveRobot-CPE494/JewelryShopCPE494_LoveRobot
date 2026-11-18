@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0016
 ---
 
 # The Arduino UNO runs the conveyor and packaging; the MG400 only picks and places

@@ -2,7 +2,8 @@
 
 Language page: [C++ / UNO standards](../../../Docs/standards/cpp-uno.md).
 
-The UNO owns the conveyor, the bag sensor and the Bag Closer servo (ADR-0004, ADR-0005). It obeys
+The UNO drives only the Bag Closer servo (ADR-0016, ADR-0005); the conveyor and the bag sensor
+run through the MG400 I/O from `Dobot/`. It obeys
 the PC over Serial; it never talks to the MG400 directly.
 
 - **Board:** the team's board is an i-Duino R3B, UNO-compatible, so the target stays
@@ -14,8 +15,8 @@ the PC over Serial; it never talks to the MG400 directly.
   pins to that core.
 - **Serial protocol:** one line per command, one reply per command (`OK`/`ERR <reason>`), and a
   status line on every state change. Keep it in sync with the parser in `Dobot/`.
-- **Non-blocking loop:** `millis()`-based timing, no long `delay()`, so the E-stop and sensor are
-  read every loop.
-- **Power and safety:** servos and the motor run from a separate supply (never the UNO 5V); the
-  E-stop input wins over every command; a timeout with no command from the PC stops the conveyor.
+- **Non-blocking loop:** `millis()`-based timing, no long `delay()`, so the E-stop is read every
+  loop.
+- **Power and safety:** the servo runs from a separate supply (never the UNO 5V); the E-stop input
+  wins over every command; a timeout with no command from the PC stops the servo.
 - Pin assignments live in one header; wiring changes are a human task, reported with the new pins.

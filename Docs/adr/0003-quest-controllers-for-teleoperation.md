@@ -8,11 +8,13 @@ In remote maintenance mode (item 4b) the operator uses the controllers that ship
 
 | Controller | MG400 |
 |---|---|
-| Position (x, y, z) | End-effector position (after calibration) |
+| Position (x, y, z) | End-effector position, moved by the same distance since Grip was pressed ([ADR-0017](0017-teleop-udp-bridge-relative-mapping.md)) |
 | Hold Grip | Enables the arm to follow; release and it stops (deadman) |
 | Trigger | Suck / release |
-| A / B | Home / emergency stop |
+| A / B | Home / software stop (not a replacement for the real E-stop) |
 | Thumbstick | Nudge up and down in small steps |
+
+**Amended (2026-11-18):** the Position and A / B rows changed to match the working Teleop ([ADR-0017](0017-teleop-udp-bridge-relative-mapping.md)): the arm moves by the same distance as the Controller since Grip was pressed, with no calibration, and B is a software stop.
 
 ## Consequences
 

@@ -1,6 +1,6 @@
 ---
 name: general-coder-uno
-description: Arduino UNO firmware coder for `UNO/` (conveyor, sensors, Bag Closer servo) — any `area:uno` ticket. Dispatched by `grab-ticket` or recommended by `pick-role`.
+description: Arduino UNO firmware coder for `UNO/` (Bag Closer servo; the conveyor and sensor run on the MG400 I/O, ADR-0016) — any `area:uno` ticket. Dispatched by `grab-ticket` or recommended by `pick-role`.
 model: sonnet
 effort: medium
 skills:
