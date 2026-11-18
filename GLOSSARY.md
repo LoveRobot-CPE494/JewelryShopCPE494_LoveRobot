@@ -98,6 +98,18 @@ _Avoid_: back office, backstage
 The door between the Storefront and the Staff Room
 _Avoid_: back door
 
+**Front Door**:
+The glass door between the Storefront and the Street. Like the Staff Door, it opens by itself for the Customer or the Staff Avatar and closes again behind them
+_Avoid_: entrance, main door
+
+**Street**:
+The one block of road outside the Front Door, where the Customer and the Staff Avatar may walk freely
+_Avoid_: outside, city, exterior
+
+**Decor**:
+Everything in the Storefront, the Staff Room and the Street that is only there to look at and is never picked up. Decorative jewelry is never a Gem Model and stays out of the Customer's reach
+_Avoid_: props, decoration
+
 **Customer Avatar**:
 The 3D figure that stands in for the Customer on the Staff Console, seen only by the Staff
 _Avoid_: player model, buyer avatar
