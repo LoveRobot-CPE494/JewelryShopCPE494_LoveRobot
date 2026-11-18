@@ -9,7 +9,7 @@ The full brief is in [`Docs/brief/`](Docs/brief/)
 .
 ├── Unity/JewelryShop/   Unity project on Meta Quest 3: AR storefront (4a) + remote arm control (4b)
 ├── Dobot/               Python on the PC: hub (ADR-0001) + MG400 control over TCP/IP
-├── UNO/                 Arduino UNO firmware: conveyor, sensors, Bag Closer (ADR-0004, ADR-0005)
+├── UNO/                 Arduino UNO firmware: Bag Closer servo only (ADR-0016, ADR-0005)
 ├── Docs/
 │   ├── brief/           Brief from the instructor (PDF) + summary
 │   └── adr/             Decision records (Architecture Decision Records)

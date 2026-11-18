@@ -15,4 +15,5 @@ The Quest 3 does not talk to the MG400 or the Arduino directly. It sends the Ord
 
 - The PC must stay on during the demo, and every device must be on the same LAN (a router is required).
 - The PC is the single place that enforces the arm's safety limits, such as workspace limits, minimum Z and a speed cap.
+- **Amended (2026-11-18):** Teleop goes over UDP to a separate Teleop Bridge on the PC, not over the Order link ([ADR-0017](0017-teleop-udp-bridge-relative-mapping.md)). The conveyor and bag sensor run through the MG400's I/O, and the Arduino drives only the Bag Closer ([ADR-0016](0016-mg400-io-runs-conveyor-uno-only-bag-closer.md)).
 - Data from port 30004 can later feed a Digital Twin in Unity (if the group has 6 members).
