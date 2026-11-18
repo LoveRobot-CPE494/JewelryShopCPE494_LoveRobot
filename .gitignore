@@ -14,6 +14,9 @@
 **/.gradle/
 **/sysinfo.txt
 **/crashlytics-build.properties
+# Performance Testing writes these on every Test Runner run
+**/Assets/Resources/PerformanceTestRun*
+**/Assets/Resources.meta
 **/[Aa]ssets/[Ss]treamingAssets/aa/
 *.pidb.meta
 *.pdb.meta
