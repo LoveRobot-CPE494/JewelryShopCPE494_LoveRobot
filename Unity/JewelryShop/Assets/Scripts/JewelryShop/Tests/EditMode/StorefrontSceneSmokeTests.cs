@@ -93,9 +93,10 @@ namespace JewelryShop.Tests
                 Assert.That(model.TryGetKey(out var key), Is.True,
                     $"{g.parent.name}: catalog entry wired (#76)");
                 // GemModel_Round / GemModel_Emerald: the mesh's Cut must match the entry's Cut.
-                var source = PrefabUtility.GetCorrespondingObjectFromSource(g.gameObject);
-                Assert.That(source?.name, Does.EndWith(key.Cut.ToString()),
-                    $"{g.parent.name}: {key} wired to a {source?.name}");
+                var sourcePath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(g.gameObject);
+                var sourceName = System.IO.Path.GetFileNameWithoutExtension(sourcePath);
+                Assert.That(sourceName, Does.EndWith(key.Cut.ToString()),
+                    $"{g.parent.name}: {key} wired to a {sourceName}");
                 keys.Add(key);
             }
             Assert.That(keys.Distinct().Count(), Is.EqualTo(9), "9 distinct Cut + Color");
