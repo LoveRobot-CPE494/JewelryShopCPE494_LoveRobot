@@ -1,4 +1,5 @@
 using System.Linq;
+using JewelryShop.Core;
 using UniGLTF.SpringBoneJobs;
 using UniGLTF.SpringBoneJobs.Blittables;
 using UnityEngine;
@@ -10,24 +11,24 @@ namespace JewelryShop.StaffConsole
     [DefaultExecutionOrder(10990)] // Apply the pose before Vrm10Instance solves the springs.
     public sealed class StaffConsoleJumpSkirt : MonoBehaviour
     {
-        private const float JumpSwingDegrees = 6f;
-        private const float JumpFlareDegrees = 8f;
-        private const float JumpFlareSpeedDegreesPerSecond = 80f;
-        private const float BowUprightWeight = 0.8f;
-
         [SerializeField] private Vrm10Instance _avatar;
         [SerializeField] private StaffConsoleMovement _movement;
+        [SerializeField] private StaffSkirtConfig _skirtConfig;
 
         private Transform _hips;
         private Animator _animator;
         private (Transform Bone, Pose ParentPose, Pose HipsPose)[] _anchors;
         private VRM10SpringBoneJoint[] _joints;
         private IVrm10SpringBoneRuntime _springs;
+        private SkirtSettings _skirt;
         private bool _isLimited;
         private float _jumpFlareDegrees;
 
         private void Awake()
         {
+            if (_skirtConfig == null)
+                Debug.LogWarning("No Skirt Config assigned; using defaults.", this);
+            _skirt = _skirtConfig != null ? _skirtConfig.Settings : SkirtSettings.Defaults;
             _hips = _avatar != null ? _avatar.Humanoid.Hips : null;
             _animator = GetComponent<Animator>();
             if (_hips == null || _movement == null || _animator == null)
@@ -63,8 +64,8 @@ namespace JewelryShop.StaffConsole
         {
             var isJumping = _movement.IsJumping;
             _jumpFlareDegrees = Mathf.MoveTowards(_jumpFlareDegrees,
-                isJumping ? JumpFlareDegrees : 0f,
-                JumpFlareSpeedDegreesPerSecond * Time.deltaTime);
+                isJumping ? _skirt.FlareDegrees : 0f,
+                _skirt.FlareSpeedDegreesPerSecond * Time.deltaTime);
             if (!isJumping)
             {
                 RestoreJumpLimits();
@@ -78,7 +79,7 @@ namespace JewelryShop.StaffConsole
                     var limited = new BlittableJointMutable(
                         normal.stiffnessForce, normal.gravityPower, normal.gravityDir,
                         normal.dragForce, normal.radius, (float)AnglelimitTypes.Cone,
-                        JumpSwingDegrees * Mathf.Deg2Rad, 0f, normal.anglelimitOffset);
+                        _skirt.SwingDegrees * Mathf.Deg2Rad, 0f, normal.anglelimitOffset);
                     _springs.SetJointLevel(joint.transform, limited);
                 }
 
@@ -92,7 +93,7 @@ namespace JewelryShop.StaffConsole
             if (bowing)
             {
                 var upright = Quaternion.Euler(0f, _hips.eulerAngles.y, 0f);
-                hipsRotation = Quaternion.Slerp(hipsRotation, upright, BowUprightWeight);
+                hipsRotation = Quaternion.Slerp(hipsRotation, upright, _skirt.BowUprightWeight);
             }
 
             var correction = hipsRotation * Quaternion.Inverse(_hips.rotation);
