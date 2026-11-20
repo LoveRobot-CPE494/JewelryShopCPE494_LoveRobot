@@ -47,8 +47,7 @@ original VRoid clip name. The output option sets the folder.
 
 In Unity's **Project** window, select `stroll.anim`, press **F2**, and enter `VRoid_Stroll`.
 Unity keeps the `.anim` extension and its asset reference when you rename it there.
-To use the clip for normal walking, drag `VRoid_Stroll` to **Motion** on the `Walk` state in
-`CheryllPreview.controller`.
+Open the clip's Inspector preview to check the Stroll motion on a Humanoid avatar.
 
 ### Use tools or a VRoid installation from another folder
 
@@ -131,10 +130,34 @@ Humanoid curves.
 
 ## Cheryll animation folders
 
-- `Assets/Avatar/Animations/Cheryll/Locomotion` holds the active Idle and Walk clips.
+- `Assets/Avatar/Animations/Cheryll/Locomotion` holds the standby and jump clips.
 - `Assets/Avatar/Animations/Cheryll/Gestures` holds the Staff Console gesture clips.
 - `Assets/Avatar/Animations/Cheryll/Poses` holds pose clips.
 - `Assets/Avatar/VRoid_AIM` holds reusable VRoid export files such as `Cheryll_Stroll.fbx`.
 
-Use Unity asset moves to retain GUIDs when organizing clips. `CheryllPreview.controller` resolves
-the active Walk state to `Locomotion/Walk.anim`, which is the recovered Stroll clip.
+Use Unity asset moves to retain GUIDs when organizing clips. In `CheryllPreview.controller`,
+the Walk state blends `WALK00_F`, `WALK00_B`, `WALK00_L`, and `WALK00_R` from
+`VRoid_AIM/Locomotion` with the main `WAIT00` pose at its center. Space plays `Jumping0` once.
+
+### Staff Console preview clips
+
+After 3–9 seconds in the main standby pose, Cheryll plays one of five standby variations once.
+`Standby01` and `Standby02` use the existing clips. Extract the additions and gesture replacements
+into a temporary directory with Python.
+
+```powershell
+python Unity/Tools/extract_vroid_animations.py WAIT01 WAIT02 'Hub_Idle02#180' `
+  greet_02 greet_00 embar_01 --output "$env:TEMP/cheryll-preview-clips"
+```
+
+| Preview state or hotkey | Photo Booth label | Original clip |
+| --- | --- | --- |
+| Idle 3 (`Standby03`) | Standby 1 | `WAIT01` |
+| Idle 4 (`Standby04`) | Standby 2 | `WAIT02` |
+| Idle 5 (`Standby05`) | Standby 6 | `Hub_Idle02#180` |
+| 1 · Wave | Greeting 0 | `greet_02` |
+| 2 · Bow | Greeting 1 | `greet_00` |
+| 5 · Embarrassed | Embarrassed | `embar_01` |
+
+Import these as Humanoid `.anim` clips with **Loop Time** disabled. Keys 3 and 4 play Point and
+Nod. In the Staff Console preview, check WASD, Space, keys 1–5, and idle variation interruptions.
