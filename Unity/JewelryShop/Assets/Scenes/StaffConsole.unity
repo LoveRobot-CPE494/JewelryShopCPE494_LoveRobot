@@ -2849,6 +2849,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::JewelryShop.StaffConsole.StaffConsoleJumpSkirt
   _avatar: {fileID: 2080917676}
   _movement: {fileID: 2080917679}
+  _skirtConfig: {fileID: 11400000, guid: 67b7a817a019457dbbf870a57dce7700, type: 2}
 --- !u!114 &2080917679
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2866,6 +2867,7 @@ MonoBehaviour:
   _walkableFloorRenderer: {fileID: 1583290782}
   _movementConfig: {fileID: 11400000, guid: 0be75e99e4be3a84fbb5b791d9e650e3, type: 2}
   _cameraConfig: {fileID: 11400000, guid: 6ce1d8a355e50c041a3837e3df06b553, type: 2}
+  _gestureMapConfig: {fileID: 11400000, guid: 92ff7187db6a4a5d864430d85fe4f432, type: 2}
 --- !u!1 &2087338227
 GameObject:
   m_ObjectHideFlags: 0

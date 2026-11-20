@@ -1,3 +1,4 @@
+using System.Linq;
 using JewelryShop.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -11,7 +12,6 @@ namespace JewelryShop.StaffConsole
     public sealed class StaffConsoleMovement : MonoBehaviour
     {
         private const float MinimumMovementMeters = 0.0001f;
-        private const float GestureBlendSeconds = 0.08f;
         private const string GestureTag = "Gesture";
         private const string JumpTag = "Jump";
         private const string IdleLockStatusName = "Idle Lock Status";
@@ -20,15 +20,6 @@ namespace JewelryShop.StaffConsole
         private static readonly int s_walkHorizontal = Animator.StringToHash("WalkHorizontal");
         private static readonly int s_walkForward = Animator.StringToHash("WalkForward");
         private static readonly int s_jump = Animator.StringToHash("Base Layer.Jump");
-        private static readonly (Key Key, int State)[] s_gestures =
-        {
-            (Key.Digit1, Animator.StringToHash("Base Layer.Wave")),
-            (Key.Digit2, Animator.StringToHash("Base Layer.Bow")),
-            (Key.Digit3, Animator.StringToHash("Base Layer.Point")),
-            (Key.Digit4, Animator.StringToHash("Base Layer.Nod")),
-            (Key.Digit5, Animator.StringToHash("Base Layer.Shake")),
-            (Key.Digit6, Animator.StringToHash("Base Layer.Embarrassed")),
-        };
 
         [SerializeField] private Animator _animator;
         [SerializeField] private Transform _staffCamera;
@@ -36,6 +27,7 @@ namespace JewelryShop.StaffConsole
         private MeshRenderer _walkableFloorRenderer;
         [SerializeField] private StaffMovementConfig _movementConfig;
         [SerializeField] private StaffCameraConfig _cameraConfig;
+        [SerializeField] private StaffGestureMapConfig _gestureMapConfig;
 
         private Vector3 _platformCenterMeters;
         private float _platformRadiusMeters;
@@ -48,6 +40,8 @@ namespace JewelryShop.StaffConsole
         private Text _idleLockStatus;
         private MovementSettings _movement;
         private CameraSettings _camera;
+        private float _blendSeconds;
+        private (Key Key, int State)[] _gestures;
 
         /// <summary>Whether the avatar is in or blending with the jump animation.</summary>
         public bool IsJumping => _animator != null && IsPlayingTag(JumpTag);
@@ -68,6 +62,15 @@ namespace JewelryShop.StaffConsole
             if (_cameraConfig == null)
                 Debug.LogWarning("No Camera Config assigned; using defaults.", this);
             _camera = _cameraConfig != null ? _cameraConfig.Settings : CameraSettings.Defaults;
+            if (_gestureMapConfig == null)
+                Debug.LogWarning("No Gesture Map Config assigned; using defaults.", this);
+            var gestureMap = _gestureMapConfig != null ? _gestureMapConfig.Settings :
+                GestureMapSettings.Defaults;
+            _blendSeconds = gestureMap.BlendSeconds;
+            _gestures = gestureMap.Entries
+                .Select(e => ((Key)((int)Key.Digit1 + e.Digit - 1),
+                    Animator.StringToHash(e.StateName)))
+                .ToArray();
 
             if (_staffCamera == null || _walkableFloorRenderer == null || _animator == null ||
                 _animator.runtimeAnimatorController == null)
@@ -130,7 +133,7 @@ namespace JewelryShop.StaffConsole
                 var canMove = true;
                 if (!isJumping && keyboard.spaceKey.wasPressedThisFrame)
                 {
-                    _animator.CrossFadeInFixedTime(s_jump, GestureBlendSeconds, 0);
+                    _animator.CrossFadeInFixedTime(s_jump, _blendSeconds, 0);
                     isJumping = true;
                 }
                 else if (!isJumping && (TryPlayGesture(keyboard) || IsPlayingTag(GestureTag)))
@@ -159,12 +162,12 @@ namespace JewelryShop.StaffConsole
 
         private bool TryPlayGesture(Keyboard keyboard)
         {
-            foreach (var (key, state) in s_gestures)
+            foreach (var (key, state) in _gestures)
             {
                 if (!keyboard[key].wasPressedThisFrame)
                     continue;
 
-                _animator.CrossFadeInFixedTime(state, GestureBlendSeconds, 0);
+                _animator.CrossFadeInFixedTime(state, _blendSeconds, 0);
                 return true;
             }
 

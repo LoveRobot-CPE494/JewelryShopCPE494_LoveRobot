@@ -142,4 +142,142 @@ namespace JewelryShop.Core
             };
         }
     }
+
+    /// <summary>One gesture: a number-row key digit (1-9) and the Animator state it plays.</summary>
+    [Serializable]
+    public struct GestureEntry
+    {
+        public int Digit;
+        public string StateName;
+    }
+
+    /// <summary>Key-to-gesture map and the crossfade shared by gestures and the jump.</summary>
+    [Serializable]
+    public struct GestureMapSettings
+    {
+        public GestureEntry[] Entries;
+        public float BlendSeconds;
+
+        public static GestureMapSettings Defaults => new GestureMapSettings
+        {
+            Entries = new[]
+            {
+                new GestureEntry { Digit = 1, StateName = "Base Layer.Wave" },
+                new GestureEntry { Digit = 2, StateName = "Base Layer.Bow" },
+                new GestureEntry { Digit = 3, StateName = "Base Layer.Point" },
+                new GestureEntry { Digit = 4, StateName = "Base Layer.Nod" },
+                new GestureEntry { Digit = 5, StateName = "Base Layer.Shake" },
+                new GestureEntry { Digit = 6, StateName = "Base Layer.Embarrassed" },
+            },
+            BlendSeconds = 0.08f,
+        };
+
+        /// <summary>A clean copy: bad or duplicate entries dropped, an empty map reset to defaults.</summary>
+        public GestureMapSettings Validated(List<string> warnings)
+        {
+            var d = Defaults;
+            var kept = new List<GestureEntry>();
+            foreach (var entry in Entries ?? Array.Empty<GestureEntry>())
+            {
+                if (entry.Digit < 1 || entry.Digit > 9)
+                    warnings.Add($"Gesture key digit {entry.Digit} is outside 1..9; entry dropped.");
+                else if (string.IsNullOrWhiteSpace(entry.StateName))
+                    warnings.Add($"Gesture key {entry.Digit} has an empty state name; entry dropped.");
+                else if (kept.Exists(k => k.Digit == entry.Digit))
+                    warnings.Add($"Gesture key {entry.Digit} is mapped twice; later entry dropped.");
+                else
+                    kept.Add(entry);
+            }
+
+            if (kept.Count == 0)
+            {
+                warnings.Add("Gesture map has no valid entries; using the default map.");
+                kept.AddRange(d.Entries);
+            }
+
+            return new GestureMapSettings
+            {
+                Entries = kept.ToArray(),
+                BlendSeconds = ConfigRule.Clamp(nameof(BlendSeconds),
+                    BlendSeconds, 0f, 1f, d.BlendSeconds, warnings),
+            };
+        }
+    }
+
+    /// <summary>Idle fidget timing. Defaults equal the pre-config behaviour.</summary>
+    [Serializable]
+    public struct IdleSettings
+    {
+        public float MinIntervalSeconds;
+        public float MaxIntervalSeconds;
+        public float BlendSeconds;
+
+        public static IdleSettings Defaults => new IdleSettings
+        {
+            MinIntervalSeconds = 3f,
+            MaxIntervalSeconds = 9f,
+            BlendSeconds = 0.15f,
+        };
+
+        /// <summary>A clamped copy; each change is described in <paramref name="warnings"/>.</summary>
+        public IdleSettings Validated(List<string> warnings)
+        {
+            var d = Defaults;
+            var min = ConfigRule.Clamp(nameof(MinIntervalSeconds),
+                MinIntervalSeconds, 0f, 600f, d.MinIntervalSeconds, warnings);
+            var max = ConfigRule.Clamp(nameof(MaxIntervalSeconds),
+                MaxIntervalSeconds, 0f, 600f, d.MaxIntervalSeconds, warnings);
+            if (min > max)
+            {
+                warnings.Add($"MinIntervalSeconds {min} is above MaxIntervalSeconds {max}; " +
+                    "using the default interval.");
+                min = d.MinIntervalSeconds;
+                max = d.MaxIntervalSeconds;
+            }
+
+            return new IdleSettings
+            {
+                MinIntervalSeconds = min,
+                MaxIntervalSeconds = max,
+                BlendSeconds = ConfigRule.Clamp(nameof(BlendSeconds),
+                    BlendSeconds, 0f, 5f, d.BlendSeconds, warnings),
+            };
+        }
+    }
+
+    /// <summary>Skirt sway and flare tuning. Defaults equal the pre-config behaviour.</summary>
+    [Serializable]
+    public struct SkirtSettings
+    {
+        public float SwingDegrees;
+        public float FlareDegrees;
+        public float FlareSpeedDegreesPerSecond;
+        public float BowUprightWeight;
+
+        public static SkirtSettings Defaults => new SkirtSettings
+        {
+            SwingDegrees = 6f,
+            FlareDegrees = 8f,
+            FlareSpeedDegreesPerSecond = 80f,
+            BowUprightWeight = 0.8f,
+        };
+
+        /// <summary>A clamped copy; each change is described in <paramref name="warnings"/>.</summary>
+        public SkirtSettings Validated(List<string> warnings)
+        {
+            var d = Defaults;
+            return new SkirtSettings
+            {
+                SwingDegrees = ConfigRule.Clamp(nameof(SwingDegrees),
+                    SwingDegrees, 0f, 90f, d.SwingDegrees, warnings),
+                FlareDegrees = ConfigRule.Clamp(nameof(FlareDegrees),
+                    FlareDegrees, 0f, 60f, d.FlareDegrees, warnings),
+                FlareSpeedDegreesPerSecond = ConfigRule.Clamp(
+                    nameof(FlareSpeedDegreesPerSecond),
+                    FlareSpeedDegreesPerSecond, 1f, 1000f, d.FlareSpeedDegreesPerSecond, warnings),
+                BowUprightWeight = ConfigRule.Clamp(nameof(BowUprightWeight),
+                    BowUprightWeight, 0f, 1f, d.BowUprightWeight, warnings),
+            };
+        }
+    }
 }

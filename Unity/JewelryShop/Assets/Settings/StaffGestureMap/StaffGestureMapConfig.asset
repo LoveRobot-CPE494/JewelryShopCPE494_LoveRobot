@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aea62506369d481da1faaf50ac9e41f7, type: 3}
+  m_Name: StaffGestureMapConfig
+  m_EditorClassIdentifier: Assembly-CSharp::JewelryShop.StaffConsole.StaffGestureMapConfig
+  _settings:
+    Entries:
+    - Digit: 1
+      StateName: Base Layer.Wave
+    - Digit: 2
+      StateName: Base Layer.Bow
+    - Digit: 3
+      StateName: Base Layer.Point
+    - Digit: 4
+      StateName: Base Layer.Nod
+    - Digit: 5
+      StateName: Base Layer.Shake
+    - Digit: 6
+      StateName: Base Layer.Embarrassed
+    BlendSeconds: 0.08

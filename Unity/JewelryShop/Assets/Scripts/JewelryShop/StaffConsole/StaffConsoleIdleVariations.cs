@@ -6,9 +6,6 @@ namespace JewelryShop.StaffConsole
     /// <summary>Schedules a single standby variation while the Staff Avatar waits.</summary>
     public sealed class StaffConsoleIdleVariations : StateMachineBehaviour
     {
-        private const float MinimumIntervalSeconds = 3f;
-        private const float MaximumIntervalSeconds = 9f;
-        private const float BlendSeconds = 0.15f;
         private static readonly int s_isMoving = Animator.StringToHash("IsMoving");
         private static readonly int s_idleLock = Animator.StringToHash("IdleLock");
         private static readonly int[] s_standbyStates =
@@ -20,13 +17,26 @@ namespace JewelryShop.StaffConsole
             Animator.StringToHash("Base Layer.Standby05"),
         };
 
+        [SerializeField] private StaffIdleConfig _config;
+
+        private IdleSettings _settings;
+        private bool _isResolved;
         private float _secondsUntilChange;
 
         /// <summary>Starts a fresh countdown whenever the main Idle state begins.</summary>
         public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo,
             int layerIndex)
         {
-            _secondsUntilChange = Random.Range(MinimumIntervalSeconds, MaximumIntervalSeconds);
+            if (!_isResolved)
+            {
+                if (_config == null)
+                    Debug.LogWarning("No Idle Config assigned on the Idle state; using defaults.");
+                _settings = _config != null ? _config.Settings : IdleSettings.Defaults;
+                _isResolved = true;
+            }
+
+            _secondsUntilChange = Random.Range(
+                _settings.MinIntervalSeconds, _settings.MaxIntervalSeconds);
         }
 
         /// <summary>Plays one standby variation after the main Idle state has waited.</summary>
@@ -43,7 +53,7 @@ namespace JewelryShop.StaffConsole
 
             _secondsUntilChange = float.PositiveInfinity;
             var chosenState = s_standbyStates[Random.Range(0, s_standbyStates.Length)];
-            animator.CrossFadeInFixedTime(chosenState, BlendSeconds, layerIndex);
+            animator.CrossFadeInFixedTime(chosenState, _settings.BlendSeconds, layerIndex);
         }
     }
 }
