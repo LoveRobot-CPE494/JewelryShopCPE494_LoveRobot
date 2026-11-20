@@ -94,6 +94,10 @@ _Avoid_: staff app, admin panel, dashboard
 A Staff Console toggle (key 7, OFF at every start) that keeps the Staff Avatar in the plain standing pose instead of playing random Standby fidgets
 _Avoid_: freeze, pause pose
 
+**Staff Config**:
+A data-only ScriptableObject asset holding the Staff Console's tuning values (movement or camera), with plain-C# validation in the Core assembly. See [ADR-0018](Docs/adr/0018-staff-config-data-only-scriptable-objects.md)
+_Avoid_: settings file, event channel
+
 **Staff Room**:
 The back room behind the Storefront, out of the Customer's sight, where the Staff Avatar waits while no Staff Call is being served
 _Avoid_: back office, backstage

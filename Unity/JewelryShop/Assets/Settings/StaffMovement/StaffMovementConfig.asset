@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 053ba53f852f24f4889d2f2b33c9e57e, type: 3}
+  m_Name: StaffMovementConfig
+  m_EditorClassIdentifier: Assembly-CSharp::JewelryShop.StaffConsole.StaffMovementConfig
+  _settings:
+    WalkSpeedMetersPerSecond: 1.5
+    AccelerationMetersPerSecondSquared: 8
+    TurnDegreesPerSecond: 180
+    EdgeMarginMeters: 0.25
+    GravityMetersPerSecondSquared: 9.81
+    JumpSpeedMetersPerSecond: 4
+    AirControl: 0.3
+    StepHeightMeters: 0.3
+    SlopeLimitDegrees: 45
+    CapsuleRadiusMeters: 0.3
+    CapsuleHeightMeters: 1.7

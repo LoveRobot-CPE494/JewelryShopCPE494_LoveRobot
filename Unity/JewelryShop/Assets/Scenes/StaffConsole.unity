@@ -2864,8 +2864,8 @@ MonoBehaviour:
   _animator: {fileID: 2080917677}
   _staffCamera: {fileID: 1370927873}
   _walkableFloorRenderer: {fileID: 1583290782}
-  _walkSpeedMetersPerSecond: 1
-  _lookDegreesPerPixel: 0.15
+  _movementConfig: {fileID: 11400000, guid: 0be75e99e4be3a84fbb5b791d9e650e3, type: 2}
+  _cameraConfig: {fileID: 11400000, guid: 6ce1d8a355e50c041a3837e3df06b553, type: 2}
 --- !u!1 &2087338227
 GameObject:
   m_ObjectHideFlags: 0
