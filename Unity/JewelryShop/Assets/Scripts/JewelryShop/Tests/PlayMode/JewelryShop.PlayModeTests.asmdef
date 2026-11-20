@@ -3,6 +3,8 @@
     "rootNamespace": "JewelryShop.Tests",
     "references": [
         "JewelryShop.Core",
+        "JewelryShop.StaffConsole",
+        "Unity.InputSystem",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],

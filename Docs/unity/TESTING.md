@@ -11,7 +11,7 @@ same way. Paths are relative to `Unity/JewelryShop/`. Editor version: `6000.6.5f
 | Assembly | `JewelryShop.Tests` | `JewelryShop.PlayModeTests` |
 | Folder | `Assets/Scripts/JewelryShop/Tests/EditMode/` | `Assets/Scripts/JewelryShop/Tests/PlayMode/` |
 | Runs in | Editor only | Play Mode |
-| References | `JewelryShop.Core`, `Unity.XR.Interaction.Toolkit` (Storefront asset tests), `Unity.XR.CoreUtils` (Storefront scene smoke test), `UnityEngine.TestRunner`, `UnityEditor.TestRunner`, `nunit.framework.dll` | `JewelryShop.Core`, `UnityEngine.TestRunner`, `nunit.framework.dll` |
+| References | `JewelryShop.Core`, `Unity.XR.Interaction.Toolkit` (Storefront asset tests), `Unity.XR.CoreUtils` (Storefront scene smoke test), `UnityEngine.TestRunner`, `UnityEditor.TestRunner`, `nunit.framework.dll` | `JewelryShop.Core`, `JewelryShop.StaffConsole`, `Unity.InputSystem`, `UnityEngine.TestRunner`, `nunit.framework.dll` |
 | Use for | pure rules, and components built in memory | behaviour that needs frames, physics, or a scene |
 
 Both have the `UNITY_INCLUDE_TESTS` define constraint, so they never ship in a build.
