@@ -65,6 +65,8 @@ Use it to read the Console, check compilation, and run tests while the Editor is
 (see `Docs/unity/TESTING.md`). It does not lift the Editor pen beyond the rough-layout
 exception above.
 
+For VRoid Studio animation extraction, follow [the runbook](Docs/unity/VROID_ANIMATION_EXTRACTION.md).
+
 ## Agent skills
 
 ### Issue tracker
