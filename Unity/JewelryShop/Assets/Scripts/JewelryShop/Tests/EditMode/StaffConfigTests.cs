@@ -15,7 +15,7 @@ namespace JewelryShop.Tests
             Assert.That(d.WalkSpeedMetersPerSecond, Is.EqualTo(1f));
             Assert.That(d.AccelerationMetersPerSecondSquared, Is.EqualTo(8f));
             Assert.That(d.TurnDegreesPerSecond, Is.EqualTo(180f));
-            Assert.That(d.EdgeMarginMeters, Is.EqualTo(0.25f));
+            Assert.That(d.KillPlaneYMeters, Is.EqualTo(-10f));
         }
 
         [Test]
@@ -49,6 +49,16 @@ namespace JewelryShop.Tests
             Assert.That(v.AirControl, Is.EqualTo(1f));
             Assert.That(warnings.Count, Is.EqualTo(2));
             Assert.That(warnings[0], Does.Contain("WalkSpeedMetersPerSecond"));
+        }
+
+        [Test]
+        public void Movement_KillPlaneOutOfRange_IsClampedWithWarning()
+        {
+            var s = MovementSettings.Defaults;
+            s.KillPlaneYMeters = -5000f;
+            var warnings = new List<string>();
+            Assert.That(s.Validated(warnings).KillPlaneYMeters, Is.EqualTo(-1000f));
+            Assert.That(warnings, Has.Count.EqualTo(1));
         }
 
         [Test]

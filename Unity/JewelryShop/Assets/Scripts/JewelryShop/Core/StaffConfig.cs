@@ -29,22 +29,21 @@ namespace JewelryShop.Core
         public float WalkSpeedMetersPerSecond;
         public float AccelerationMetersPerSecondSquared;
         public float TurnDegreesPerSecond;
-        public float EdgeMarginMeters;
-        // Physics-only fields below are validated now and read by later tickets.
         public float GravityMetersPerSecondSquared;
+        // Jump speed and air control are validated now and read by a later ticket.
         public float JumpSpeedMetersPerSecond;
         public float AirControl;
         public float StepHeightMeters;
         public float SlopeLimitDegrees;
         public float CapsuleRadiusMeters;
         public float CapsuleHeightMeters;
+        public float KillPlaneYMeters;
 
         public static MovementSettings Defaults => new MovementSettings
         {
             WalkSpeedMetersPerSecond = 1f,
             AccelerationMetersPerSecondSquared = 8f,
             TurnDegreesPerSecond = 180f,
-            EdgeMarginMeters = 0.25f,
             GravityMetersPerSecondSquared = 9.81f,
             JumpSpeedMetersPerSecond = 4f,
             AirControl = 0.3f,
@@ -52,6 +51,7 @@ namespace JewelryShop.Core
             SlopeLimitDegrees = 45f,
             CapsuleRadiusMeters = 0.3f,
             CapsuleHeightMeters = 1.7f,
+            KillPlaneYMeters = -10f,
         };
 
         /// <summary>A clamped copy; each change is described in <paramref name="warnings"/>.</summary>
@@ -68,8 +68,6 @@ namespace JewelryShop.Core
                     d.AccelerationMetersPerSecondSquared, warnings),
                 TurnDegreesPerSecond = ConfigRule.Clamp(nameof(TurnDegreesPerSecond),
                     TurnDegreesPerSecond, 1f, 1440f, d.TurnDegreesPerSecond, warnings),
-                EdgeMarginMeters = ConfigRule.Clamp(nameof(EdgeMarginMeters),
-                    EdgeMarginMeters, 0f, 5f, d.EdgeMarginMeters, warnings),
                 GravityMetersPerSecondSquared = ConfigRule.Clamp(
                     nameof(GravityMetersPerSecondSquared),
                     GravityMetersPerSecondSquared, 0f, 50f,
@@ -86,6 +84,8 @@ namespace JewelryShop.Core
                     CapsuleRadiusMeters, 0.05f, 2f, d.CapsuleRadiusMeters, warnings),
                 CapsuleHeightMeters = ConfigRule.Clamp(nameof(CapsuleHeightMeters),
                     CapsuleHeightMeters, 0.1f, 4f, d.CapsuleHeightMeters, warnings),
+                KillPlaneYMeters = ConfigRule.Clamp(nameof(KillPlaneYMeters),
+                    KillPlaneYMeters, -1000f, 1000f, d.KillPlaneYMeters, warnings),
             };
         }
     }

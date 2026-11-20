@@ -1,0 +1,22 @@
+{
+    "name": "JewelryShop.StaffConsole",
+    "rootNamespace": "JewelryShop.StaffConsole",
+    "references": [
+        "JewelryShop.Core",
+        "Unity.InputSystem",
+        "UnityEngine.UI",
+        "VRM10",
+        "UniGLTF",
+        "UniHumanoid",
+        "SpringBoneJobs"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -2,15 +2,16 @@ using System.Linq;
 using JewelryShop.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace JewelryShop.StaffConsole
 {
     /// <summary>Drives the Staff Avatar and third-person camera in the offline preview.</summary>
-    [RequireComponent(typeof(Animator))]
+    [RequireComponent(typeof(Animator), typeof(CharacterController))]
     public sealed class StaffConsoleMovement : MonoBehaviour
     {
+        // Keeps the controller pressed on the ground so isGrounded stays true on flats and ramps.
+        private const float GroundStickMetersPerSecond = 2f;
         private const float MinimumMovementMeters = 0.0001f;
         private const string GestureTag = "Gesture";
         private const string JumpTag = "Jump";
@@ -23,20 +24,21 @@ namespace JewelryShop.StaffConsole
 
         [SerializeField] private Animator _animator;
         [SerializeField] private Transform _staffCamera;
-        [SerializeField, FormerlySerializedAs("_previewPlatform")]
-        private MeshRenderer _walkableFloorRenderer;
         [SerializeField] private StaffMovementConfig _movementConfig;
         [SerializeField] private StaffCameraConfig _cameraConfig;
         [SerializeField] private StaffGestureMapConfig _gestureMapConfig;
 
-        private Vector3 _platformCenterMeters;
-        private float _platformRadiusMeters;
+        private CharacterController _controller;
+        private Vector3 _startPositionMeters;
+        private Quaternion _startRotation;
+        private float _verticalMetersPerSecond;
         private Vector3 _initialCameraOffsetMeters;
         private Quaternion _initialCameraRotation;
         private float _initialCameraYawDegrees;
         private float _yawDegrees;
         private float _pitchDegrees;
         private Vector3 _walkVelocityMetersPerSecond;
+        private bool _isFocusRequired = true; // PlayMode tests turn it off so an unfocused Editor still walks
         private Text _idleLockStatus;
         private MovementSettings _movement;
         private CameraSettings _camera;
@@ -72,12 +74,18 @@ namespace JewelryShop.StaffConsole
                     Animator.StringToHash(e.StateName)))
                 .ToArray();
 
-            if (_staffCamera == null || _walkableFloorRenderer == null || _animator == null ||
+            // RequireComponent does not retrofit scene objects saved before it existed.
+            if (!TryGetComponent(out _controller))
+            {
+                Debug.LogWarning("No CharacterController on Cheryll; adding one at runtime. " +
+                    "Add it in the Editor and save the scene.", this);
+                _controller = gameObject.AddComponent<CharacterController>();
+            }
+
+            if (_staffCamera == null || _animator == null ||
                 _animator.runtimeAnimatorController == null)
             {
-                Debug.LogWarning(
-                    "StaffConsoleMovement needs Staff Camera, Floor renderer, and Animator.",
-                    this);
+                Debug.LogWarning("StaffConsoleMovement needs Staff Camera and Animator.", this);
                 enabled = false;
                 return;
             }
@@ -89,11 +97,13 @@ namespace JewelryShop.StaffConsole
                 Debug.LogWarning(
                     $"No Text named '{IdleLockStatusName}'; Idle Lock still works.", this);
             SetIdleLock(false);
-            var bounds = _walkableFloorRenderer.bounds;
-            _platformCenterMeters = new Vector3(
-                bounds.center.x, transform.position.y, bounds.center.z);
-            var radiusMeters = Mathf.Min(bounds.extents.x, bounds.extents.z);
-            _platformRadiusMeters = Mathf.Max(0f, radiusMeters - _movement.EdgeMarginMeters);
+            _controller.radius = _movement.CapsuleRadiusMeters;
+            _controller.height = _movement.CapsuleHeightMeters;
+            _controller.center = Vector3.up * (_movement.CapsuleHeightMeters / 2f);
+            _controller.stepOffset = _movement.StepHeightMeters;
+            _controller.slopeLimit = _movement.SlopeLimitDegrees;
+            _startPositionMeters = transform.position;
+            _startRotation = transform.rotation;
             _initialCameraOffsetMeters = _staffCamera.position - CameraPivot;
             _initialCameraRotation = _staffCamera.rotation;
             _initialCameraYawDegrees = _initialCameraRotation.eulerAngles.y;
@@ -101,7 +111,7 @@ namespace JewelryShop.StaffConsole
 
         private void Update()
         {
-            if (!Application.isFocused)
+            if (_isFocusRequired && !Application.isFocused)
             {
                 _walkVelocityMetersPerSecond = Vector3.zero;
                 Move(Vector2.zero, Time.deltaTime, IsJumping);
@@ -190,12 +200,20 @@ namespace JewelryShop.StaffConsole
             _walkVelocityMetersPerSecond = Vector3.MoveTowards(_walkVelocityMetersPerSecond,
                 targetVelocityMetersPerSecond,
                 _movement.AccelerationMetersPerSecondSquared * elapsedSeconds);
+            _verticalMetersPerSecond = _controller.isGrounded ? -GroundStickMetersPerSecond :
+                _verticalMetersPerSecond - _movement.GravityMetersPerSecondSquared * elapsedSeconds;
             var previousMeters = transform.position;
-            var nextMeters = previousMeters + _walkVelocityMetersPerSecond * elapsedSeconds;
-            nextMeters = _platformCenterMeters +
-                Vector3.ClampMagnitude(nextMeters - _platformCenterMeters, _platformRadiusMeters);
+            _controller.Move((_walkVelocityMetersPerSecond +
+                Vector3.up * _verticalMetersPerSecond) * elapsedSeconds);
+            if (transform.position.y < _movement.KillPlaneYMeters)
+            {
+                Respawn();
+                return;
+            }
 
-            var displacementMeters = nextMeters - previousMeters;
+            // Walls and steps shape the animation: only what actually moved counts, sideways.
+            var displacementMeters = transform.position - previousMeters;
+            displacementMeters.y = 0f;
             var isMoving =
                 displacementMeters.sqrMagnitude > MinimumMovementMeters * MinimumMovementMeters;
             var walkBlend = Vector2.zero;
@@ -213,7 +231,7 @@ namespace JewelryShop.StaffConsole
                 var rotation = isJumping ? transform.rotation : Quaternion.RotateTowards(
                     transform.rotation, targetRotation,
                     _movement.TurnDegreesPerSecond * elapsedSeconds);
-                transform.SetPositionAndRotation(nextMeters, rotation);
+                transform.rotation = rotation;
 
                 var localDisplacementMeters = Quaternion.Inverse(rotation) * displacementMeters;
                 var localDirection = new Vector2(localDisplacementMeters.x,
@@ -227,6 +245,24 @@ namespace JewelryShop.StaffConsole
             _animator.SetFloat(s_walkHorizontal, walkBlend.x);
             _animator.SetFloat(s_walkForward, walkBlend.y);
             _animator.SetBool(s_isMoving, isMoving);
+        }
+
+        private void Respawn()
+        {
+            Debug.LogWarning("Cheryll fell below the kill plane " +
+                $"({_movement.KillPlaneYMeters} m); respawning at her start position. " +
+                "Is there a floor collider under her?", this);
+            _controller.enabled = false; // a CharacterController overrides direct teleports
+            transform.SetPositionAndRotation(_startPositionMeters, _startRotation);
+            _controller.enabled = true;
+            _walkVelocityMetersPerSecond = Vector3.zero;
+            _verticalMetersPerSecond = 0f;
+            // Back to the start camera heading, and no stale walk blend while a key is still held.
+            _yawDegrees = 0f;
+            _pitchDegrees = 0f;
+            _animator.SetFloat(s_walkHorizontal, 0f);
+            _animator.SetFloat(s_walkForward, 0f);
+            _animator.SetBool(s_isMoving, false);
         }
 
         private void LateUpdate()
