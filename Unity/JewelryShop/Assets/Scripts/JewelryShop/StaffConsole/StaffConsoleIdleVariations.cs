@@ -5,14 +5,17 @@ namespace JewelryShop.StaffConsole
     /// <summary>Schedules a single standby variation while the Staff Avatar waits.</summary>
     public sealed class StaffConsoleIdleVariations : StateMachineBehaviour
     {
-        private const float MinimumIntervalSeconds = 6f;
-        private const float MaximumIntervalSeconds = 12f;
+        private const float MinimumIntervalSeconds = 3f;
+        private const float MaximumIntervalSeconds = 9f;
         private const float BlendSeconds = 0.15f;
         private static readonly int s_isMoving = Animator.StringToHash("IsMoving");
         private static readonly int[] s_standbyStates =
         {
             Animator.StringToHash("Base Layer.Standby01"),
             Animator.StringToHash("Base Layer.Standby02"),
+            Animator.StringToHash("Base Layer.Standby03"),
+            Animator.StringToHash("Base Layer.Standby04"),
+            Animator.StringToHash("Base Layer.Standby05"),
         };
 
         private float _secondsUntilChange;

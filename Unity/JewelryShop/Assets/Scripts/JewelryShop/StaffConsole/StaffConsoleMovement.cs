@@ -10,10 +10,14 @@ namespace JewelryShop.StaffConsole
         private const float CameraPivotHeightMeters = 0.9f;
         private const float MinimumMovementMeters = 0.0001f;
         private const float PlatformEdgeMarginMeters = 0.25f;
+        private const float WalkAccelerationMetersPerSecondSquared = 8f;
+        private const float TurnDegreesPerSecond = 540f;
         private const float GestureBlendSeconds = 0.08f;
         private const string GestureTag = "Gesture";
         private const string JumpTag = "Jump";
         private static readonly int s_isMoving = Animator.StringToHash("IsMoving");
+        private static readonly int s_walkHorizontal = Animator.StringToHash("WalkHorizontal");
+        private static readonly int s_walkForward = Animator.StringToHash("WalkForward");
         private static readonly int s_jump = Animator.StringToHash("Base Layer.Jump");
         private static readonly (Key Key, int State)[] s_gestures =
         {
@@ -21,11 +25,7 @@ namespace JewelryShop.StaffConsole
             (Key.Digit2, Animator.StringToHash("Base Layer.Bow")),
             (Key.Digit3, Animator.StringToHash("Base Layer.Point")),
             (Key.Digit4, Animator.StringToHash("Base Layer.Nod")),
-            (Key.Digit5, Animator.StringToHash("Base Layer.InternetYamero")),
-            (Key.Digit6, Animator.StringToHash("Base Layer.UnwelcomeSchool")),
-            (Key.Digit7, Animator.StringToHash("Base Layer.KyofuAllBack")),
-            (Key.Digit8, Animator.StringToHash("Base Layer.DoodleDance")),
-            (Key.Digit9, Animator.StringToHash("Base Layer.Sit")),
+            (Key.Digit5, Animator.StringToHash("Base Layer.Embarrassed")),
         };
 
         [SerializeField] private Animator _animator;
@@ -41,6 +41,7 @@ namespace JewelryShop.StaffConsole
         private float _initialCameraYawDegrees;
         private float _yawDegrees;
         private float _pitchDegrees;
+        private Vector3 _walkVelocityMetersPerSecond;
 
         /// <summary>Whether the avatar is in or blending with the jump animation.</summary>
         public bool IsJumping => _animator != null && IsPlayingTag(JumpTag);
@@ -79,6 +80,7 @@ namespace JewelryShop.StaffConsole
         {
             if (!Application.isFocused)
             {
+                _walkVelocityMetersPerSecond = Vector3.zero;
                 Move(Vector2.zero, Time.deltaTime);
                 return;
             }
@@ -103,8 +105,13 @@ namespace JewelryShop.StaffConsole
                 if (keyboard.spaceKey.wasPressedThisFrame)
                 {
                     _animator.CrossFadeInFixedTime(s_jump, GestureBlendSeconds, 0);
+                    _walkVelocityMetersPerSecond = Vector3.zero;
                 }
-                else if (!TryPlayGesture(keyboard) && !IsPlayingTag(GestureTag))
+                else if (TryPlayGesture(keyboard) || IsPlayingTag(GestureTag))
+                {
+                    _walkVelocityMetersPerSecond = Vector3.zero;
+                }
+                else
                 {
                     movement = new Vector2(
                         keyboard.dKey.ReadValue() - keyboard.aKey.ReadValue(),
@@ -140,21 +147,43 @@ namespace JewelryShop.StaffConsole
             var input = Vector2.ClampMagnitude(movement, 1f);
             var heading = Quaternion.Euler(0f, _initialCameraYawDegrees + _yawDegrees, 0f);
             var direction = heading * new Vector3(input.x, 0f, input.y);
+            var targetVelocityMetersPerSecond = direction * _walkSpeedMetersPerSecond;
+            _walkVelocityMetersPerSecond = Vector3.MoveTowards(_walkVelocityMetersPerSecond,
+                targetVelocityMetersPerSecond,
+                WalkAccelerationMetersPerSecondSquared * elapsedSeconds);
             var previousMeters = transform.position;
-            var distanceMeters = _walkSpeedMetersPerSecond * elapsedSeconds;
-            var nextMeters = previousMeters + direction * distanceMeters;
+            var nextMeters = previousMeters + _walkVelocityMetersPerSecond * elapsedSeconds;
             nextMeters = _platformCenterMeters +
                 Vector3.ClampMagnitude(nextMeters - _platformCenterMeters, _platformRadiusMeters);
 
             var displacementMeters = nextMeters - previousMeters;
             var isMoving =
                 displacementMeters.sqrMagnitude > MinimumMovementMeters * MinimumMovementMeters;
+            var walkBlend = Vector2.zero;
             if (isMoving)
             {
-                transform.SetPositionAndRotation(
-                    nextMeters, Quaternion.LookRotation(displacementMeters));
+                var cameraDisplacementMeters = Quaternion.Inverse(heading) * displacementMeters;
+                var fullSpeedDistanceMeters = Mathf.Max(MinimumMovementMeters,
+                    _walkSpeedMetersPerSecond * elapsedSeconds);
+                var cameraDirection = new Vector2(cameraDisplacementMeters.x,
+                    cameraDisplacementMeters.z) / fullSpeedDistanceMeters;
+
+                // Face the travel direction while keeping backward movement as a back step.
+                var turnDegrees = Mathf.Atan2(cameraDirection.x,
+                    Mathf.Abs(cameraDirection.y)) * Mathf.Rad2Deg;
+                var targetRotation = heading * Quaternion.Euler(0f, turnDegrees, 0f);
+                var rotation = Quaternion.RotateTowards(transform.rotation, targetRotation,
+                    TurnDegreesPerSecond * elapsedSeconds);
+                transform.SetPositionAndRotation(nextMeters, rotation);
+
+                var localDisplacementMeters = Quaternion.Inverse(rotation) * displacementMeters;
+                var localDirection = new Vector2(localDisplacementMeters.x,
+                    localDisplacementMeters.z) / fullSpeedDistanceMeters;
+                walkBlend = Vector2.ClampMagnitude(localDirection, 1f);
             }
 
+            _animator.SetFloat(s_walkHorizontal, walkBlend.x);
+            _animator.SetFloat(s_walkForward, walkBlend.y);
             _animator.SetBool(s_isMoving, isMoving);
         }
 
@@ -169,6 +198,7 @@ namespace JewelryShop.StaffConsole
 
         private void OnDisable()
         {
+            _walkVelocityMetersPerSecond = Vector3.zero;
             if (_animator != null && _animator.runtimeAnimatorController != null)
                 _animator.SetBool(s_isMoving, false);
         }

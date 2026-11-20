@@ -11,18 +11,26 @@ namespace JewelryShop.Tests
     {
         private const string AnimationFolder = "Assets/Avatar/Animations/Cheryll/";
 
-        /// <summary>The preview walks with the imported Humanoid loop.</summary>
-        [Test]
-        public void PreviewController_Walk_UsesLoopingHumanoidClip()
+        /// <summary>Each direction uses its own looping Humanoid walk.</summary>
+        [TestCase("WALK00_F", 0f, 1f)]
+        [TestCase("WALK00_B", 0f, -1f)]
+        [TestCase("WALK00_L", -1f, 0f)]
+        [TestCase("WALK00_R", 1f, 0f)]
+        public void PreviewController_Walk_BlendsDirectionalHumanoidLoops(
+            string name, float horizontal, float forward)
         {
             var controller = LoadController();
             var walk = AssetDatabase.LoadAssetAtPath<AnimationClip>(
-                AnimationFolder + "Locomotion/Walk.anim");
+                $"Assets/Avatar/VRoid_AIM/Locomotion/{name}.anim");
             var walkState = controller.layers[0].stateMachine.states.Single(
                 child => child.state.name == "Walk").state;
 
             Assert.That(walk, Is.Not.Null);
-            Assert.That(walkState.motion, Is.EqualTo(walk));
+            Assert.That(walkState.motion, Is.TypeOf<BlendTree>());
+            var tree = (BlendTree)walkState.motion;
+            var direction = new Vector2(horizontal, forward);
+            Assert.That(tree.children.Single(child => child.position == direction).motion,
+                Is.EqualTo(walk));
             Assert.That(walk.isLooping, Is.True);
             Assert.That(walk.humanMotion, Is.True);
         }
@@ -63,15 +71,19 @@ namespace JewelryShop.Tests
         }
 
         /// <summary>Each standby variation plays once and can be interrupted by walking.</summary>
-        [TestCase("Standby01")]
-        [TestCase("Standby02")]
-        public void PreviewController_Standby_PlaysOnceAndReturnsToIdle(string stateName)
+        [TestCase("Standby01", "Animation2/Standby01")]
+        [TestCase("Standby02", "Animation2/Standby02")]
+        [TestCase("Standby03", "WAIT01")]
+        [TestCase("Standby04", "WAIT02")]
+        [TestCase("Standby05", "Animation2/Standby05")]
+        public void PreviewController_Standby_PlaysOnceAndReturnsToIdle(
+            string stateName, string clipName)
         {
             var machine = LoadController().layers[0].stateMachine;
             var state = machine.states.SingleOrDefault(
                 child => child.state.name == stateName).state;
             var walk = machine.states.Single(child => child.state.name == "Walk").state;
-            var clip = LoadStandbyClip("Animation2/" + stateName);
+            var clip = LoadStandbyClip(clipName);
 
             Assert.That(state, Is.Not.Null);
             Assert.That(state.motion, Is.EqualTo(clip));
@@ -101,18 +113,20 @@ namespace JewelryShop.Tests
         }
 
         /// <summary>The preview plays each gesture once and returns to Idle.</summary>
-        [TestCase("Wave")]
-        [TestCase("Bow")]
-        [TestCase("Point")]
-        [TestCase("Nod")]
-        public void PreviewController_Gesture_PlaysImportedClipOnceAndReturnsToIdle(string name)
+        [TestCase("Wave", "Wave.anim")]
+        [TestCase("Bow", "Bow.anim")]
+        [TestCase("Point", "Point.fbx")]
+        [TestCase("Nod", "Nod.fbx")]
+        [TestCase("Embarrassed", "Embarrassed.anim")]
+        public void PreviewController_Gesture_PlaysImportedClipOnceAndReturnsToIdle(
+            string name, string fileName)
         {
             var stateMachine = LoadController().layers[0].stateMachine;
             var state = stateMachine.states.SingleOrDefault(
                 child => child.state.name == name).state;
             Assert.That(state, Is.Not.Null, $"Missing gesture state {name}");
 
-            var clip = LoadClip(AnimationFolder + "Gestures/" + name + ".fbx");
+            var clip = LoadClip(AnimationFolder + "Gestures/" + fileName);
             Assert.That(state.motion, Is.EqualTo(clip));
             Assert.That(state.tag, Is.EqualTo("Gesture"));
             Assert.That(clip.humanMotion, Is.True);
@@ -121,31 +135,6 @@ namespace JewelryShop.Tests
             Assert.That(exit.destinationState, Is.EqualTo(stateMachine.defaultState));
             Assert.That(exit.hasExitTime, Is.True);
             Assert.That(exit.exitTime, Is.EqualTo(1f));
-        }
-
-        /// <summary>The imported emotes play for a set duration and return to Idle.</summary>
-        [TestCase("InternetYamero")]
-        [TestCase("UnwelcomeSchool")]
-        [TestCase("KyofuAllBack")]
-        [TestCase("DoodleDance")]
-        [TestCase("Sit")]
-        public void PreviewController_Emote_UsesHumanoidClipAndReturnsToIdle(string name)
-        {
-            var machine = LoadController().layers[0].stateMachine;
-            var state = machine.states.SingleOrDefault(item => item.state.name == name).state;
-            Assert.That(state, Is.Not.Null, $"Missing emote state {name}");
-
-            var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(
-                $"Assets/Avatar/Animations/Misc/StaffConsole/{name}.anim");
-            Assert.That(clip, Is.Not.Null);
-            Assert.That(clip.humanMotion, Is.True);
-            Assert.That(state.motion, Is.EqualTo(clip));
-            Assert.That(state.tag, Is.EqualTo("Gesture"));
-
-            var exit = state.transitions.Single();
-            Assert.That(exit.destinationState, Is.EqualTo(machine.defaultState));
-            Assert.That(exit.hasExitTime, Is.True);
-            Assert.That(exit.exitTime * clip.length / state.speed, Is.InRange(1f, 5f));
         }
 
         private static void AssertTransition(
