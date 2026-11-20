@@ -1,3 +1,4 @@
+using JewelryShop.Core;
 using UnityEngine;
 
 namespace JewelryShop.StaffConsole
@@ -9,6 +10,7 @@ namespace JewelryShop.StaffConsole
         private const float MaximumIntervalSeconds = 9f;
         private const float BlendSeconds = 0.15f;
         private static readonly int s_isMoving = Animator.StringToHash("IsMoving");
+        private static readonly int s_idleLock = Animator.StringToHash("IdleLock");
         private static readonly int[] s_standbyStates =
         {
             Animator.StringToHash("Base Layer.Standby01"),
@@ -31,7 +33,8 @@ namespace JewelryShop.StaffConsole
         public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo,
             int layerIndex)
         {
-            if (animator.IsInTransition(layerIndex) || animator.GetBool(s_isMoving))
+            if (animator.IsInTransition(layerIndex) ||
+                !IdleLock.AllowsStandby(animator.GetBool(s_isMoving), animator.GetBool(s_idleLock)))
                 return;
 
             _secondsUntilChange -= Time.deltaTime;

@@ -1,6 +1,8 @@
+using JewelryShop.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 namespace JewelryShop.StaffConsole
 {
@@ -16,7 +18,9 @@ namespace JewelryShop.StaffConsole
         private const float GestureBlendSeconds = 0.08f;
         private const string GestureTag = "Gesture";
         private const string JumpTag = "Jump";
+        private const string IdleLockStatusName = "Idle Lock Status";
         private static readonly int s_isMoving = Animator.StringToHash("IsMoving");
+        private static readonly int s_idleLock = Animator.StringToHash("IdleLock");
         private static readonly int s_walkHorizontal = Animator.StringToHash("WalkHorizontal");
         private static readonly int s_walkForward = Animator.StringToHash("WalkForward");
         private static readonly int s_jump = Animator.StringToHash("Base Layer.Jump");
@@ -45,6 +49,7 @@ namespace JewelryShop.StaffConsole
         private float _yawDegrees;
         private float _pitchDegrees;
         private Vector3 _walkVelocityMetersPerSecond;
+        private Text _idleLockStatus;
 
         /// <summary>Whether the avatar is in or blending with the jump animation.</summary>
         public bool IsJumping => _animator != null && IsPlayingTag(JumpTag);
@@ -69,6 +74,12 @@ namespace JewelryShop.StaffConsole
             }
 
             _animator.applyRootMotion = false;
+            var statusObject = GameObject.Find(IdleLockStatusName);
+            _idleLockStatus = statusObject != null ? statusObject.GetComponent<Text>() : null;
+            if (_idleLockStatus == null)
+                Debug.LogWarning(
+                    $"No Text named '{IdleLockStatusName}'; Idle Lock still works.", this);
+            SetIdleLock(false);
             var bounds = _walkableFloorRenderer.bounds;
             _platformCenterMeters = new Vector3(
                 bounds.center.x, transform.position.y, bounds.center.z);
@@ -106,6 +117,9 @@ namespace JewelryShop.StaffConsole
 
             if (keyboard != null)
             {
+                if (keyboard.digit7Key.wasPressedThisFrame)
+                    SetIdleLock(!_animator.GetBool(s_idleLock));
+
                 var canMove = true;
                 if (!isJumping && keyboard.spaceKey.wasPressedThisFrame)
                 {
@@ -127,6 +141,13 @@ namespace JewelryShop.StaffConsole
             }
 
             Move(movement, Time.deltaTime, isJumping);
+        }
+
+        private void SetIdleLock(bool isIdleLockOn)
+        {
+            _animator.SetBool(s_idleLock, isIdleLockOn);
+            if (_idleLockStatus != null)
+                _idleLockStatus.text = IdleLock.StatusText(isIdleLockOn);
         }
 
         private bool TryPlayGesture(Keyboard keyboard)
