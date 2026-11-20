@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 namespace JewelryShop.StaffConsole
 {
@@ -11,7 +12,7 @@ namespace JewelryShop.StaffConsole
         private const float MinimumMovementMeters = 0.0001f;
         private const float PlatformEdgeMarginMeters = 0.25f;
         private const float WalkAccelerationMetersPerSecondSquared = 8f;
-        private const float TurnDegreesPerSecond = 540f;
+        private const float TurnDegreesPerSecond = 180f;
         private const float GestureBlendSeconds = 0.08f;
         private const string GestureTag = "Gesture";
         private const string JumpTag = "Jump";
@@ -25,12 +26,14 @@ namespace JewelryShop.StaffConsole
             (Key.Digit2, Animator.StringToHash("Base Layer.Bow")),
             (Key.Digit3, Animator.StringToHash("Base Layer.Point")),
             (Key.Digit4, Animator.StringToHash("Base Layer.Nod")),
-            (Key.Digit5, Animator.StringToHash("Base Layer.Embarrassed")),
+            (Key.Digit5, Animator.StringToHash("Base Layer.Shake")),
+            (Key.Digit6, Animator.StringToHash("Base Layer.Embarrassed")),
         };
 
         [SerializeField] private Animator _animator;
         [SerializeField] private Transform _staffCamera;
-        [SerializeField] private MeshRenderer _previewPlatform;
+        [SerializeField, FormerlySerializedAs("_previewPlatform")]
+        private MeshRenderer _walkableFloorRenderer;
         [SerializeField, Min(0f)] private float _walkSpeedMetersPerSecond = 1f;
         [SerializeField, Min(0f)] private float _lookDegreesPerPixel = 0.15f;
 
@@ -55,18 +58,18 @@ namespace JewelryShop.StaffConsole
 
         private void Awake()
         {
-            if (_staffCamera == null || _previewPlatform == null || _animator == null ||
+            if (_staffCamera == null || _walkableFloorRenderer == null || _animator == null ||
                 _animator.runtimeAnimatorController == null)
             {
                 Debug.LogWarning(
-                    "StaffConsoleMovement needs Staff Camera, Preview Platform, and Animator.",
+                    "StaffConsoleMovement needs Staff Camera, Floor renderer, and Animator.",
                     this);
                 enabled = false;
                 return;
             }
 
             _animator.applyRootMotion = false;
-            var bounds = _previewPlatform.bounds;
+            var bounds = _walkableFloorRenderer.bounds;
             _platformCenterMeters = new Vector3(
                 bounds.center.x, transform.position.y, bounds.center.z);
             var radiusMeters = Mathf.Min(bounds.extents.x, bounds.extents.z);
@@ -81,7 +84,7 @@ namespace JewelryShop.StaffConsole
             if (!Application.isFocused)
             {
                 _walkVelocityMetersPerSecond = Vector3.zero;
-                Move(Vector2.zero, Time.deltaTime);
+                Move(Vector2.zero, Time.deltaTime, IsJumping);
                 return;
             }
 
@@ -93,6 +96,7 @@ namespace JewelryShop.StaffConsole
             var keyboard = Keyboard.current;
             var mouse = Mouse.current;
             var movement = Vector2.zero;
+            var isJumping = IsJumping;
             if (mouse != null && mouse.rightButton.isPressed)
             {
                 var lookDegrees = mouse.delta.ReadValue() * _lookDegreesPerPixel;
@@ -100,18 +104,21 @@ namespace JewelryShop.StaffConsole
                 _pitchDegrees = Mathf.Clamp(_pitchDegrees - lookDegrees.y, -20f, 25f);
             }
 
-            if (keyboard != null && !IsJumping)
+            if (keyboard != null)
             {
-                if (keyboard.spaceKey.wasPressedThisFrame)
+                var canMove = true;
+                if (!isJumping && keyboard.spaceKey.wasPressedThisFrame)
                 {
                     _animator.CrossFadeInFixedTime(s_jump, GestureBlendSeconds, 0);
-                    _walkVelocityMetersPerSecond = Vector3.zero;
+                    isJumping = true;
                 }
-                else if (TryPlayGesture(keyboard) || IsPlayingTag(GestureTag))
+                else if (!isJumping && (TryPlayGesture(keyboard) || IsPlayingTag(GestureTag)))
                 {
                     _walkVelocityMetersPerSecond = Vector3.zero;
+                    canMove = false;
                 }
-                else
+
+                if (canMove)
                 {
                     movement = new Vector2(
                         keyboard.dKey.ReadValue() - keyboard.aKey.ReadValue(),
@@ -119,7 +126,7 @@ namespace JewelryShop.StaffConsole
                 }
             }
 
-            Move(movement, Time.deltaTime);
+            Move(movement, Time.deltaTime, isJumping);
         }
 
         private bool TryPlayGesture(Keyboard keyboard)
@@ -142,9 +149,10 @@ namespace JewelryShop.StaffConsole
                 _animator.GetNextAnimatorStateInfo(0).IsTag(tag);
         }
 
-        private void Move(Vector2 movement, float elapsedSeconds)
+        private void Move(Vector2 movement, float elapsedSeconds, bool isJumping)
         {
             var input = Vector2.ClampMagnitude(movement, 1f);
+            var isBacking = input.y < 0f;
             var heading = Quaternion.Euler(0f, _initialCameraYawDegrees + _yawDegrees, 0f);
             var direction = heading * new Vector3(input.x, 0f, input.y);
             var targetVelocityMetersPerSecond = direction * _walkSpeedMetersPerSecond;
@@ -167,19 +175,21 @@ namespace JewelryShop.StaffConsole
                     _walkSpeedMetersPerSecond * elapsedSeconds);
                 var cameraDirection = new Vector2(cameraDisplacementMeters.x,
                     cameraDisplacementMeters.z) / fullSpeedDistanceMeters;
-
-                // Face the travel direction while keeping backward movement as a back step.
                 var turnDegrees = Mathf.Atan2(cameraDirection.x,
                     Mathf.Abs(cameraDirection.y)) * Mathf.Rad2Deg;
-                var targetRotation = heading * Quaternion.Euler(0f, turnDegrees, 0f);
-                var rotation = Quaternion.RotateTowards(transform.rotation, targetRotation,
-                    TurnDegreesPerSecond * elapsedSeconds);
+                var targetRotation = heading * Quaternion.Euler(0f,
+                    isBacking ? -turnDegrees : turnDegrees, 0f);
+                var rotation = isJumping ? transform.rotation : Quaternion.RotateTowards(
+                    transform.rotation, targetRotation, TurnDegreesPerSecond * elapsedSeconds);
                 transform.SetPositionAndRotation(nextMeters, rotation);
 
                 var localDisplacementMeters = Quaternion.Inverse(rotation) * displacementMeters;
                 var localDirection = new Vector2(localDisplacementMeters.x,
                     localDisplacementMeters.z) / fullSpeedDistanceMeters;
-                walkBlend = Vector2.ClampMagnitude(localDirection, 1f);
+                // Backpedaling uses the opposite side clip while turning away from that side.
+                walkBlend = isBacking ? new Vector2(-cameraDirection.x, cameraDirection.y) :
+                    localDirection;
+                walkBlend = Vector2.ClampMagnitude(walkBlend, 1f);
             }
 
             _animator.SetFloat(s_walkHorizontal, walkBlend.x);
