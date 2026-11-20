@@ -10,11 +10,7 @@ namespace JewelryShop.StaffConsole
     [RequireComponent(typeof(Animator))]
     public sealed class StaffConsoleMovement : MonoBehaviour
     {
-        private const float CameraPivotHeightMeters = 0.9f;
         private const float MinimumMovementMeters = 0.0001f;
-        private const float PlatformEdgeMarginMeters = 0.25f;
-        private const float WalkAccelerationMetersPerSecondSquared = 8f;
-        private const float TurnDegreesPerSecond = 180f;
         private const float GestureBlendSeconds = 0.08f;
         private const string GestureTag = "Gesture";
         private const string JumpTag = "Jump";
@@ -38,8 +34,8 @@ namespace JewelryShop.StaffConsole
         [SerializeField] private Transform _staffCamera;
         [SerializeField, FormerlySerializedAs("_previewPlatform")]
         private MeshRenderer _walkableFloorRenderer;
-        [SerializeField, Min(0f)] private float _walkSpeedMetersPerSecond = 1f;
-        [SerializeField, Min(0f)] private float _lookDegreesPerPixel = 0.15f;
+        [SerializeField] private StaffMovementConfig _movementConfig;
+        [SerializeField] private StaffCameraConfig _cameraConfig;
 
         private Vector3 _platformCenterMeters;
         private float _platformRadiusMeters;
@@ -50,11 +46,13 @@ namespace JewelryShop.StaffConsole
         private float _pitchDegrees;
         private Vector3 _walkVelocityMetersPerSecond;
         private Text _idleLockStatus;
+        private MovementSettings _movement;
+        private CameraSettings _camera;
 
         /// <summary>Whether the avatar is in or blending with the jump animation.</summary>
         public bool IsJumping => _animator != null && IsPlayingTag(JumpTag);
 
-        private Vector3 CameraPivot => transform.position + Vector3.up * CameraPivotHeightMeters;
+        private Vector3 CameraPivot => transform.position + Vector3.up * _camera.PivotHeightMeters;
 
         private void Reset()
         {
@@ -63,6 +61,14 @@ namespace JewelryShop.StaffConsole
 
         private void Awake()
         {
+            if (_movementConfig == null)
+                Debug.LogWarning("No Movement Config assigned; using defaults.", this);
+            _movement = _movementConfig != null ? _movementConfig.Settings :
+                MovementSettings.Defaults;
+            if (_cameraConfig == null)
+                Debug.LogWarning("No Camera Config assigned; using defaults.", this);
+            _camera = _cameraConfig != null ? _cameraConfig.Settings : CameraSettings.Defaults;
+
             if (_staffCamera == null || _walkableFloorRenderer == null || _animator == null ||
                 _animator.runtimeAnimatorController == null)
             {
@@ -84,7 +90,7 @@ namespace JewelryShop.StaffConsole
             _platformCenterMeters = new Vector3(
                 bounds.center.x, transform.position.y, bounds.center.z);
             var radiusMeters = Mathf.Min(bounds.extents.x, bounds.extents.z);
-            _platformRadiusMeters = Mathf.Max(0f, radiusMeters - PlatformEdgeMarginMeters);
+            _platformRadiusMeters = Mathf.Max(0f, radiusMeters - _movement.EdgeMarginMeters);
             _initialCameraOffsetMeters = _staffCamera.position - CameraPivot;
             _initialCameraRotation = _staffCamera.rotation;
             _initialCameraYawDegrees = _initialCameraRotation.eulerAngles.y;
@@ -110,9 +116,10 @@ namespace JewelryShop.StaffConsole
             var isJumping = IsJumping;
             if (mouse != null && mouse.rightButton.isPressed)
             {
-                var lookDegrees = mouse.delta.ReadValue() * _lookDegreesPerPixel;
+                var lookDegrees = mouse.delta.ReadValue() * _camera.LookDegreesPerPixel;
                 _yawDegrees = Mathf.Repeat(_yawDegrees + lookDegrees.x, 360f);
-                _pitchDegrees = Mathf.Clamp(_pitchDegrees - lookDegrees.y, -20f, 25f);
+                _pitchDegrees = Mathf.Clamp(_pitchDegrees - lookDegrees.y,
+                    _camera.MinPitchDegrees, _camera.MaxPitchDegrees);
             }
 
             if (keyboard != null)
@@ -176,10 +183,10 @@ namespace JewelryShop.StaffConsole
             var isBacking = input.y < 0f;
             var heading = Quaternion.Euler(0f, _initialCameraYawDegrees + _yawDegrees, 0f);
             var direction = heading * new Vector3(input.x, 0f, input.y);
-            var targetVelocityMetersPerSecond = direction * _walkSpeedMetersPerSecond;
+            var targetVelocityMetersPerSecond = direction * _movement.WalkSpeedMetersPerSecond;
             _walkVelocityMetersPerSecond = Vector3.MoveTowards(_walkVelocityMetersPerSecond,
                 targetVelocityMetersPerSecond,
-                WalkAccelerationMetersPerSecondSquared * elapsedSeconds);
+                _movement.AccelerationMetersPerSecondSquared * elapsedSeconds);
             var previousMeters = transform.position;
             var nextMeters = previousMeters + _walkVelocityMetersPerSecond * elapsedSeconds;
             nextMeters = _platformCenterMeters +
@@ -193,7 +200,7 @@ namespace JewelryShop.StaffConsole
             {
                 var cameraDisplacementMeters = Quaternion.Inverse(heading) * displacementMeters;
                 var fullSpeedDistanceMeters = Mathf.Max(MinimumMovementMeters,
-                    _walkSpeedMetersPerSecond * elapsedSeconds);
+                    _movement.WalkSpeedMetersPerSecond * elapsedSeconds);
                 var cameraDirection = new Vector2(cameraDisplacementMeters.x,
                     cameraDisplacementMeters.z) / fullSpeedDistanceMeters;
                 var turnDegrees = Mathf.Atan2(cameraDirection.x,
@@ -201,7 +208,8 @@ namespace JewelryShop.StaffConsole
                 var targetRotation = heading * Quaternion.Euler(0f,
                     isBacking ? -turnDegrees : turnDegrees, 0f);
                 var rotation = isJumping ? transform.rotation : Quaternion.RotateTowards(
-                    transform.rotation, targetRotation, TurnDegreesPerSecond * elapsedSeconds);
+                    transform.rotation, targetRotation,
+                    _movement.TurnDegreesPerSecond * elapsedSeconds);
                 transform.SetPositionAndRotation(nextMeters, rotation);
 
                 var localDisplacementMeters = Quaternion.Inverse(rotation) * displacementMeters;
