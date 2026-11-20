@@ -117,6 +117,7 @@ namespace JewelryShop.Tests
         [TestCase("Bow", "Bow.anim")]
         [TestCase("Point", "Point.fbx")]
         [TestCase("Nod", "Nod.fbx")]
+        [TestCase("Shake", "Shaking Head No.fbx")]
         [TestCase("Embarrassed", "Embarrassed.anim")]
         public void PreviewController_Gesture_PlaysImportedClipOnceAndReturnsToIdle(
             string name, string fileName)

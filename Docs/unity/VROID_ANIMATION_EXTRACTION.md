@@ -157,7 +157,7 @@ python Unity/Tools/extract_vroid_animations.py WAIT01 WAIT02 'Hub_Idle02#180' `
 | Idle 5 (`Standby05`) | Standby 6 | `Hub_Idle02#180` |
 | 1 · Wave | Greeting 0 | `greet_02` |
 | 2 · Bow | Greeting 1 | `greet_00` |
-| 5 · Embarrassed | Embarrassed | `embar_01` |
+| 6 · Embarrassed (Shy) | Embarrassed | `embar_01` |
 
-Import these as Humanoid `.anim` clips with **Loop Time** disabled. Keys 3 and 4 play Point and
-Nod. In the Staff Console preview, check WASD, Space, keys 1–5, and idle variation interruptions.
+Import these as Humanoid `.anim` clips with **Loop Time** disabled. Keys 3, 4 and 5 play Point,
+Nod and Shake (No, from the Mixamo clip). In the Staff Console preview, check WASD, Space, keys 1–6, and idle variation interruptions.
