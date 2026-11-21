@@ -6,8 +6,9 @@ using UnityEngine.UI;
 namespace JewelryShop.StaffConsole
 {
     /// <summary>
-    /// Key 8 toggles Look-At: Cheryll's head follows the Staff Console camera within
-    /// the config limits and the body turns the excess (ADR-0020). Head and body only; the
+    /// Key 8 toggles Look-At and F toggles Focus on the Customer Avatar: Cheryll's head
+    /// follows the target (Customer, Interest Target or the Staff Console camera) within the
+    /// config limits and the body turns the excess (ADR-0020). Head and body only; the
     /// rules live in <see cref="LookAt"/>.
     /// </summary>
     // Run after StaffConsoleMovement.LateUpdate moves the camera, so we read this frame's
@@ -32,6 +33,10 @@ namespace JewelryShop.StaffConsole
 
         [SerializeField] private StaffLookAtConfig _config;
         [SerializeField] private Transform _staffCamera;
+        [Tooltip("Optional. Focus (F) looks at it while it is in range.")]
+        [SerializeField] private Transform _customerAvatar;
+        [Tooltip("Optional. Looked at when Focus has no Customer; for testing or a display.")]
+        [SerializeField] private Transform _interestTarget;
 
         private sealed class PlayerPrefsStore : ILookAtStore
         {
@@ -46,6 +51,7 @@ namespace JewelryShop.StaffConsole
         private readonly ILookAtStore _store = new PlayerPrefsStore();
         private readonly LookAtHead _head = new LookAtHead();
         private readonly CameraAim _cameraAim = new CameraAim();
+        private readonly LookAtFocus _focus = new LookAtFocus();
         private Animator _animator;
         private LookAtSettings _settings;
         private Transform _headBone;
@@ -89,18 +95,41 @@ namespace JewelryShop.StaffConsole
         private void Update()
         {
             var keyboard = Keyboard.current;
-            if (keyboard == null || !keyboard.digit8Key.wasPressedThisFrame) return;
-            _isOn = LookAt.Toggle(_store, _settings);
+            if (keyboard == null) return;
+            if (keyboard.digit8Key.wasPressedThisFrame)
+                _isOn = LookAt.Toggle(_store, _settings);
+
+            var hasCustomer = _customerAvatar != null;
+            var distance = 0f;
+            if (hasCustomer)
+            {
+                var offset = _customerAvatar.position - transform.position;
+                distance = new Vector2(offset.x, offset.z).magnitude;
+            }
+            _focus.Tick(_isOn, keyboard.fKey.wasPressedThisFrame, hasCustomer, distance, _settings);
             ShowStatus();
         }
 
         // After the Animator has posed the head: turn the body past the limit, then the head.
         private void LateUpdate()
         {
-            var to = transform.InverseTransformDirection(_staffCamera.position - _headBone.position);
-            var face = transform.InverseTransformDirection(_staffCamera.forward);
-            var (rawYaw, rawPitch) = _cameraAim.Aim(to.x, to.y, to.z, face.x, face.y, face.z,
-                _settings);
+            float rawYaw, rawPitch;
+            var target = CurrentTarget();
+            var aimed = target == LookAtTarget.Customer ? _customerAvatar : _interestTarget;
+            // A target destroyed since Update falls back to the camera for this frame.
+            if (target == LookAtTarget.Camera || aimed == null)
+            {
+                var toCamera = _staffCamera.position - _headBone.position;
+                var to = transform.InverseTransformDirection(toCamera);
+                var face = transform.InverseTransformDirection(_staffCamera.forward);
+                (rawYaw, rawPitch) = _cameraAim.Aim(to.x, to.y, to.z, face.x, face.y, face.z,
+                    _settings);
+            }
+            else
+            {
+                var to = transform.InverseTransformDirection(aimed.position - _headBone.position);
+                (rawYaw, rawPitch) = LookAt.RawAngles(to.x, to.y, to.z);
+            }
 
             // Body Follow yields the heading and pose to locomotion, jumps and gestures.
             var elapsedSeconds = Time.deltaTime;
@@ -143,9 +172,14 @@ namespace JewelryShop.StaffConsole
             _animator.GetCurrentAnimatorStateInfo(0).IsTag(tag) ||
             _animator.GetNextAnimatorStateInfo(0).IsTag(tag);
 
+        private LookAtTarget CurrentTarget() =>
+            LookAt.PickTarget(_focus.InRange, _interestTarget != null);
+
         private void ShowStatus()
         {
-            if (_status != null) _status.text = LookAt.StatusText(_isOn);
+            if (_status == null) return;
+            _status.text = LookAt.StatusText(_isOn, _focus, _customerAvatar != null,
+                CurrentTarget(), _interestTarget != null ? _interestTarget.name : "");
         }
     }
 }

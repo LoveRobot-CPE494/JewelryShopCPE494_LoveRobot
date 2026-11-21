@@ -26,6 +26,10 @@ namespace JewelryShop.Core
         public float FrontHysteresisDegrees;
         /// <summary>Time the body takes to catch up with a target past the head's yaw limit.</summary>
         public float BodyTurnSeconds;
+        /// <summary>Focus latches on the Customer within this horizontal distance (m).</summary>
+        public float FocusEnterMeters;
+        /// <summary>Focus lets go of the Customer only past this distance (m).</summary>
+        public float FocusExitMeters;
 
         public static LookAtSettings Defaults => new LookAtSettings
         {
@@ -36,6 +40,8 @@ namespace JewelryShop.Core
             FrontHalfAngleDegrees = 90f,
             FrontHysteresisDegrees = 10f,
             BodyTurnSeconds = 0.25f,
+            FocusEnterMeters = 3.5f,
+            FocusExitMeters = 4.0f,
         };
 
         /// <summary>A clamped copy; each change is described in <paramref name="warnings"/>.</summary>
@@ -53,8 +59,21 @@ namespace JewelryShop.Core
                 hysteresis = half;
             }
 
+            var enter = ConfigRule.Clamp(nameof(FocusEnterMeters),
+                FocusEnterMeters, 0f, 100f, d.FocusEnterMeters, warnings);
+            var exit = ConfigRule.Clamp(nameof(FocusExitMeters),
+                FocusExitMeters, 0f, 100f, d.FocusExitMeters, warnings);
+            if (exit < enter)
+            {
+                warnings.Add(
+                    $"FocusExitMeters {exit} is below FocusEnterMeters {enter}; using {enter}.");
+                exit = enter;
+            }
+
             return new LookAtSettings
             {
+                FocusEnterMeters = enter,
+                FocusExitMeters = exit,
                 FrontHalfAngleDegrees = half,
                 FrontHysteresisDegrees = hysteresis,
                 BodyTurnSeconds = ConfigRule.Clamp(nameof(BodyTurnSeconds),
@@ -151,9 +170,57 @@ namespace JewelryShop.Core
                 (1f - (float)Math.Exp(-SettleRate * deltaSeconds / seconds));
         }
 
-        /// <summary>The panel status line.</summary>
-        public static string StatusText(bool isOn) =>
-            isOn ? "Look-At: ON · Target: camera" : "Look-At: OFF";
+        /// <summary>Focus, then Interest Target, then the camera (ADR-0020).</summary>
+        public static LookAtTarget PickTarget(bool focusLatched, bool hasInterest) =>
+            focusLatched ? LookAtTarget.Customer :
+            hasInterest ? LookAtTarget.Interest : LookAtTarget.Camera;
+
+        /// <summary>
+        /// The panel status line; <paramref name="interestName"/> names the Interest Target.
+        /// </summary>
+        public static string StatusText(bool isOn, LookAtFocus focus, bool hasCustomer,
+            LookAtTarget target, string interestName)
+        {
+            if (!isOn) return "Look-At: OFF";
+            var name = target == LookAtTarget.Customer ? "Customer" :
+                target == LookAtTarget.Interest ? interestName : "camera";
+            var focusText = !focus.IsOn ? "OFF" :
+                !hasCustomer ? "ON (no customer)" :
+                !focus.InRange ? "ON (out of range)" : "ON";
+            return $"Look-At: ON · Focus: {focusText} · Target: {name}";
+        }
+    }
+
+    /// <summary>What the head aims at.</summary>
+    public enum LookAtTarget { Camera, Interest, Customer }
+
+    /// <summary>
+    /// Focus toggle (F) with enter/exit distance hysteresis (ADR-0020). Never remembered.
+    /// </summary>
+    public sealed class LookAtFocus
+    {
+        /// <summary>Focus is switched on.</summary>
+        public bool IsOn { get; private set; }
+
+        /// <summary>
+        /// The Customer is latched: entered at the enter distance, held to the exit distance.
+        /// </summary>
+        public bool InRange { get; private set; }
+
+        /// <summary>
+        /// One frame. Focus works only while Look-At is on and turns off with it; a switch-on
+        /// starts out of range, so a Customer between the two distances is not latched.
+        /// </summary>
+        public void Tick(bool lookAtOn, bool togglePressed, bool hasCustomer,
+            float distanceMeters, LookAtSettings s)
+        {
+            if (!lookAtOn) IsOn = false;
+            else if (togglePressed) IsOn = !IsOn;
+
+            if (!IsOn || !hasCustomer) InRange = false;
+            else if (InRange) InRange = distanceMeters <= s.FocusExitMeters;
+            else InRange = distanceMeters <= s.FocusEnterMeters;
+        }
     }
 
     /// <summary>
