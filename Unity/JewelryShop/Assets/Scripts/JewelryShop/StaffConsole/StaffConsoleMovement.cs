@@ -152,7 +152,7 @@ namespace JewelryShop.StaffConsole
             if (_isFocusRequired && !Application.isFocused)
             {
                 _walkVelocityMetersPerSecond = Vector3.zero;
-                Move(Vector2.zero, Time.deltaTime, IsJumping);
+                Move(Vector2.zero, Time.deltaTime);
                 return;
             }
 
@@ -205,7 +205,7 @@ namespace JewelryShop.StaffConsole
                 }
             }
 
-            Move(movement, Time.deltaTime, isJumping);
+            Move(movement, Time.deltaTime);
         }
 
         private void SetIdleLock(bool isIdleLockOn)
@@ -235,7 +235,7 @@ namespace JewelryShop.StaffConsole
                 _animator.GetNextAnimatorStateInfo(0).IsTag(tag);
         }
 
-        private void Move(Vector2 movement, float elapsedSeconds, bool isJumping)
+        private void Move(Vector2 movement, float elapsedSeconds)
         {
             var input = Vector2.ClampMagnitude(movement, 1f);
             var heading = Quaternion.Euler(0f, _initialCameraYawDegrees + _yawDegrees, 0f);
@@ -317,7 +317,8 @@ namespace JewelryShop.StaffConsole
                 var turnDegrees = Mathf.Atan2(cameraDirection.x, cameraDirection.y) *
                     Mathf.Rad2Deg;
                 var targetRotation = heading * Quaternion.Euler(0f, turnDegrees, 0f);
-                var rotation = isJumping ? transform.rotation : Quaternion.RotateTowards(
+                // Take-off holds the pose; in the air she turns like on the ground.
+                var rotation = _isTakingOff ? transform.rotation : Quaternion.RotateTowards(
                     transform.rotation, targetRotation,
                     _movement.TurnDegreesPerSecond * elapsedSeconds);
                 transform.rotation = rotation;

@@ -49,7 +49,7 @@ namespace JewelryShop.Core
             GravityMetersPerSecondSquared = 9.81f,
             JumpHeightMeters = 0.5f,
             JumpTakeoffDelaySeconds = 0.14f,
-            AirControl = 0.3f,
+            AirControl = 0.7f,
             StepHeightMeters = 0.3f,
             SlopeLimitDegrees = 45f,
             CapsuleRadiusMeters = 0.3f,
