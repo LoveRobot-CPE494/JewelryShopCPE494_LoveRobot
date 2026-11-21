@@ -143,6 +143,15 @@ namespace JewelryShop.Core
         public static float BodyStep(float excessYaw, float deltaSeconds, LookAtSettings s) =>
             Ease(0f, excessYaw, deltaSeconds, s.BodyTurnSeconds);
 
+        /// <summary>
+        /// Eye yaw and pitch relative to the head (VRM look-at: right and up are +): what the
+        /// head leaves over, scaled by its weight so the eyes rest when the head does.
+        /// </summary>
+        public static (float Yaw, float Pitch) EyeAngles(float rawYaw, float rawPitch,
+            LookAtPose head) =>
+            (head.Weight * (Normalize(rawYaw) - head.Yaw),
+                head.Weight * (rawPitch - head.Pitch));
+
         private static float Symmetric(float value, float limit) =>
             Math.Max(-limit, Math.Min(limit, value));
 
