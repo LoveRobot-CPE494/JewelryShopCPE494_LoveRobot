@@ -44,6 +44,11 @@ MonoBehaviour:
       Relaxed: 0.6
       Angry: 0
       Sad: 0
-    HoldSeconds: 0.5
+    HoldSeconds: 0.1
     FadeSeconds: 0.3
     DefaultSmileWeight: 0.3
+    BlinkMinSeconds: 2
+    BlinkMaxSeconds: 6
+    BlinkDurationSeconds: 0.15
+    BlinkHappyThreshold: 0.5
+    BlinkSquintScale: 0.6
