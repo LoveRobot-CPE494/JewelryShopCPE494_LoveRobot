@@ -20,6 +20,16 @@ namespace JewelryShop.Core
                 warnings.Add($"{name} {value} is outside {min}..{max}; using {clamped}.");
             return clamped;
         }
+
+        /// <summary>Like Clamp, but an out-of-range value falls back to the default.</summary>
+        internal static float DefaultIfOutside(string name, float value, float min, float max,
+            float fallback, List<string> warnings)
+        {
+            if (value >= min && value <= max)
+                return value;
+            warnings.Add($"{name} {value} is outside {min}..{max}; using {fallback}.");
+            return fallback;
+        }
     }
 
     /// <summary>Staff Avatar movement tuning. Defaults equal the pre-config behaviour.</summary>
@@ -99,7 +109,13 @@ namespace JewelryShop.Core
     [Serializable]
     public struct CameraSettings
     {
-        public float PivotHeightMeters;
+        /// <summary>Physics layer of walls and ceilings, the only camera blockers.</summary>
+        public const int CameraBlockingLayer = 6;
+
+        // No [FormerlySerializedAs("PivotHeightMeters")]: Core has no UnityEngine, and the old
+        // value (0.9, mid-body) must not become the eye height; 0 reads as unset and defaults.
+        /// <summary>Camera height above the feet: third-person pivot, first-person eye.</summary>
+        public float EyeHeightMeters;
         public float LookDegreesPerPixel;
         public float MinPitchDegrees;
         public float MaxPitchDegrees;
@@ -107,16 +123,25 @@ namespace JewelryShop.Core
         public int CollisionLayerMask;
         /// <summary>How fast the camera eases back out after a wall stops blocking it.</summary>
         public float CollisionRelaxMetersPerSecond;
+        /// <summary>Clearance at which a wall fully raises the third-person camera.</summary>
+        public float FirstPersonThresholdMeters;
+        /// <summary>First-person camera shift forward of the eye.</summary>
+        public float FirstPersonForwardMeters;
+        /// <summary>Furthest first-person look-down, so the neck opening stays hidden.</summary>
+        public float FirstPersonMaxLookDownDegrees;
 
         public static CameraSettings Defaults => new CameraSettings
         {
-            PivotHeightMeters = 0.9f,
+            EyeHeightMeters = 1.6f,
             LookDegreesPerPixel = 0.15f,
             MinPitchDegrees = -20f,
             MaxPitchDegrees = 25f,
             CollisionRadiusMeters = 0.2f,
-            CollisionLayerMask = -1,
+            CollisionLayerMask = 1 << CameraBlockingLayer,
             CollisionRelaxMetersPerSecond = 6f,
+            FirstPersonThresholdMeters = 0.6f,
+            FirstPersonForwardMeters = 0.1f,
+            FirstPersonMaxLookDownDegrees = 20f,
         };
 
         /// <summary>A clamped copy; each change is described in <paramref name="warnings"/>.</summary>
@@ -137,8 +162,9 @@ namespace JewelryShop.Core
 
             return new CameraSettings
             {
-                PivotHeightMeters = ConfigRule.Clamp(nameof(PivotHeightMeters),
-                    PivotHeightMeters, 0f, 3f, d.PivotHeightMeters, warnings),
+                // 0 is also what an asset saved before the field existed reads: warn and default.
+                EyeHeightMeters = ConfigRule.DefaultIfOutside(nameof(EyeHeightMeters),
+                    EyeHeightMeters, 0.1f, 3f, d.EyeHeightMeters, warnings),
                 LookDegreesPerPixel = ConfigRule.Clamp(nameof(LookDegreesPerPixel),
                     LookDegreesPerPixel, 0f, 5f, d.LookDegreesPerPixel, warnings),
                 MinPitchDegrees = min,
@@ -151,6 +177,14 @@ namespace JewelryShop.Core
                     d.CollisionRelaxMetersPerSecond : ConfigRule.Clamp(
                         nameof(CollisionRelaxMetersPerSecond), CollisionRelaxMetersPerSecond,
                         0.1f, 100f, d.CollisionRelaxMetersPerSecond, warnings),
+                FirstPersonThresholdMeters = ConfigRule.DefaultIfOutside(
+                    nameof(FirstPersonThresholdMeters), FirstPersonThresholdMeters,
+                    0.05f, 5f, d.FirstPersonThresholdMeters, warnings),
+                FirstPersonForwardMeters = ConfigRule.Clamp(nameof(FirstPersonForwardMeters),
+                    FirstPersonForwardMeters, 0f, 0.5f, d.FirstPersonForwardMeters, warnings),
+                FirstPersonMaxLookDownDegrees = ConfigRule.Clamp(
+                    nameof(FirstPersonMaxLookDownDegrees), FirstPersonMaxLookDownDegrees,
+                    0f, 89f, d.FirstPersonMaxLookDownDegrees, warnings),
             };
         }
     }

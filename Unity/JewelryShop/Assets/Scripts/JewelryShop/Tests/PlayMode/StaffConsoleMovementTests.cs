@@ -20,6 +20,8 @@ namespace JewelryShop.Tests
 
         private GameObject _root;
         private Keyboard _keyboard;
+        private InputSettings.BackgroundBehavior _originalBackgroundBehavior;
+        private InputSettings.EditorInputBehaviorInPlayMode _originalEditorInputBehavior;
         private CharacterController _controller;
         private Animator _animator;
         private StaffConsoleMovement _movement;
@@ -28,6 +30,13 @@ namespace JewelryShop.Tests
         public void SetUp()
         {
             _root = new GameObject("MovementTestRoot");
+            // The test runner may be unfocused while it feeds the simulated keyboard.
+            var settings = InputSystem.settings;
+            _originalBackgroundBehavior = settings.backgroundBehavior;
+            _originalEditorInputBehavior = settings.editorInputBehaviorInPlayMode;
+            settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            settings.editorInputBehaviorInPlayMode =
+                InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             _keyboard = InputSystem.AddDevice<Keyboard>();
             // Host keyboard input may arrive while the Editor runs the tests.
             InputSystem.onAfterUpdate += _keyboard.MakeCurrent;
@@ -39,6 +48,8 @@ namespace JewelryShop.Tests
             Hold(); // release held keys before the device goes
             InputSystem.onAfterUpdate -= _keyboard.MakeCurrent;
             InputSystem.RemoveDevice(_keyboard);
+            InputSystem.settings.backgroundBehavior = _originalBackgroundBehavior;
+            InputSystem.settings.editorInputBehaviorInPlayMode = _originalEditorInputBehavior;
             Object.DestroyImmediate(_root);
         }
 
@@ -617,13 +628,21 @@ namespace JewelryShop.Tests
         private const float WallNearFaceZMeters = -2f;
 
         private Transform AddCameraWall() =>
-            AddBox(new Vector3(0f, 1.5f, -2.25f), new Vector3(10f, 3f, 0.5f)).transform;
+            AddBlockingBox(new Vector3(0f, 1.5f, -2.25f), new Vector3(10f, 3f, 0.5f)).transform;
+
+        // Walls and ceilings sit on the camera-blocking layer; ordinary objects do not.
+        private GameObject AddBlockingBox(Vector3 center, Vector3 size)
+        {
+            var box = AddBox(center, size);
+            box.layer = CameraSettings.CameraBlockingLayer;
+            return box;
+        }
 
         private static Vector3 StartPivot =>
-            Vector3.up * (CameraSpawnHeightMeters + CameraSettings.Defaults.PivotHeightMeters);
+            Vector3.up * (CameraSpawnHeightMeters + CameraSettings.Defaults.EyeHeightMeters);
 
         private Vector3 CurrentPivot => _movement.transform.position +
-            Vector3.up * CameraSettings.Defaults.PivotHeightMeters;
+            Vector3.up * CameraSettings.Defaults.EyeHeightMeters;
 
         private Transform CameraOf() => GetField<Transform>(_movement, "_staffCamera");
 
@@ -718,6 +737,199 @@ namespace JewelryShop.Tests
 
             Assert.That(CameraOf().position.z,
                 Is.EqualTo(WallNearFaceZMeters + radiusMeters).Within(0.05f));
+        }
+
+        // Wall face at z = -0.5, so the camera ray is pulled inside the wall-lift threshold.
+        private GameObject AddSqueezingWall() =>
+            AddBlockingBox(new Vector3(0f, 1.5f, -0.75f), new Vector3(10f, 3f, 0.5f));
+
+        private static Vector3 FirstPersonCameraPosition => Vector3.up *
+            (CameraSpawnHeightMeters + CameraSettings.Defaults.EyeHeightMeters) +
+            Vector3.forward * CameraSettings.Defaults.FirstPersonForwardMeters;
+
+        private const float BlendWaitSeconds = 0.6f;
+
+        [UnityTest]
+        public IEnumerator Camera_NonBlockingObjectBehind_DoesNotMoveCamera()
+        {
+            AddFloor();
+            AddBox(new Vector3(0f, 1.5f, -2.25f), new Vector3(10f, 3f, 0.5f)); // Default layer
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+
+            yield return Wait(0.3f);
+
+            Assert.That(CameraOf().position.z, Is.EqualTo(CameraStart.z).Within(0.01f));
+            Assert.That(_movement.IsFirstPerson, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_Squeezed_LiftsAboveCheryllInThirdPerson()
+        {
+            AddFloor();
+            // The wall is close enough that a fixed rear offset would block an upward lift.
+            AddBlockingBox(new Vector3(0f, 1.5f, -0.48f), new Vector3(10f, 3f, 0.5f));
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+
+            yield return Wait(BlendWaitSeconds);
+
+            Assert.That(_movement.IsFirstPerson, Is.False);
+            Assert.That(CameraOf().position.y, Is.GreaterThan(CurrentPivot.y + 0.5f));
+            Assert.That(CameraOf().position.z, Is.GreaterThanOrEqualTo(-0.035f));
+            Assert.That(Vector3.Dot(CameraOf().forward, Vector3.down), Is.GreaterThan(0.65f));
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_SteppingAwayFromWall_ReturnsToNormalOrbitHeight()
+        {
+            AddFloor();
+            AddSqueezingWall();
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+            yield return Wait(BlendWaitSeconds);
+            Assert.That(CameraOf().position.y, Is.GreaterThan(CurrentPivot.y + 0.5f));
+
+            _controller.Move(Vector3.forward * 3f);
+            yield return Wait(BlendWaitSeconds);
+
+            Assert.That(_movement.IsFirstPerson, Is.False);
+            Assert.That(CameraOf().position.y - CurrentPivot.y,
+                Is.EqualTo(CameraStart.y - StartPivot.y).Within(0.05f));
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_VKey_CutsToFirstPersonWithTheHeadAndHairVisible()
+        {
+            AddFloor();
+            var cheryll = AddVrmCheryll();
+            yield return Wait(0.2f);
+            var head = _animator.GetBoneTransform(HumanBodyBones.Head);
+            var headScale = head.localScale;
+            var face = cheryll.Find("Face").GetComponent<Renderer>();
+            var hair = cheryll.Find("Hair").GetComponent<Renderer>();
+            var faceMaterial = face.sharedMaterials[0];
+            var hairMaterial = hair.sharedMaterials[0];
+            var start = CameraOf().position;
+
+            yield return Tap(Key.V);
+
+            Assert.That(_movement.IsFirstPerson, Is.True);
+            Assert.That(Vector3.Distance(CameraOf().position, FirstPersonCameraPosition),
+                Is.LessThan(0.05f));
+            Assert.That(head.localScale, Is.EqualTo(headScale));
+            Assert.That(face.enabled && hair.enabled, Is.True);
+            Assert.That(face.sharedMaterials[0], Is.SameAs(faceMaterial));
+            Assert.That(hair.sharedMaterials[0], Is.SameAs(hairMaterial));
+
+            yield return Tap(Key.V);
+
+            Assert.That(_movement.IsFirstPerson, Is.False);
+            Assert.That(Vector3.Distance(CameraOf().position, start), Is.LessThan(0.05f));
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_WallLift_StopsBelowTheCeiling()
+        {
+            AddFloor();
+            AddSqueezingWall();
+            const float ceilingBottomMeters = 2.45f;
+            AddBlockingBox(new Vector3(0f, ceilingBottomMeters + 0.1f, 0f),
+                new Vector3(10f, 0.2f, 10f));
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+
+            yield return Wait(BlendWaitSeconds);
+
+            Assert.That(_movement.IsFirstPerson, Is.False);
+            Assert.That(CameraOf().position.y, Is.GreaterThan(CurrentPivot.y + 0.3f));
+            Assert.That(CameraOf().position.y, Is.LessThanOrEqualTo(
+                ceilingBottomMeters - CameraSettings.Defaults.CollisionRadiusMeters + 0.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_VKey_CanEnterAndLeaveFirstPersonBesideAWall()
+        {
+            AddFloor();
+            AddSqueezingWall();
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+            yield return Wait(BlendWaitSeconds);
+            Assert.That(_movement.IsFirstPerson, Is.False);
+
+            yield return Tap(Key.V);
+            Assert.That(_movement.IsFirstPerson, Is.True);
+            Assert.That(Vector3.Distance(CameraOf().position, FirstPersonCameraPosition),
+                Is.LessThan(0.05f));
+
+            yield return Tap(Key.V);
+            Assert.That(_movement.IsFirstPerson, Is.False);
+            Assert.That(CameraOf().position.y, Is.GreaterThan(CurrentPivot.y + 0.5f));
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_WallRemoved_LowersWithoutSnapping()
+        {
+            AddFloor();
+            var wall = AddSqueezingWall();
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+            yield return Wait(BlendWaitSeconds);
+            var camera = CameraOf();
+            var previous = camera.position;
+            Assert.That(previous.y, Is.GreaterThan(CurrentPivot.y + 0.5f));
+            Object.Destroy(wall);
+
+            var worstStepMeters = 0f;
+            for (var elapsed = 0f; elapsed < 1.5f; elapsed += Time.deltaTime)
+            {
+                yield return null;
+                worstStepMeters = Mathf.Max(worstStepMeters,
+                    Vector3.Distance(previous, camera.position));
+                previous = camera.position;
+            }
+
+            Assert.That(worstStepMeters, Is.LessThan(0.5f), "largest one-frame jump, m");
+            Assert.That(Vector3.Distance(camera.position, CameraStart), Is.LessThan(0.05f));
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_ManualFirstPerson_IsNotPushedByWalls()
+        {
+            AddFloor();
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+            yield return Tap(Key.V);
+            yield return Wait(BlendWaitSeconds);
+
+            AddSqueezingWall();
+            yield return Wait(BlendWaitSeconds);
+            Assert.That(Vector3.Distance(CameraOf().position, FirstPersonCameraPosition),
+                Is.LessThan(0.05f));
+
+            Hold(Key.W);
+            yield return Wait(1.5f);
+            Hold();
+            Assert.That(_movement.IsFirstPerson, Is.True, "still the viewer's choice");
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_FirstPerson_LimitsDownwardLook()
+        {
+            AddFloor();
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+            yield return Tap(Key.V);
+            SetField(_movement, "_pitchDegrees", CameraSettings.Defaults.MaxPitchDegrees);
+
+            yield return Wait(BlendWaitSeconds);
+
+            Assert.That(CameraOf().eulerAngles.x,
+                Is.EqualTo(CameraSettings.Defaults.FirstPersonMaxLookDownDegrees).Within(0.5f));
+        }
+
+        private Transform AddVrmCheryll()
+        {
+#if UNITY_EDITOR
+            var avatar = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Avatar/Cheryll_3.vrm");
+            Assert.That(avatar, Is.Not.Null);
+            return AddCheryll(Vector3.up * CameraSpawnHeightMeters, avatar: avatar);
+#else
+            return AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+#endif
         }
 
         private Transform AddCheryll(Vector3 position,
