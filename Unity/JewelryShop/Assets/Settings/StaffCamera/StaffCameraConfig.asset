@@ -9,13 +9,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 8aaf6b27cbb74c7096a9c8e2099e4889, type: 3}
   m_Name: StaffCameraConfig
   m_EditorClassIdentifier: Assembly-CSharp:JewelryShop.StaffConsole:StaffCameraConfig
   _settings:
     EyeHeightMeters: 1.6
     LookDegreesPerPixel: 0.15
-    MinPitchDegrees: -20
+    MinPitchDegrees: -35
     MaxPitchDegrees: 25
     CollisionRadiusMeters: 0.2
     CollisionLayerMask: 64
