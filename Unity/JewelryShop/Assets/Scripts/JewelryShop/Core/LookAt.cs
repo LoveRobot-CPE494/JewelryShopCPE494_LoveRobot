@@ -248,6 +248,70 @@ namespace JewelryShop.Core
         }
     }
 
+    /// <summary>
+    /// Body turns that are not Body Follow (ADR-0020): toward the target latched when a gesture
+    /// ends (Look-At ON only; the body never turns during a gesture), and Reset Look toward
+    /// the camera's direction (R).
+    /// </summary>
+    public sealed class GestureLook
+    {
+        // A turn counts as done inside this many degrees (the ease never quite arrives).
+        private const float DoneDegrees = 0.1f;
+
+        /// <summary>A gesture is playing.</summary>
+        public bool InGesture { get; private set; }
+        /// <summary>The body is turning toward the target latched at the gesture's end.</summary>
+        public bool Turning { get; private set; }
+        /// <summary>A Reset Look turn is under way.</summary>
+        public bool Resetting { get; private set; }
+
+        /// <summary>
+        /// One frame. Returns true on the frame a gesture ends with Look-At ON: the caller
+        /// latches the winning target now. A new gesture cancels the turns; Look-At OFF stops
+        /// the post-gesture turn where it is.
+        /// </summary>
+        public bool Tick(bool isGesture, bool lookAtOn)
+        {
+            var ended = !isGesture && InGesture;
+            if (isGesture && !InGesture)
+            {
+                Turning = false;
+                Resetting = false;
+            }
+            InGesture = isGesture;
+            if (ended) Turning = lookAtOn;
+            if (!lookAtOn) Turning = false;
+            return ended && lookAtOn;
+        }
+
+        /// <summary>R: does nothing while a gesture plays.</summary>
+        public void RequestReset()
+        {
+            if (!InGesture) Resetting = true;
+        }
+
+        /// <summary>Walking owns the heading, so it ends a Reset Look.</summary>
+        public void CancelReset() => Resetting = false;
+
+        /// <summary>
+        /// Degrees to turn the body this frame. Yaws are body-local, to the latched target and
+        /// to the camera's facing direction.
+        /// </summary>
+        public float Step(float targetYaw, float cameraYaw, float deltaSeconds, LookAtSettings s)
+        {
+            if (!Turning && !Resetting) return 0f;
+
+            var yaw = LookAt.Normalize(Turning ? targetYaw : cameraYaw);
+            if (Math.Abs(yaw) < DoneDegrees)
+            {
+                if (Turning) Turning = false;
+                else Resetting = false;
+                return yaw;
+            }
+            return LookAt.BodyStep(yaw, deltaSeconds, s);
+        }
+    }
+
     /// <summary>Eases the head angles and the weight over the animation pose.</summary>
     public sealed class LookAtHead
     {
@@ -258,24 +322,29 @@ namespace JewelryShop.Core
         private float _pitch;
         private float _weight;
 
-        /// <summary>One frame: angles follow the target only while ON; the weight fades in or out.</summary>
+        /// <summary>
+        /// One frame: angles follow the target only while ON; the weight fades in or out.
+        /// During a gesture (<paramref name="inGesture"/>) the weight fades to 0,
+        /// so the animation owns the head.
+        /// </summary>
         public LookAtPose Tick(float deltaSeconds, bool isOn, float targetYaw, float targetPitch,
-            LookAtSettings s)
+            LookAtSettings s, bool inGesture = false)
         {
+            var active = isOn && !inGesture;
             // While fully off the angles track the target, so switching on only eases the weight.
-            if (_weight <= 0f && isOn)
+            if (_weight <= 0f && active)
             {
                 _yaw = targetYaw;
                 _pitch = targetPitch;
             }
-            else if (isOn)
+            else if (active)
             {
                 _yaw = LookAt.Ease(_yaw, targetYaw, deltaSeconds, s.SmoothingSeconds);
                 _pitch = LookAt.Ease(_pitch, targetPitch, deltaSeconds, s.SmoothingSeconds);
             }
 
-            _weight = LookAt.Ease(_weight, isOn ? 1f : 0f, deltaSeconds, s.SmoothingSeconds);
-            if (!isOn && _weight < OffWeightCutoff) _weight = 0f;
+            _weight = LookAt.Ease(_weight, active ? 1f : 0f, deltaSeconds, s.SmoothingSeconds);
+            if (!active && _weight < OffWeightCutoff) _weight = 0f;
             return new LookAtPose { Yaw = _yaw, Pitch = _pitch, Weight = _weight };
         }
     }

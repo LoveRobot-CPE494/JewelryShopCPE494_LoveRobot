@@ -333,6 +333,160 @@ namespace JewelryShop.Tests
         }
 
         [Test]
+        public void Gesture_NoBodyTurnWhileItPlays_TurnStartsAtTheEnd_WithoutAJump()
+        {
+            var g = new GestureLook();
+            Assert.That(g.Tick(true, true), Is.False, "nothing to latch at the start");
+            Assert.That(g.Tick(true, true), Is.False);
+            Assert.That(g.Turning, Is.False);
+            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.EqualTo(0f), "no turn mid-gesture");
+            Assert.That(g.Tick(false, true), Is.True, "latch on the end frame");
+            Assert.That(g.Tick(false, true), Is.False, "no second latch");
+            Assert.That(g.Turning, Is.True);
+            var step = g.Step(90f, 0f, 0.016f, s_defaults);
+            Assert.That(step, Is.GreaterThan(0f).And.LessThan(90f));
+            var yaw = 90f - step;
+            for (var i = 0; i < 60 && g.Turning; i++) yaw -= g.Step(yaw, 0f, 0.016f, s_defaults);
+            Assert.That(g.Turning, Is.False, "done after the turn time");
+            Assert.That(yaw, Is.EqualTo(0f).Within(0.2f));
+            Assert.That(g.Step(yaw, 0f, 0.016f, s_defaults), Is.EqualTo(0f), "stays put");
+        }
+
+        [Test]
+        public void Gesture_TurnTakesTheShortestWayRound()
+        {
+            var g = new GestureLook();
+            g.Tick(true, true);
+            g.Tick(false, true);
+            Assert.That(g.Step(-100f, 0f, 0.016f, s_defaults), Is.LessThan(0f));
+        }
+
+        [Test]
+        public void Gesture_BodyTurnIgnoresTargetHeight()
+        {
+            var above = LookAt.RawAngles(1f, 5f, 1f).Yaw;
+            var below = LookAt.RawAngles(1f, -5f, 1f).Yaw;
+            Assert.That(above, Is.EqualTo(below));
+        }
+
+        [Test]
+        public void Gesture_LookAtOff_NoPostGestureTurn_NoLatch()
+        {
+            var g = new GestureLook();
+            g.Tick(true, false);
+            Assert.That(g.Tick(false, false), Is.False);
+            Assert.That(g.Turning, Is.False);
+            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void Gesture_LookAtOffMidGesture_NoTurnAfter_HeadStaysAtZero()
+        {
+            var g = new GestureLook();
+            var head = new LookAtHead();
+            for (var i = 0; i < 100; i++) head.Tick(0.016f, true, 0f, 0f, s_defaults);
+            g.Tick(true, true);
+            g.Tick(true, false);
+            LookAtPose pose = default;
+            for (var i = 0; i < 100; i++) pose = head.Tick(0.016f, false, 0f, 0f, s_defaults, true);
+            Assert.That(pose.Weight, Is.EqualTo(0f));
+            Assert.That(g.Tick(false, false), Is.False);
+            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void Gesture_LookAtOffDuringThePostTurn_StopsItWhereItIs()
+        {
+            var g = new GestureLook();
+            g.Tick(true, true);
+            g.Tick(false, true);
+            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.GreaterThan(0f));
+            g.Tick(false, false);
+            Assert.That(g.Turning, Is.False);
+            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.EqualTo(0f));
+            g.Tick(false, true);
+            Assert.That(g.Turning, Is.False, "turning Look-At back on does not resume it");
+        }
+
+        [Test]
+        public void Gesture_NewGestureDuringThePostTurn_CancelsIt()
+        {
+            var g = new GestureLook();
+            g.Tick(true, true);
+            g.Tick(false, true);
+            Assert.That(g.Turning, Is.True);
+            g.Tick(true, true);
+            Assert.That(g.Turning, Is.False);
+            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void Head_Gesture_WeightEasesToZeroThenBackToOne()
+        {
+            var head = new LookAtHead();
+            var pose = default(LookAtPose);
+            for (var i = 0; i < 100; i++) pose = head.Tick(0.016f, true, 20f, 0f, s_defaults);
+            var yawBefore = pose.Yaw;
+            pose = head.Tick(0.016f, true, 40f, 0f, s_defaults, true);
+            Assert.That(pose.Weight, Is.LessThan(1f).And.GreaterThan(0f));
+            Assert.That(pose.Yaw, Is.EqualTo(yawBefore), "angles hold during the gesture");
+            for (var i = 0; i < 100; i++) pose = head.Tick(0.016f, true, 40f, 0f, s_defaults, true);
+            Assert.That(pose.Weight, Is.EqualTo(0f).Within(0.01f));
+            pose = head.Tick(0.016f, true, 40f, 0f, s_defaults);
+            Assert.That(pose.Weight, Is.GreaterThan(0f).And.LessThan(1f));
+            for (var i = 0; i < 100; i++) pose = head.Tick(0.016f, true, 40f, 0f, s_defaults);
+            Assert.That(pose.Weight, Is.EqualTo(1f).Within(0.01f));
+        }
+
+        [Test]
+        public void Head_GestureStartsBeforeWeightIsBack_EasesFromWhereItIs()
+        {
+            var head = new LookAtHead();
+            for (var i = 0; i < 100; i++) head.Tick(0.016f, true, 0f, 0f, s_defaults, true);
+            var half = 0f;
+            for (var i = 0; i < 4; i++) half = head.Tick(0.016f, true, 0f, 0f, s_defaults).Weight;
+            Assert.That(half, Is.GreaterThan(0.1f).And.LessThan(0.9f));
+            var next = head.Tick(0.016f, true, 0f, 0f, s_defaults, true).Weight;
+            Assert.That(next, Is.LessThan(half).And.GreaterThan(0f), "no jump to 0 or 1");
+        }
+
+        [Test]
+        public void ResetLook_TurnsToTheCameraDirection_WithLookAtOnOrOff()
+        {
+            var g = new GestureLook();
+            g.Tick(false, false); // Look-At OFF
+            g.RequestReset();
+            Assert.That(g.Resetting, Is.True);
+            var yaw = 60f;
+            var first = g.Step(0f, yaw, 0.016f, s_defaults);
+            Assert.That(first, Is.GreaterThan(0f).And.LessThan(60f));
+            yaw -= first;
+            for (var i = 0; i < 200 && g.Resetting; i++) yaw -= g.Step(0f, yaw, 0.016f, s_defaults);
+            Assert.That(g.Resetting, Is.False);
+            Assert.That(yaw, Is.EqualTo(0f).Within(0.2f));
+            Assert.That(g.Step(0f, yaw, 0.016f, s_defaults), Is.EqualTo(0f), "one-shot: done");
+        }
+
+        [Test]
+        public void ResetLook_DuringAGesture_DoesNothing_AndAGestureStartCancelsIt()
+        {
+            var g = new GestureLook();
+            g.Tick(true, true);
+            g.RequestReset();
+            Assert.That(g.Resetting, Is.False);
+            g.Tick(false, true);
+            g.RequestReset();
+            Assert.That(g.Resetting, Is.True);
+            g.Tick(true, true);
+            Assert.That(g.Resetting, Is.False);
+            g.RequestReset();
+            g.Tick(false, true);
+            g.RequestReset();
+            g.CancelReset();
+            Assert.That(g.Step(0f, 60f, 0.016f, s_defaults), Is.EqualTo(0f));
+        }
+
+        [Test]
         public void CameraAim_InFront_LooksAtThePosition()
         {
             var aim = new CameraAim();
