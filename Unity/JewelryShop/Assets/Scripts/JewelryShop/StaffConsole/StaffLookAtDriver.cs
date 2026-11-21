@@ -8,7 +8,8 @@ namespace JewelryShop.StaffConsole
     /// <summary>
     /// Key 8 toggles Look-At and F toggles Focus on the Customer Avatar: Cheryll's head
     /// follows the target (Customer, Interest Target or the Staff Console camera) within the
-    /// config limits and the body turns the excess (ADR-0020). Head and body only; the
+    /// config limits and the body turns the excess; after a gesture the body turns to the
+    /// target winning at its end, and R is Reset Look (ADR-0020). Head and body only; the
     /// rules live in <see cref="LookAt"/>.
     /// </summary>
     // Run after StaffConsoleMovement.LateUpdate moves the camera, so we read this frame's
@@ -52,6 +53,8 @@ namespace JewelryShop.StaffConsole
         private readonly LookAtHead _head = new LookAtHead();
         private readonly CameraAim _cameraAim = new CameraAim();
         private readonly LookAtFocus _focus = new LookAtFocus();
+        private readonly GestureLook _gesture = new GestureLook();
+        private LookAtTarget _latchedTarget;
         private Animator _animator;
         private LookAtSettings _settings;
         private Transform _headBone;
@@ -106,6 +109,7 @@ namespace JewelryShop.StaffConsole
                 var offset = _customerAvatar.position - transform.position;
                 distance = new Vector2(offset.x, offset.z).magnitude;
             }
+            if (keyboard.rKey.wasPressedThisFrame) _gesture.RequestReset();
             _focus.Tick(_isOn, keyboard.fKey.wasPressedThisFrame, hasCustomer, distance, _settings);
             ShowStatus();
         }
@@ -113,45 +117,57 @@ namespace JewelryShop.StaffConsole
         // After the Animator has posed the head: turn the body past the limit, then the head.
         private void LateUpdate()
         {
-            float rawYaw, rawPitch;
-            var target = CurrentTarget();
-            var aimed = target == LookAtTarget.Customer ? _customerAvatar : _interestTarget;
-            // A target destroyed since Update falls back to the camera for this frame.
-            if (target == LookAtTarget.Camera || aimed == null)
-            {
-                var toCamera = _staffCamera.position - _headBone.position;
-                var to = transform.InverseTransformDirection(toCamera);
-                var face = transform.InverseTransformDirection(_staffCamera.forward);
-                (rawYaw, rawPitch) = _cameraAim.Aim(to.x, to.y, to.z, face.x, face.y, face.z,
-                    _settings);
-            }
-            else
-            {
-                var to = transform.InverseTransformDirection(aimed.position - _headBone.position);
-                (rawYaw, rawPitch) = LookAt.RawAngles(to.x, to.y, to.z);
-            }
+            var (rawYaw, rawPitch) = Raw(CurrentTarget());
 
+            // The body does not turn during a gesture. When one ends it latches the winning
+            // target and turns to it; that turn and Reset Look own the body until done, then
             // Body Follow yields the heading and pose to locomotion, jumps and gestures.
             var elapsedSeconds = Time.deltaTime;
-            var stepDegrees = 0f;
-            if (_isOn && _animator.GetBool(s_isGrounded) && !_animator.GetBool(s_isMoving) &&
-                !IsPlayingTag(GestureTag) && !IsPlayingTag(JumpTag))
+            var isMoving = _animator.GetBool(s_isMoving);
+            if (isMoving) _gesture.CancelReset();
+            if (_gesture.Tick(IsPlayingTag(GestureTag), _isOn)) _latchedTarget = CurrentTarget();
+            var face = transform.InverseTransformDirection(_staffCamera.forward);
+            var stepDegrees = _gesture.Step(
+                _gesture.Turning ? Raw(_latchedTarget).Yaw : 0f,
+                LookAt.RawAngles(face.x, 0f, face.z).Yaw, elapsedSeconds, _settings);
+            if (stepDegrees != 0f)
+                transform.Rotate(0f, stepDegrees, 0f, Space.World);
+            else if (_isOn && _animator.GetBool(s_isGrounded) && !isMoving &&
+                !_gesture.InGesture && !IsPlayingTag(JumpTag))
             {
                 stepDegrees = LookAt.BodyStep(LookAt.ExcessYaw(rawYaw, _settings),
                     elapsedSeconds, _settings);
                 transform.Rotate(0f, stepDegrees, 0f, Space.World);
-                rawYaw -= stepDegrees;
             }
+            rawYaw -= stepDegrees;
             AnimateTurn(elapsedSeconds > 0f ? stepDegrees / elapsedSeconds : 0f);
 
             var (yaw, pitch) = LookAt.Clamp(rawYaw, rawPitch, _settings);
-            var pose = _head.Tick(elapsedSeconds, _isOn, yaw, pitch, _settings);
+            var pose = _head.Tick(elapsedSeconds, _isOn, yaw, pitch, _settings,
+                _gesture.InGesture);
             if (pose.Weight <= 0f) return;
 
             var offset = Quaternion.Slerp(Quaternion.identity,
                 Quaternion.Euler(-pose.Pitch, pose.Yaw, 0f), pose.Weight);
             var body = transform.rotation;
             _headBone.rotation = body * offset * Quaternion.Inverse(body) * _headBone.rotation;
+        }
+
+        // Unclamped body-local yaw and pitch to a target; one destroyed since Update falls back
+        // to the camera for this frame.
+        private (float Yaw, float Pitch) Raw(LookAtTarget target)
+        {
+            var aimed = target == LookAtTarget.Customer ? _customerAvatar : _interestTarget;
+            if (target == LookAtTarget.Camera || aimed == null)
+            {
+                var to = transform.InverseTransformDirection(
+                    _staffCamera.position - _headBone.position);
+                var face = transform.InverseTransformDirection(_staffCamera.forward);
+                return _cameraAim.Aim(to.x, to.y, to.z, face.x, face.y, face.z, _settings);
+            }
+
+            var toAimed = transform.InverseTransformDirection(aimed.position - _headBone.position);
+            return LookAt.RawAngles(toAimed.x, toAimed.y, toAimed.z);
         }
 
         private void AnimateTurn(float degreesPerSecond)
