@@ -14,7 +14,7 @@ namespace JewelryShop.Tests
             var d = MovementSettings.Defaults;
             Assert.That(d.WalkSpeedMetersPerSecond, Is.EqualTo(1f));
             Assert.That(d.AccelerationMetersPerSecondSquared, Is.EqualTo(8f));
-            Assert.That(d.TurnDegreesPerSecond, Is.EqualTo(180f));
+            Assert.That(d.TurnDegreesPerSecond, Is.EqualTo(540f));
             Assert.That(d.KillPlaneYMeters, Is.EqualTo(-10f));
         }
 
@@ -67,7 +67,7 @@ namespace JewelryShop.Tests
             var s = MovementSettings.Defaults;
             s.TurnDegreesPerSecond = float.NaN;
             var v = s.Validated(new List<string>());
-            Assert.That(v.TurnDegreesPerSecond, Is.EqualTo(180f));
+            Assert.That(v.TurnDegreesPerSecond, Is.EqualTo(540f));
         }
 
         [Test]

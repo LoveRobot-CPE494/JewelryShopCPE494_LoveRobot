@@ -238,7 +238,6 @@ namespace JewelryShop.StaffConsole
         private void Move(Vector2 movement, float elapsedSeconds, bool isJumping)
         {
             var input = Vector2.ClampMagnitude(movement, 1f);
-            var isBacking = input.y < 0f;
             var heading = Quaternion.Euler(0f, _initialCameraYawDegrees + _yawDegrees, 0f);
             var direction = heading * new Vector3(input.x, 0f, input.y);
             var targetVelocityMetersPerSecond = direction * _movement.WalkSpeedMetersPerSecond;
@@ -315,10 +314,9 @@ namespace JewelryShop.StaffConsole
                     _movement.WalkSpeedMetersPerSecond * elapsedSeconds);
                 var cameraDirection = new Vector2(cameraDisplacementMeters.x,
                     cameraDisplacementMeters.z) / fullSpeedDistanceMeters;
-                var turnDegrees = Mathf.Atan2(cameraDirection.x,
-                    Mathf.Abs(cameraDirection.y)) * Mathf.Rad2Deg;
-                var targetRotation = heading * Quaternion.Euler(0f,
-                    isBacking ? -turnDegrees : turnDegrees, 0f);
+                var turnDegrees = Mathf.Atan2(cameraDirection.x, cameraDirection.y) *
+                    Mathf.Rad2Deg;
+                var targetRotation = heading * Quaternion.Euler(0f, turnDegrees, 0f);
                 var rotation = isJumping ? transform.rotation : Quaternion.RotateTowards(
                     transform.rotation, targetRotation,
                     _movement.TurnDegreesPerSecond * elapsedSeconds);
@@ -327,10 +325,7 @@ namespace JewelryShop.StaffConsole
                 var localDisplacementMeters = Quaternion.Inverse(rotation) * displacementMeters;
                 var localDirection = new Vector2(localDisplacementMeters.x,
                     localDisplacementMeters.z) / fullSpeedDistanceMeters;
-                // Backpedaling uses the opposite side clip while turning away from that side.
-                walkBlend = isBacking ? new Vector2(-cameraDirection.x, cameraDirection.y) :
-                    localDirection;
-                walkBlend = Vector2.ClampMagnitude(walkBlend, 1f);
+                walkBlend = Vector2.ClampMagnitude(localDirection, 1f);
             }
 
             _animator.SetFloat(s_walkHorizontal, walkBlend.x);

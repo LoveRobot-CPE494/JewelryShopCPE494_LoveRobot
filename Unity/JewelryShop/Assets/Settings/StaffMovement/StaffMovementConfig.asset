@@ -15,7 +15,7 @@ MonoBehaviour:
   _settings:
     WalkSpeedMetersPerSecond: 1.5
     AccelerationMetersPerSecondSquared: 8
-    TurnDegreesPerSecond: 180
+    TurnDegreesPerSecond: 540
     GravityMetersPerSecondSquared: 12
     JumpHeightMeters: 0.5
     JumpTakeoffDelaySeconds: 0.14
