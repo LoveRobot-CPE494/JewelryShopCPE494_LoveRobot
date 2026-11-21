@@ -98,6 +98,22 @@ _Avoid_: freeze, pause pose
 A facial look (a VRM preset such as happy, relaxed or sad) the Staff Avatar shows with each gesture, then holds briefly and fades. Without a gesture it keeps a light smile, and the same driver blinks on its own in every state. See [ADR-0019](Docs/adr/0019-staff-avatar-gesture-expressions.md)
 _Avoid_: emote, face animation, blendshape (that is the mesh mechanism, not the term)
 
+**Look-At**:
+A Staff Console toggle (key 8, OFF by default, remembered between runs) that makes the Staff Avatar's head and eyes follow a target within fixed angle limits. See [ADR-0020](Docs/adr/0020-staff-avatar-look-at.md)
+_Avoid_: gaze, head tracking
+
+**Focus**:
+A Staff Console toggle (key F, OFF at every start) that makes Look-At target the Customer Avatar while it is close. Works only while Look-At is ON, and turns OFF with it. See [ADR-0020](Docs/adr/0020-staff-avatar-look-at.md)
+_Avoid_: lock-on, glance
+
+**Reset Look**:
+A Staff Console one-shot command (key R) that turns the Staff Avatar's body back to face where the Staff Console camera faces, undoing a body turn left by a gesture. See [ADR-0020](Docs/adr/0020-staff-avatar-look-at.md)
+_Avoid_: recenter, reset pose
+
+**Interest Target**:
+An optional object a human assigns in the Inspector for Look-At to follow instead of the camera direction, for testing or pointing at a display. Focus outranks it. See [ADR-0020](Docs/adr/0020-staff-avatar-look-at.md)
+_Avoid_: look target, aim point
+
 **Staff Config**:
 A data-only ScriptableObject asset holding the Staff Console's tuning values (movement or camera), with plain-C# validation in the Core assembly. See [ADR-0018](Docs/adr/0018-staff-config-data-only-scriptable-objects.md)
 _Avoid_: settings file, event channel
