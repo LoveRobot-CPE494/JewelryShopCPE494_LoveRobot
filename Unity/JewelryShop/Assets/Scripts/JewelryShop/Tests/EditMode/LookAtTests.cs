@@ -1,0 +1,268 @@
+using System;
+using System.Collections.Generic;
+using JewelryShop.Core;
+using NUnit.Framework;
+
+namespace JewelryShop.Tests
+{
+    [TestFixture]
+    public class LookAtTests
+    {
+        private sealed class FakeStore : ILookAtStore
+        {
+            public bool? Value;
+            public bool? Get() => Value;
+            public void Set(bool on) => Value = on;
+        }
+
+        private static readonly LookAtSettings s_defaults = LookAtSettings.Defaults;
+
+        [Test]
+        public void Defaults_AreValidWithoutWarnings()
+        {
+            var warnings = new List<string>();
+            s_defaults.Validated(warnings);
+            Assert.That(warnings, Is.Empty);
+            Assert.That(s_defaults.DefaultOn, Is.False);
+        }
+
+        [Test]
+        public void Validated_CorrectsNegativeAndHugeValuesWithWarnings()
+        {
+            var bad = new LookAtSettings
+            {
+                YawLimitDegrees = -5f, PitchLimitDegrees = 200f, SmoothingSeconds = -1f,
+            };
+            var warnings = new List<string>();
+            var v = bad.Validated(warnings);
+            Assert.That(v.YawLimitDegrees, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(v.PitchLimitDegrees, Is.LessThanOrEqualTo(90f));
+            Assert.That(v.SmoothingSeconds, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(warnings.Count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void IsOn_NothingStored_UsesConfigDefault()
+        {
+            var store = new FakeStore();
+            Assert.That(LookAt.IsOn(store, s_defaults), Is.False);
+            var on = s_defaults;
+            on.DefaultOn = true;
+            Assert.That(LookAt.IsOn(store, on), Is.True);
+        }
+
+        [Test]
+        public void IsOn_StoredValueAlwaysWins()
+        {
+            var on = s_defaults;
+            on.DefaultOn = true;
+            var store = new FakeStore { Value = false };
+            Assert.That(LookAt.IsOn(store, on), Is.False);
+            store.Value = true;
+            Assert.That(LookAt.IsOn(store, s_defaults), Is.True);
+        }
+
+        [Test]
+        public void Toggle_FlipsTheFlag_RemembersIt()
+        {
+            var store = new FakeStore();
+            Assert.That(LookAt.Toggle(store, s_defaults), Is.True);
+            Assert.That(store.Value, Is.True);
+            Assert.That(LookAt.Toggle(store, s_defaults), Is.False);
+            Assert.That(store.Value, Is.False);
+        }
+
+        [TestCase(0f, 0f, 0f, 0f)]
+        [TestCase(30f, 10f, 30f, 10f)]
+        [TestCase(80f, 50f, 45f, 25f)]
+        [TestCase(-80f, -50f, -45f, -25f)]
+        [TestCase(170f, 0f, 45f, 0f)]
+        [TestCase(-170f, 0f, -45f, 0f)]
+        [TestCase(-180f, 0f, 45f, 0f)]
+        [TestCase(180f, 0f, 45f, 0f)]
+        public void Clamp_PastLimits_StaysAtLimit(float yaw, float pitch, float ey, float ep)
+        {
+            var (y, p) = LookAt.Clamp(yaw, pitch, s_defaults);
+            Assert.That(y, Is.EqualTo(ey).Within(1e-4));
+            Assert.That(p, Is.EqualTo(ep).Within(1e-4));
+        }
+
+        [Test]
+        public void Angles_DirectlyBehind_TakesRightHandLimitEvenForNegativeZeroX()
+        {
+            Assert.That(LookAt.Angles(0f, 0f, -1f, s_defaults).Yaw, Is.EqualTo(45f));
+            Assert.That(LookAt.Angles(-0f, 0f, -1f, s_defaults).Yaw, Is.EqualTo(45f));
+        }
+
+        [Test]
+        public void Angles_UsesShortestSignedAngle()
+        {
+            // Slightly behind-left is a left turn, clamped to the left limit.
+            Assert.That(LookAt.Angles(-0.1f, 0f, -1f, s_defaults).Yaw, Is.EqualTo(-45f));
+            // 20 degrees right and 10 degrees up passes through unclamped.
+            var cosP = (float)Math.Cos(10 * Math.PI / 180);
+            var d = LookAt.Angles(
+                cosP * (float)Math.Sin(20 * Math.PI / 180),
+                (float)Math.Sin(10 * Math.PI / 180),
+                cosP * (float)Math.Cos(20 * Math.PI / 180), s_defaults);
+            Assert.That(d.Yaw, Is.EqualTo(20f).Within(0.1f));
+            Assert.That(d.Pitch, Is.EqualTo(10f).Within(0.1f));
+        }
+
+        [Test]
+        public void Ease_TowardTarget_MovesWithoutOvershoot()
+        {
+            var v = LookAt.Ease(0f, 10f, 0.05f, 0.15f);
+            Assert.That(v, Is.GreaterThan(0f).And.LessThan(10f));
+            Assert.That(LookAt.Ease(0f, 10f, 0.15f, 0.15f), Is.GreaterThan(9f));
+            Assert.That(LookAt.Ease(3f, 10f, 0f, 0.15f), Is.EqualTo(3f));
+        }
+
+        [Test]
+        public void Ease_ZeroSmoothing_Snaps()
+        {
+            Assert.That(LookAt.Ease(0f, 10f, 0.016f, 0f), Is.EqualTo(10f));
+        }
+
+        [Test]
+        public void Head_OnThenOff_WeightEasesInThenBackToZero()
+        {
+            var head = new LookAtHead();
+            var s = head.Tick(0.016f, true, 30f, 0f, s_defaults);
+            Assert.That(s.Weight, Is.GreaterThan(0f).And.LessThan(1f));
+            Assert.That(s.Yaw, Is.EqualTo(30f), "first frame snaps the angle; the weight does the easing");
+            for (var i = 0; i < 100; i++)
+                s = head.Tick(0.016f, true, 30f, 0f, s_defaults);
+            Assert.That(s.Weight, Is.EqualTo(1f).Within(0.01f));
+            var off = head.Tick(0.016f, false, 30f, 0f, s_defaults);
+            Assert.That(off.Weight, Is.LessThan(1f).And.GreaterThan(0f));
+            for (var i = 0; i < 100; i++)
+                off = head.Tick(0.016f, false, 30f, 0f, s_defaults);
+            Assert.That(off.Weight, Is.EqualTo(0f).Within(0.01f));
+        }
+
+        [Test]
+        public void Head_On_AnglesEaseTowardMovingTarget()
+        {
+            var head = new LookAtHead();
+            for (var i = 0; i < 100; i++)
+                head.Tick(0.016f, true, 10f, 0f, s_defaults);
+            var s = head.Tick(0.016f, true, 40f, 0f, s_defaults);
+            Assert.That(s.Yaw, Is.GreaterThan(10f).And.LessThan(40f));
+            for (var i = 0; i < 100; i++)
+                s = head.Tick(0.016f, true, 40f, 0f, s_defaults);
+            Assert.That(s.Yaw, Is.EqualTo(40f).Within(0.1f));
+        }
+
+        [Test]
+        public void Head_Off_AnglesStayFrozen_OnlyWeightFades()
+        {
+            var head = new LookAtHead();
+            LookAtPose on = default;
+            for (var i = 0; i < 100; i++)
+                on = head.Tick(0.016f, true, 30f, 5f, s_defaults);
+            var off = head.Tick(0.016f, false, -40f, -20f, s_defaults);
+            Assert.That(off.Yaw, Is.EqualTo(on.Yaw));
+            Assert.That(off.Pitch, Is.EqualTo(on.Pitch));
+            Assert.That(off.Weight, Is.LessThan(on.Weight));
+        }
+
+        [Test]
+        public void StatusText_OffAndOn_MatchesTicketStrings()
+        {
+            Assert.That(LookAt.StatusText(false), Is.EqualTo("Look-At: OFF"));
+            Assert.That(LookAt.StatusText(true), Is.EqualTo("Look-At: ON · Target: camera"));
+        }
+
+        [Test]
+        public void Validated_NewFieldsOutOfRange_AreCorrectedWithWarnings()
+        {
+            var bad = LookAtSettings.Defaults;
+            bad.FrontHalfAngleDegrees = 200f;
+            bad.FrontHysteresisDegrees = -1f;
+            bad.BodyTurnSeconds = -2f;
+            var warnings = new List<string>();
+            var v = bad.Validated(warnings);
+            Assert.That(v.FrontHalfAngleDegrees, Is.EqualTo(180f));
+            Assert.That(v.FrontHysteresisDegrees, Is.EqualTo(0f));
+            Assert.That(v.BodyTurnSeconds, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(warnings.Count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Validated_HysteresisAboveHalfAngle_IsCappedWithWarning()
+        {
+            var bad = LookAtSettings.Defaults;
+            bad.FrontHalfAngleDegrees = 20f;
+            bad.FrontHysteresisDegrees = 30f;
+            var warnings = new List<string>();
+            var v = bad.Validated(warnings);
+            Assert.That(v.FrontHysteresisDegrees, Is.EqualTo(20f));
+            Assert.That(warnings.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ExcessYaw_InsideLimit_IsZero_PastItIsTheSignedRemainder()
+        {
+            Assert.That(LookAt.ExcessYaw(30f, s_defaults), Is.EqualTo(0f));
+            Assert.That(LookAt.ExcessYaw(100f, s_defaults), Is.EqualTo(55f));
+            Assert.That(LookAt.ExcessYaw(-100f, s_defaults), Is.EqualTo(-55f));
+            Assert.That(LookAt.ExcessYaw(180f, s_defaults), Is.EqualTo(135f));
+            Assert.That(LookAt.ExcessYaw(-180f, s_defaults), Is.EqualTo(135f));
+        }
+
+        [Test]
+        public void BodyStep_EasesTowardTheExcess_NeverPastIt()
+        {
+            var step = LookAt.BodyStep(60f, 0.05f, s_defaults);
+            Assert.That(step, Is.GreaterThan(0f).And.LessThan(60f));
+            Assert.That(LookAt.BodyStep(-60f, 0.05f, s_defaults), Is.EqualTo(-step));
+            Assert.That(LookAt.BodyStep(0f, 0.05f, s_defaults), Is.EqualTo(0f));
+            var snap = s_defaults;
+            snap.BodyTurnSeconds = 0f;
+            Assert.That(LookAt.BodyStep(60f, 0.016f, snap), Is.EqualTo(60f));
+        }
+
+        [Test]
+        public void CameraAim_InFront_LooksAtThePosition()
+        {
+            var aim = new CameraAim();
+            // Camera 2 m ahead and 2 m right, facing away (+z): the position wins, so yaw is 45.
+            var (yaw, _) = aim.Aim(2f, 0f, 2f, 0f, 0f, 1f, s_defaults);
+            Assert.That(aim.InFront, Is.True);
+            Assert.That(yaw, Is.EqualTo(45f).Within(0.01f));
+        }
+
+        [Test]
+        public void CameraAim_Behind_TakesTheFacingDirection()
+        {
+            var aim = new CameraAim();
+            // Camera behind-right, facing 30 degrees right.
+            var (yaw, _) = aim.Aim(1f, 0f, -3f, 0.5f, 0f, 0.8660254f, s_defaults);
+            Assert.That(aim.InFront, Is.False);
+            Assert.That(yaw, Is.EqualTo(30f).Within(0.01f));
+        }
+
+        [Test]
+        public void CameraAim_NearTheBoundary_DoesNotFlick()
+        {
+            var aim = new CameraAim();
+            AimAt(aim, 60f);
+            Assert.That(aim.InFront, Is.True);
+            AimAt(aim, 95f); // past 90 but inside the 10 degree band: stays in front
+            Assert.That(aim.InFront, Is.True);
+            AimAt(aim, 105f); // past 100: switches to behind
+            Assert.That(aim.InFront, Is.False);
+            AimAt(aim, 85f); // below 90 but above 80: stays behind
+            Assert.That(aim.InFront, Is.False);
+            AimAt(aim, 75f); // below 80: back in front
+            Assert.That(aim.InFront, Is.True);
+        }
+
+        private static void AimAt(CameraAim aim, float yawDegrees)
+        {
+            var r = yawDegrees * Math.PI / 180;
+            aim.Aim((float)Math.Sin(r), 0f, (float)Math.Cos(r), 0f, 0f, 1f, s_defaults);
+        }
+    }
+}
