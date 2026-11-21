@@ -23,5 +23,5 @@ Decided:
 ## Consequences
 
 - `StaffConsoleMovement` now reads gravity, step height, slope limit and capsule size for its CharacterController, plus `KillPlaneYMeters` for the respawn. `EdgeMarginMeters` is removed with the circular platform clamp.
-- Fields for jump, air control and camera collision are validated now but not read yet; the next tickets wire them.
+- `StaffConsoleMovement` also reads `JumpHeightMeters`, `JumpTakeoffDelaySeconds` and `AirControl`. Takeoff speed comes from jump height and the configured gravity. The Jump pose follows takeoff and landing. Camera collision fields are validated but not read yet; the next tickets wire them.
 - The two assets must be created in the Editor and assigned on the movement component by a human.
