@@ -2,6 +2,7 @@ using JewelryShop.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using UniVRM10;
 
 namespace JewelryShop.StaffConsole
 {
@@ -9,7 +10,7 @@ namespace JewelryShop.StaffConsole
     /// Key 8 toggles Look-At and F toggles Focus on the Customer Avatar: Cheryll's head
     /// follows the target (Customer, Interest Target or the Staff Console camera) within the
     /// config limits and the body turns the excess; after a gesture the body turns to the
-    /// target winning at its end, and R is Reset Look (ADR-0020). Head and body only; the
+    /// target winning at its end, and R is Reset Look (ADR-0020). Head, eyes and body; the
     /// rules live in <see cref="LookAt"/>.
     /// </summary>
     // Run after StaffConsoleMovement.LateUpdate moves the camera, so we read this frame's
@@ -49,6 +50,9 @@ namespace JewelryShop.StaffConsole
             }
         }
 
+        [Tooltip("Cheryll's VRM; its look-at turns the eyes. Empty: found on this object.")]
+        [SerializeField] private Vrm10Instance _avatar;
+
         private readonly ILookAtStore _store = new PlayerPrefsStore();
         private readonly LookAtHead _head = new LookAtHead();
         private readonly CameraAim _cameraAim = new CameraAim();
@@ -61,6 +65,11 @@ namespace JewelryShop.StaffConsole
         private Text _status;
         private bool _isOn;
         private bool _hasTurnAnimation;
+
+        private void Reset()
+        {
+            _avatar = GetComponent<Vrm10Instance>();
+        }
 
         private void Awake()
         {
@@ -79,6 +88,12 @@ namespace JewelryShop.StaffConsole
                 enabled = false;
                 return;
             }
+
+            if (_avatar == null) _avatar = GetComponent<Vrm10Instance>();
+            if (_avatar == null)
+                Debug.LogWarning("No Vrm10Instance; the head follows but the eyes stay put.", this);
+            else // we feed the eyes yaw and pitch ourselves
+                _avatar.LookAtTargetType = VRM10ObjectLookAt.LookAtTargetTypes.YawPitchValue;
 
             var statusObject = GameObject.Find(StatusName);
             _status = statusObject != null ? statusObject.GetComponent<Text>() : null;
@@ -145,6 +160,11 @@ namespace JewelryShop.StaffConsole
             var (yaw, pitch) = LookAt.Clamp(rawYaw, rawPitch, _settings);
             var pose = _head.Tick(elapsedSeconds, _isOn, yaw, pitch, _settings,
                 _gesture.InGesture);
+            if (_avatar != null)
+            {
+                var (eyeYaw, eyePitch) = LookAt.EyeAngles(rawYaw, rawPitch, pose);
+                _avatar.Runtime.LookAt.SetYawPitchManually(eyeYaw, eyePitch);
+            }
             if (pose.Weight <= 0f) return;
 
             var offset = Quaternion.Slerp(Quaternion.identity,

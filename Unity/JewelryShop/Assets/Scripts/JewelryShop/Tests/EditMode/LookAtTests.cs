@@ -522,6 +522,38 @@ namespace JewelryShop.Tests
             Assert.That(aim.InFront, Is.True);
         }
 
+        [Test]
+        public void EyeAngles_EyesCoverWhatTheHeadLeavesOver()
+        {
+            // Target 60 right; the head sits at its 45 limit, so the eyes take 15.
+            var head = new LookAtPose { Yaw = 45f, Pitch = 0f, Weight = 1f };
+            var (yaw, pitch) = LookAt.EyeAngles(60f, 10f, head);
+            Assert.That(yaw, Is.EqualTo(15f).Within(0.001f));
+            Assert.That(pitch, Is.EqualTo(10f).Within(0.001f));
+        }
+
+        [Test]
+        public void EyeAngles_ZeroWeight_EyesAtRest()
+        {
+            var head = new LookAtPose { Yaw = 0f, Pitch = 0f, Weight = 0f };
+            Assert.That(LookAt.EyeAngles(60f, 20f, head), Is.EqualTo((0f, 0f)));
+        }
+
+        [Test]
+        public void EyeAngles_PartWeight_ScalesTheResidual()
+        {
+            var head = new LookAtPose { Yaw = 20f, Pitch = 0f, Weight = 0.5f };
+            Assert.That(LookAt.EyeAngles(40f, 0f, head).Yaw, Is.EqualTo(10f).Within(0.001f));
+        }
+
+        [Test]
+        public void EyeAngles_RawYawPastHalfTurn_TakesTheShortestWay()
+        {
+            // 190 is -170; the head is at its -45 limit, so the eyes take -125.
+            var head = new LookAtPose { Yaw = -45f, Pitch = 0f, Weight = 1f };
+            Assert.That(LookAt.EyeAngles(190f, 0f, head).Yaw, Is.EqualTo(-125f).Within(0.001f));
+        }
+
         private static void AimAt(CameraAim aim, float yawDegrees)
         {
             var r = yawDegrees * Math.PI / 180;
