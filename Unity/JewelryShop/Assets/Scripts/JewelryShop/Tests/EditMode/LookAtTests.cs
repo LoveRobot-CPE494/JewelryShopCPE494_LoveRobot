@@ -170,8 +170,117 @@ namespace JewelryShop.Tests
         [Test]
         public void StatusText_OffAndOn_MatchesTicketStrings()
         {
-            Assert.That(LookAt.StatusText(false), Is.EqualTo("Look-At: OFF"));
-            Assert.That(LookAt.StatusText(true), Is.EqualTo("Look-At: ON · Target: camera"));
+            var focus = new LookAtFocus();
+            Assert.That(LookAt.StatusText(false, focus, false, LookAtTarget.Camera, ""),
+                Is.EqualTo("Look-At: OFF"));
+            Assert.That(LookAt.StatusText(true, focus, false, LookAtTarget.Camera, ""),
+                Is.EqualTo("Look-At: ON · Focus: OFF · Target: camera"));
+            Assert.That(LookAt.StatusText(true, focus, false, LookAtTarget.Interest, "Display_01"),
+                Is.EqualTo("Look-At: ON · Focus: OFF · Target: Display_01"));
+        }
+
+        [Test]
+        public void StatusText_FocusOn_NamesCustomerOrTheFallbackReason()
+        {
+            var focus = new LookAtFocus();
+            focus.Tick(true, true, false, 0f, s_defaults);
+            Assert.That(LookAt.StatusText(true, focus, false, LookAtTarget.Camera, ""),
+                Is.EqualTo("Look-At: ON · Focus: ON (no customer) · Target: camera"));
+            focus.Tick(true, false, true, 3.8f, s_defaults);
+            Assert.That(LookAt.StatusText(true, focus, true, LookAtTarget.Interest, "Display_01"),
+                Is.EqualTo("Look-At: ON · Focus: ON (out of range) · Target: Display_01"));
+            focus.Tick(true, false, true, 2f, s_defaults);
+            Assert.That(LookAt.StatusText(true, focus, true, LookAtTarget.Customer, "Display_01"),
+                Is.EqualTo("Look-At: ON · Focus: ON · Target: Customer"));
+        }
+
+        [TestCase(true, true, LookAtTarget.Customer)]
+        [TestCase(true, false, LookAtTarget.Customer)]
+        [TestCase(false, true, LookAtTarget.Interest)]
+        [TestCase(false, false, LookAtTarget.Camera)]
+        public void PickTarget_FocusThenInterestThenCamera(bool latched, bool interest,
+            LookAtTarget expected) =>
+            Assert.That(LookAt.PickTarget(latched, interest), Is.EqualTo(expected));
+
+        [Test]
+        public void Focus_WhileLookAtOff_PressDoesNothing()
+        {
+            var focus = new LookAtFocus();
+            focus.Tick(false, true, true, 1f, s_defaults);
+            Assert.That(focus.IsOn, Is.False);
+            Assert.That(focus.InRange, Is.False);
+        }
+
+        [Test]
+        public void Focus_LookAtTurnedOff_TurnsFocusOff_AndStaysOffWhenBackOn()
+        {
+            var focus = new LookAtFocus();
+            focus.Tick(true, true, true, 1f, s_defaults);
+            Assert.That(focus.InRange, Is.True);
+            focus.Tick(false, false, true, 1f, s_defaults);
+            Assert.That(focus.IsOn, Is.False);
+            focus.Tick(true, false, true, 1f, s_defaults);
+            Assert.That(focus.IsOn, Is.False);
+        }
+
+        [Test]
+        public void Focus_PressTwice_TogglesOff()
+        {
+            var focus = new LookAtFocus();
+            focus.Tick(true, true, true, 1f, s_defaults);
+            focus.Tick(true, true, true, 1f, s_defaults);
+            Assert.That(focus.IsOn, Is.False);
+            Assert.That(focus.InRange, Is.False);
+        }
+
+        [Test]
+        public void Focus_Hysteresis_EnterAt35_ExitPast40()
+        {
+            var focus = new LookAtFocus();
+            focus.Tick(true, true, true, 5f, s_defaults);
+            Assert.That(focus.InRange, Is.False);
+            focus.Tick(true, false, true, 3.6f, s_defaults);
+            Assert.That(focus.InRange, Is.False);
+            focus.Tick(true, false, true, 3.5f, s_defaults);
+            Assert.That(focus.InRange, Is.True);
+            focus.Tick(true, false, true, 4.0f, s_defaults);
+            Assert.That(focus.InRange, Is.True);
+            focus.Tick(true, false, true, 4.01f, s_defaults);
+            Assert.That(focus.InRange, Is.False);
+            focus.Tick(true, false, true, 3.8f, s_defaults);
+            Assert.That(focus.InRange, Is.False);
+        }
+
+        [Test]
+        public void Focus_SwitchedOnBetweenDistances_StartsOutOfRange()
+        {
+            var focus = new LookAtFocus();
+            focus.Tick(true, true, true, 3.8f, s_defaults);
+            Assert.That(focus.IsOn, Is.True);
+            Assert.That(focus.InRange, Is.False);
+        }
+
+        [Test]
+        public void Focus_CustomerGoneThenBack_MustReenterAtEnterDistance()
+        {
+            var focus = new LookAtFocus();
+            focus.Tick(true, true, true, 1f, s_defaults);
+            focus.Tick(true, false, false, 0f, s_defaults);
+            Assert.That(focus.InRange, Is.False);
+            focus.Tick(true, false, true, 3.8f, s_defaults);
+            Assert.That(focus.InRange, Is.False);
+        }
+
+        [Test]
+        public void Validated_ExitBelowEnter_IsRaisedWithWarning()
+        {
+            var bad = LookAtSettings.Defaults;
+            bad.FocusEnterMeters = 4f;
+            bad.FocusExitMeters = 3f;
+            var warnings = new List<string>();
+            var v = bad.Validated(warnings);
+            Assert.That(v.FocusExitMeters, Is.EqualTo(4f));
+            Assert.That(warnings.Count, Is.EqualTo(1));
         }
 
         [Test]
