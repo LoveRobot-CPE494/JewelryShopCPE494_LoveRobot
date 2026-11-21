@@ -95,7 +95,7 @@ A Staff Console toggle (key 7, OFF at every start) that keeps the Staff Avatar i
 _Avoid_: freeze, pause pose
 
 **Expression**:
-A facial look (a VRM preset such as happy, relaxed or sad) the Staff Avatar shows with each gesture, then holds briefly and fades. Without a gesture it keeps a light smile. See [ADR-0019](Docs/adr/0019-staff-avatar-gesture-expressions.md)
+A facial look (a VRM preset such as happy, relaxed or sad) the Staff Avatar shows with each gesture, then holds briefly and fades. Without a gesture it keeps a light smile, and the same driver blinks on its own in every state. See [ADR-0019](Docs/adr/0019-staff-avatar-gesture-expressions.md)
 _Avoid_: emote, face animation, blendshape (that is the mesh mechanism, not the term)
 
 **Staff Config**:

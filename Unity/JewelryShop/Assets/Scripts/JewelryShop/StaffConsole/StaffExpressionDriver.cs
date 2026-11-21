@@ -6,7 +6,7 @@ namespace JewelryShop.StaffConsole
 {
     /// <summary>
     /// Writes the Expression Blender's weights to Cheryll's VRM face (ADR-0019). Drives only
-    /// happy, relaxed, angry and sad; blink, aa, ee and surprised belong to other systems.
+    /// happy, relaxed, angry, sad and blink; aa, ee and surprised belong to other systems.
     /// </summary>
     [RequireComponent(typeof(Animator))]
     public sealed class StaffExpressionDriver : MonoBehaviour
@@ -67,6 +67,7 @@ namespace JewelryShop.StaffConsole
             expression.SetWeight(ExpressionKey.Relaxed, w.Relaxed);
             expression.SetWeight(ExpressionKey.Angry, w.Angry);
             expression.SetWeight(ExpressionKey.Sad, w.Sad);
+            expression.SetWeight(ExpressionKey.Blink, w.Blink);
         }
     }
 }

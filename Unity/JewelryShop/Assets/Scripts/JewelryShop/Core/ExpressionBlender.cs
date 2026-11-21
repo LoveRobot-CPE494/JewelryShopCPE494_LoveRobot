@@ -10,6 +10,8 @@ namespace JewelryShop.Core
         public float Relaxed;
         public float Angry;
         public float Sad;
+        /// <summary>Blink channel over the emotions (ADR-0019); Lerp leaves it 0.</summary>
+        public float Blink;
 
         public static ExpressionWeights Lerp(ExpressionWeights a, ExpressionWeights b, float t) =>
             new ExpressionWeights
@@ -40,6 +42,12 @@ namespace JewelryShop.Core
         public float HoldSeconds;
         public float FadeSeconds;
         public float DefaultSmileWeight;
+        // Blink (ADR-0019). A 0 value means "unset" and takes its code default (see BlinkValue).
+        public float BlinkMinSeconds;
+        public float BlinkMaxSeconds;
+        public float BlinkDurationSeconds;
+        public float BlinkHappyThreshold;
+        public float BlinkSquintScale;
 
         public static ExpressionSettings Defaults => new ExpressionSettings
         {
@@ -58,6 +66,11 @@ namespace JewelryShop.Core
             HoldSeconds = 0.5f,
             FadeSeconds = 0.3f,
             DefaultSmileWeight = 0.3f,
+            BlinkMinSeconds = 2f,
+            BlinkMaxSeconds = 6f,
+            BlinkDurationSeconds = 0.15f,
+            BlinkHappyThreshold = 0.5f,
+            BlinkSquintScale = 0.6f,
         };
 
         /// <summary>A clean copy: bad or duplicate entries dropped, empty table reset.</summary>
@@ -95,8 +108,26 @@ namespace JewelryShop.Core
                 kept.AddRange(d.Entries);
             }
 
+            var min = BlinkValue(nameof(BlinkMinSeconds), BlinkMinSeconds, 0.01f, 60f,
+                d.BlinkMinSeconds, warnings);
+            var max = BlinkValue(nameof(BlinkMaxSeconds), BlinkMaxSeconds, 0.01f, 60f,
+                d.BlinkMaxSeconds, warnings);
+            if (min > max)
+            {
+                warnings.Add($"BlinkMinSeconds {min} is above BlinkMaxSeconds {max}; swapped.");
+                (min, max) = (max, min);
+            }
+
             return new ExpressionSettings
             {
+                BlinkMinSeconds = min,
+                BlinkMaxSeconds = max,
+                BlinkDurationSeconds = BlinkValue(nameof(BlinkDurationSeconds),
+                    BlinkDurationSeconds, 0.01f, 2f, d.BlinkDurationSeconds, warnings),
+                BlinkHappyThreshold = BlinkValue(nameof(BlinkHappyThreshold),
+                    BlinkHappyThreshold, 0f, 1f, d.BlinkHappyThreshold, warnings),
+                BlinkSquintScale = BlinkValue(nameof(BlinkSquintScale),
+                    BlinkSquintScale, 0f, 1f, d.BlinkSquintScale, warnings),
                 Entries = kept.ToArray(),
                 HoldSeconds = ConfigRule.Clamp(nameof(HoldSeconds),
                     HoldSeconds, 0f, 10f, d.HoldSeconds, warnings),
@@ -106,6 +137,13 @@ namespace JewelryShop.Core
                     DefaultSmileWeight, 0f, 1f, d.DefaultSmileWeight, warnings),
             };
         }
+
+        // shortcut: 0 is the "unset" marker (an older asset deserializes new fields as 0), so a
+        // threshold or squint scale of exactly 0 cannot be set; use 0.01. Upgrade to a presence
+        // flag if that is ever needed.
+        private static float BlinkValue(string name, float value, float min, float max,
+            float fallback, List<string> warnings) =>
+            value == 0f ? fallback : ConfigRule.Clamp(name, value, min, max, fallback, warnings);
     }
 
     /// <summary>
@@ -122,9 +160,20 @@ namespace JewelryShop.Core
         private float _holdLeft;
         private float _fadeElapsed;
 
-        public ExpressionBlender(ExpressionSettings settings)
+        // Blink closes over this share of its duration, then opens more slowly.
+        private const float CloseShare = 0.35f;
+        private readonly Func<float> _random;
+        private float _blinkWait;
+        private float _blinkElapsed;
+        private bool _isBlinking;
+
+        /// <param name="random">Returns 0..1; injected so tests are deterministic.</param>
+        public ExpressionBlender(ExpressionSettings settings, Func<float> random = null)
         {
+            var rng = new Random();
+            _random = random ?? (() => (float)rng.NextDouble());
             _settings = settings;
+            _blinkWait = RollInterval();
             _smile = new ExpressionWeights { Happy = settings.DefaultSmileWeight };
             _from = _target = _smile;
         }
@@ -172,7 +221,43 @@ namespace JewelryShop.Core
                 }
             }
 
-            return Current;
+            var w = Current;
+            w.Blink = TickBlink(elapsedSeconds, w.Happy);
+            return w;
+        }
+
+        private float RollInterval() => _settings.BlinkMinSeconds +
+            _random() * (_settings.BlinkMaxSeconds - _settings.BlinkMinSeconds);
+
+        // Independent of gestures: a started blink always finishes.
+        private float TickBlink(float dt, float happy)
+        {
+            if (!_isBlinking)
+            {
+                _blinkWait -= dt;
+                if (_blinkWait > 0f)
+                    return 0f;
+                _isBlinking = true;
+                _blinkElapsed = -_blinkWait; // overrun counts into the blink
+            }
+            else
+            {
+                _blinkElapsed += dt;
+            }
+
+            var duration = _settings.BlinkDurationSeconds;
+            if (_blinkElapsed >= duration)
+            {
+                _isBlinking = false;
+                _blinkWait = RollInterval();
+                return 0f;
+            }
+
+            var p = _blinkElapsed / duration;
+            var shape = p < CloseShare ? p / CloseShare :
+                1f - (p - CloseShare) / (1f - CloseShare);
+            return happy > _settings.BlinkHappyThreshold ?
+                shape * _settings.BlinkSquintScale : shape;
         }
 
         private ExpressionWeights Lookup(string stateName)
