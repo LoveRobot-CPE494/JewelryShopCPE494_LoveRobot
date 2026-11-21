@@ -15,12 +15,17 @@ namespace JewelryShop.StaffConsole
         private const float MinimumMovementMeters = 0.0001f;
         private const string GestureTag = "Gesture";
         private const string JumpTag = "Jump";
+        // Foot contact frames in Jumping0 (normalized clip time).
+        private const float JumpTakeoffPose = 0.36f;
+        private const float JumpLandingPose = 0.75f;
         private const string IdleLockStatusName = "Idle Lock Status";
         private static readonly int s_isMoving = Animator.StringToHash("IsMoving");
         private static readonly int s_idleLock = Animator.StringToHash("IdleLock");
         private static readonly int s_walkHorizontal = Animator.StringToHash("WalkHorizontal");
         private static readonly int s_walkForward = Animator.StringToHash("WalkForward");
         private static readonly int s_jump = Animator.StringToHash("Base Layer.Jump");
+        private static readonly int s_isGrounded = Animator.StringToHash("IsGrounded");
+        private static readonly int s_jumpPose = Animator.StringToHash("JumpPose");
 
         [SerializeField] private Animator _animator;
         [SerializeField] private Transform _staffCamera;
@@ -32,13 +37,21 @@ namespace JewelryShop.StaffConsole
         private Vector3 _startPositionMeters;
         private Quaternion _startRotation;
         private float _verticalMetersPerSecond;
+        private float _jumpTakeoffMetersPerSecond;
+        private bool _isTakingOff; // Space pressed, still waiting out the take-off delay
+        private float _takeoffRemainingSeconds;
+        private bool _isInJumpArc;
+        private bool _hasMoved; // isGrounded is meaningless before the first controller Move
+        private bool _hasGroundedParameter;
+        private bool _hasJumpPoseParameter;
         private Vector3 _initialCameraOffsetMeters;
         private Quaternion _initialCameraRotation;
         private float _initialCameraYawDegrees;
         private float _yawDegrees;
         private float _pitchDegrees;
         private Vector3 _walkVelocityMetersPerSecond;
-        private bool _isFocusRequired = true; // PlayMode tests turn it off so an unfocused Editor still walks
+        // PlayMode tests turn it off so an unfocused Editor still walks.
+        private bool _isFocusRequired = true;
         private Text _idleLockStatus;
         private MovementSettings _movement;
         private CameraSettings _camera;
@@ -47,6 +60,10 @@ namespace JewelryShop.StaffConsole
 
         /// <summary>Whether the avatar is in or blending with the jump animation.</summary>
         public bool IsJumping => _animator != null && IsPlayingTag(JumpTag);
+
+        // Space, gestures and Idle Lock need real ground, with no grace after leaving an edge.
+        private bool CanUseGroundKeys => !_isInJumpArc && !_isTakingOff &&
+            (!_hasMoved || _controller.isGrounded);
 
         private Vector3 CameraPivot => transform.position + Vector3.up * _camera.PivotHeightMeters;
 
@@ -97,6 +114,7 @@ namespace JewelryShop.StaffConsole
                 Debug.LogWarning(
                     $"No Text named '{IdleLockStatusName}'; Idle Lock still works.", this);
             SetIdleLock(false);
+            SetUpJump();
             _controller.radius = _movement.CapsuleRadiusMeters;
             _controller.height = _movement.CapsuleHeightMeters;
             _controller.center = Vector3.up * (_movement.CapsuleHeightMeters / 2f);
@@ -107,6 +125,21 @@ namespace JewelryShop.StaffConsole
             _initialCameraOffsetMeters = _staffCamera.position - CameraPivot;
             _initialCameraRotation = _staffCamera.rotation;
             _initialCameraYawDegrees = _initialCameraRotation.eulerAngles.y;
+        }
+
+        private void SetUpJump()
+        {
+            _jumpTakeoffMetersPerSecond =
+                JumpMath.TakeoffSpeed(_movement.JumpHeightMeters,
+                    _movement.GravityMetersPerSecondSquared);
+
+            _hasGroundedParameter = _animator.parameters.Any(p =>
+                p.nameHash == s_isGrounded && p.type == AnimatorControllerParameterType.Bool);
+            _hasJumpPoseParameter = _animator.parameters.Any(p =>
+                p.nameHash == s_jumpPose && p.type == AnimatorControllerParameterType.Float);
+            if (!_hasGroundedParameter)
+                Debug.LogWarning("Animator has no bool 'IsGrounded'; the Jump state can only " +
+                    "end when its clip ends.", this);
         }
 
         private void Update()
@@ -137,16 +170,23 @@ namespace JewelryShop.StaffConsole
 
             if (keyboard != null)
             {
-                if (keyboard.digit7Key.wasPressedThisFrame)
+                var onGround = CanUseGroundKeys;
+                if (onGround && keyboard.digit7Key.wasPressedThisFrame)
                     SetIdleLock(!_animator.GetBool(s_idleLock));
 
                 var canMove = true;
-                if (!isJumping && keyboard.spaceKey.wasPressedThisFrame)
+                if (!isJumping && onGround && _jumpTakeoffMetersPerSecond > 0f &&
+                    keyboard.spaceKey.wasPressedThisFrame)
                 {
+                    if (_hasJumpPoseParameter)
+                        _animator.SetFloat(s_jumpPose, 0f);
                     _animator.CrossFadeInFixedTime(s_jump, _blendSeconds, 0);
+                    _isTakingOff = true;
+                    _takeoffRemainingSeconds = _movement.JumpTakeoffDelaySeconds;
                     isJumping = true;
                 }
-                else if (!isJumping && (TryPlayGesture(keyboard) || IsPlayingTag(GestureTag)))
+                else if (!isJumping && ((onGround && TryPlayGesture(keyboard)) ||
+                    IsPlayingTag(GestureTag)))
                 {
                     _walkVelocityMetersPerSecond = Vector3.zero;
                     canMove = false;
@@ -197,14 +237,60 @@ namespace JewelryShop.StaffConsole
             var heading = Quaternion.Euler(0f, _initialCameraYawDegrees + _yawDegrees, 0f);
             var direction = heading * new Vector3(input.x, 0f, input.y);
             var targetVelocityMetersPerSecond = direction * _movement.WalkSpeedMetersPerSecond;
+            var isGrounded = _controller.isGrounded && !_isInJumpArc;
             _walkVelocityMetersPerSecond = Vector3.MoveTowards(_walkVelocityMetersPerSecond,
                 targetVelocityMetersPerSecond,
-                _movement.AccelerationMetersPerSecondSquared * elapsedSeconds);
-            _verticalMetersPerSecond = _controller.isGrounded ? -GroundStickMetersPerSecond :
-                _verticalMetersPerSecond - _movement.GravityMetersPerSecondSquared * elapsedSeconds;
+                _movement.AccelerationMetersPerSecondSquared *
+                JumpMath.ControlScale(isGrounded, _movement.AirControl) * elapsedSeconds);
+            if (isGrounded)
+            {
+                _verticalMetersPerSecond = -GroundStickMetersPerSecond;
+            }
+
+            var gravitySeconds = isGrounded ? 0f : elapsedSeconds;
+            if (_isTakingOff)
+            {
+                _takeoffRemainingSeconds -= elapsedSeconds;
+                if (!isGrounded)
+                    _isTakingOff = false; // walked off an edge before take-off
+                else if (_takeoffRemainingSeconds <= 0f)
+                {
+                    _verticalMetersPerSecond = _jumpTakeoffMetersPerSecond;
+                    gravitySeconds = Mathf.Min(elapsedSeconds, -_takeoffRemainingSeconds);
+                    _isInJumpArc = true;
+                    _isTakingOff = false;
+                }
+            }
+
             var previousMeters = transform.position;
-            _controller.Move((_walkVelocityMetersPerSecond +
-                Vector3.up * _verticalMetersPerSecond) * elapsedSeconds);
+            var gravityDelta = _movement.GravityMetersPerSecondSquared * gravitySeconds;
+            var verticalDistance = _isInJumpArc || !isGrounded
+                ? (_verticalMetersPerSecond - 0.5f * gravityDelta) * gravitySeconds
+                : _verticalMetersPerSecond * elapsedSeconds;
+            _verticalMetersPerSecond -= gravityDelta;
+            var contacts = _controller.Move(_walkVelocityMetersPerSecond * elapsedSeconds +
+                Vector3.up * verticalDistance);
+            if ((contacts & CollisionFlags.Above) != 0)
+                _verticalMetersPerSecond = Mathf.Min(0f, _verticalMetersPerSecond);
+            // Landing is detected here, in the Move that lands, so the Animator bool does not lag.
+            _hasMoved = true;
+            var landed = _controller.isGrounded && (!_isInJumpArc || verticalDistance < 0f);
+            if (_hasJumpPoseParameter && _isTakingOff)
+            {
+                _animator.SetFloat(s_jumpPose, JumpTakeoffPose *
+                    (1f - _takeoffRemainingSeconds / _movement.JumpTakeoffDelaySeconds));
+            }
+            else if (_hasJumpPoseParameter && _isInJumpArc)
+            {
+                var progress = landed ? 1f : Mathf.Clamp01(
+                    (_jumpTakeoffMetersPerSecond - _verticalMetersPerSecond) /
+                    (2f * _jumpTakeoffMetersPerSecond));
+                _animator.SetFloat(s_jumpPose, Mathf.Lerp(JumpTakeoffPose, JumpLandingPose,
+                    progress));
+            }
+            if (landed)
+                _isInJumpArc = false;
+
             if (transform.position.y < _movement.KillPlaneYMeters)
             {
                 Respawn();
@@ -245,6 +331,10 @@ namespace JewelryShop.StaffConsole
             _animator.SetFloat(s_walkHorizontal, walkBlend.x);
             _animator.SetFloat(s_walkForward, walkBlend.y);
             _animator.SetBool(s_isMoving, isMoving);
+            // False from the Space press until she lands, so Jump -> Idle fires only on landing.
+            if (_hasGroundedParameter)
+                _animator.SetBool(s_isGrounded,
+                    _controller.isGrounded && !_isInJumpArc && !_isTakingOff);
         }
 
         private void Respawn()
@@ -257,6 +347,8 @@ namespace JewelryShop.StaffConsole
             _controller.enabled = true;
             _walkVelocityMetersPerSecond = Vector3.zero;
             _verticalMetersPerSecond = 0f;
+            _isInJumpArc = false;
+            _isTakingOff = false;
             // Back to the start camera heading, and no stale walk blend while a key is still held.
             _yawDegrees = 0f;
             _pitchDegrees = 0f;

@@ -205,19 +205,131 @@ namespace JewelryShop.Tests
             Assert.That(cheryll.position.z, Is.LessThan(1.5f)); // she was stopped by it
         }
 
-        private Transform AddCheryll(Vector3 position)
+        [UnityTest]
+        public IEnumerator Cheryll_Space_LiftsToJumpHeightAndLandsGrounded()
+        {
+            AddFloor();
+            var cheryll = AddCheryll(Vector3.up * 0.05f);
+            yield return Wait(0.5f);
+            var floorY = cheryll.position.y;
+
+            yield return Tap(Key.Space);
+            var peakY = floorY;
+            for (var elapsed = 0f; elapsed < 2f; elapsed += Time.deltaTime)
+            {
+                yield return null;
+                peakY = Mathf.Max(peakY, cheryll.position.y);
+            }
+
+            Assert.That(peakY - floorY,
+                Is.EqualTo(MovementSettings.Defaults.JumpHeightMeters).Within(0.1f));
+            Assert.That(_controller.isGrounded, Is.True);
+            // She may settle up to skinWidth off the start height.
+            Assert.That(cheryll.position.y, Is.EqualTo(floorY).Within(0.05f));
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_JumpOntoLedge_LeavesJumpByGroundedNotClipEnd()
+        {
+            AddFloor();
+            // Ledge face at z = 1.3, top at 0.4.
+            AddBox(new Vector3(0f, 0.2f, 3.3f), new Vector3(10f, 0.4f, 4f));
+            var cheryll = AddCheryll(Vector3.up * 0.05f, GroundedController());
+            Hold(Key.W);
+            yield return Wait(0.4f);
+
+            yield return Tap(Key.Space, Key.W);
+            Hold(Key.W);
+            // The Animator leaves Jump when the controller lands on the ledge.
+            yield return Wait(1.5f);
+
+            Assert.That(_controller.isGrounded, Is.True);
+            Assert.That(_animator.GetBool("IsGrounded"), Is.True);
+            Assert.That(_animator.GetCurrentAnimatorStateInfo(0).IsTag("Jump"), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_GestureAndIdleLockKeys_DoNothingWhileAirborne()
+        {
+            AddFloor();
+            AddCheryll(Vector3.up * 0.05f);
+            yield return Wait(0.5f);
+            yield return Tap(Key.Space);
+            yield return Wait(0.45f); // past take-off, near the top of the arc
+            Assert.That(_controller.isGrounded, Is.False, "precondition: airborne");
+
+            yield return Tap(Key.Digit1);
+            yield return Tap(Key.Digit7);
+
+            Assert.That(_animator.GetCurrentAnimatorStateInfo(0).IsTag("Gesture"), Is.False);
+            Assert.That(_animator.GetNextAnimatorStateInfo(0).IsTag("Gesture"), Is.False);
+            Assert.That(_animator.GetBool("IdleLock"), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_IdleLockKey_OnFirstFrameWhileStillFalling_IsNotBlocked()
+        {
+            AddFloor();
+            AddCheryll(new Vector3(0f, 2f, 0f)); // not grounded yet, but only just
+            Assert.That(_animator.GetBool("IdleLock"), Is.False);
+
+            yield return Tap(Key.Digit7);
+
+            Assert.That(_animator.GetBool("IdleLock"), Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_KeysRightAfterLeavingEdge_DoNothing()
+        {
+            AddBox(new Vector3(0f, -0.5f, 0.25f), new Vector3(4f, 1f, 3.5f)); // far edge z = 2
+            AddCheryll(new Vector3(0f, 0.05f, 1.9f));
+            yield return null;
+            yield return null; // past the first Move, where isGrounded is not yet meaningful
+            Assert.That(_controller.isGrounded, Is.True, "precondition: on the platform");
+            Hold(Key.W);
+            for (var frame = 0; frame < 300 && _controller.isGrounded; frame++)
+                yield return null;
+            Assert.That(_controller.isGrounded, Is.False, "precondition: just left the edge");
+
+            yield return Tap(Key.Space);
+            Assert.That(JumpPlaying(), Is.False, "Space");
+            yield return Tap(Key.Digit1);
+            Assert.That(_animator.GetCurrentAnimatorStateInfo(0).IsTag("Gesture"), Is.False);
+            Assert.That(_animator.GetNextAnimatorStateInfo(0).IsTag("Gesture"), Is.False);
+            yield return Tap(Key.Digit7);
+            Assert.That(_animator.GetBool("IdleLock"), Is.False);
+        }
+
+        private bool JumpPlaying() =>
+            _animator.GetCurrentAnimatorStateInfo(0).IsTag("Jump") ||
+            _animator.GetNextAnimatorStateInfo(0).IsTag("Jump");
+
+        [UnityTest]
+        public IEnumerator Cheryll_Space_WhileAirborne_DoesNotJumpAgain()
+        {
+            AddBox(new Vector3(0f, -0.5f, 0.25f), new Vector3(4f, 1f, 3.5f)); // far edge z = 2
+            AddCheryll(new Vector3(0f, 0.05f, 1.9f));
+            Hold(Key.W);
+            yield return Wait(0.8f); // walked off the edge and is falling
+            Assert.That(_controller.isGrounded, Is.False, "precondition: airborne");
+            Hold();
+
+            yield return Tap(Key.Space);
+
+            Assert.That(_animator.GetCurrentAnimatorStateInfo(0).IsTag("Jump"), Is.False);
+            Assert.That(_animator.GetNextAnimatorStateInfo(0).IsTag("Jump"), Is.False);
+        }
+
+        private Transform AddCheryll(Vector3 position,
+            RuntimeAnimatorController controller = null)
         {
             var go = new GameObject("Cheryll");
             go.SetActive(false); // Awake must see the injected references
             go.transform.SetParent(_root.transform);
             go.transform.position = position;
             _animator = go.AddComponent<Animator>();
-            _animator.runtimeAnimatorController =
-#if UNITY_EDITOR
-                UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ControllerPath);
-#else
-                null;
-#endif
+            _animator.runtimeAnimatorController = controller != null ? controller :
+                LoadController();
             var camera = new GameObject("Camera").transform;
             camera.SetParent(_root.transform);
             camera.position = new Vector3(0f, 2f, -3f);
@@ -229,6 +341,13 @@ namespace JewelryShop.Tests
             _controller = go.GetComponent<CharacterController>();
             return go.transform;
         }
+
+        private static RuntimeAnimatorController LoadController() =>
+#if UNITY_EDITOR
+            UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ControllerPath);
+#else
+            null;
+#endif
 
         private static void SetField(object target, string name, object value) =>
             target.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)
@@ -258,6 +377,46 @@ namespace JewelryShop.Tests
             InputSystem.QueueStateEvent(_keyboard, new KeyboardState(keys));
             InputSystem.Update();
         }
+
+        // Queued without InputSystem.Update so the next frame's own update sees a fresh press.
+        private IEnumerator Tap(params Key[] keys)
+        {
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(keys));
+            yield return null;
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState());
+            yield return null;
+        }
+
+#if UNITY_EDITOR
+        // The real controller's Jump -> Idle wiring, in memory: leaves Jump when IsGrounded is
+        // true, with no exit time, so nothing but landing ends Jump.
+        private static RuntimeAnimatorController GroundedController()
+        {
+            var controller = new UnityEditor.Animations.AnimatorController();
+            controller.AddParameter("IsGrounded", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("IsMoving", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("IdleLock", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("WalkHorizontal", AnimatorControllerParameterType.Float);
+            controller.AddParameter("WalkForward", AnimatorControllerParameterType.Float);
+            controller.AddLayer("Base Layer");
+            var machine = controller.layers[0].stateMachine;
+            var idle = machine.AddState("Idle");
+            var jump = machine.AddState("Jump");
+            jump.tag = "Jump";
+            var clip = new AnimationClip { name = "Jumping0" };
+            clip.SetCurve("NoSuchBone", typeof(Transform), "localPosition.x",
+                AnimationCurve.Linear(0f, 0f, 1.2f, 0f));
+            jump.motion = clip;
+            var landed = jump.AddTransition(idle);
+            landed.hasExitTime = false;
+            landed.duration = 0f;
+            landed.AddCondition(
+                UnityEditor.Animations.AnimatorConditionMode.If, 0f, "IsGrounded");
+            return controller;
+        }
+#else
+        private static RuntimeAnimatorController GroundedController() => null;
+#endif
 
         private static IEnumerator Wait(float seconds)
         {

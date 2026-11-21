@@ -30,8 +30,10 @@ namespace JewelryShop.Core
         public float AccelerationMetersPerSecondSquared;
         public float TurnDegreesPerSecond;
         public float GravityMetersPerSecondSquared;
-        // Jump speed and air control are validated now and read by a later ticket.
-        public float JumpSpeedMetersPerSecond;
+        // The jump uses the same gravity as falling off a ledge.
+        public float JumpHeightMeters;
+        public float JumpTakeoffDelaySeconds;
+        /// <summary>Share of walk acceleration kept in the air (0..1); no air speed cap.</summary>
         public float AirControl;
         public float StepHeightMeters;
         public float SlopeLimitDegrees;
@@ -45,7 +47,8 @@ namespace JewelryShop.Core
             AccelerationMetersPerSecondSquared = 8f,
             TurnDegreesPerSecond = 180f,
             GravityMetersPerSecondSquared = 9.81f,
-            JumpSpeedMetersPerSecond = 4f,
+            JumpHeightMeters = 0.5f,
+            JumpTakeoffDelaySeconds = 0.14f,
             AirControl = 0.3f,
             StepHeightMeters = 0.3f,
             SlopeLimitDegrees = 45f,
@@ -72,8 +75,10 @@ namespace JewelryShop.Core
                     nameof(GravityMetersPerSecondSquared),
                     GravityMetersPerSecondSquared, 0f, 50f,
                     d.GravityMetersPerSecondSquared, warnings),
-                JumpSpeedMetersPerSecond = ConfigRule.Clamp(nameof(JumpSpeedMetersPerSecond),
-                    JumpSpeedMetersPerSecond, 0f, 20f, d.JumpSpeedMetersPerSecond, warnings),
+                JumpHeightMeters = ConfigRule.Clamp(nameof(JumpHeightMeters),
+                    JumpHeightMeters, 0f, 3f, d.JumpHeightMeters, warnings),
+                JumpTakeoffDelaySeconds = ConfigRule.Clamp(nameof(JumpTakeoffDelaySeconds),
+                    JumpTakeoffDelaySeconds, 0f, 2f, d.JumpTakeoffDelaySeconds, warnings),
                 AirControl = ConfigRule.Clamp(nameof(AirControl),
                     AirControl, 0f, 1f, d.AirControl, warnings),
                 StepHeightMeters = ConfigRule.Clamp(nameof(StepHeightMeters),

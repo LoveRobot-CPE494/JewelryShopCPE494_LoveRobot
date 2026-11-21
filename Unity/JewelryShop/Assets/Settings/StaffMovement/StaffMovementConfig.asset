@@ -16,11 +16,12 @@ MonoBehaviour:
     WalkSpeedMetersPerSecond: 1.5
     AccelerationMetersPerSecondSquared: 8
     TurnDegreesPerSecond: 180
-    EdgeMarginMeters: 0.25
-    GravityMetersPerSecondSquared: 9.81
-    JumpSpeedMetersPerSecond: 4
+    GravityMetersPerSecondSquared: 12
+    JumpHeightMeters: 0.5
+    JumpTakeoffDelaySeconds: 0.14
     AirControl: 0.3
     StepHeightMeters: 0.3
     SlopeLimitDegrees: 45
     CapsuleRadiusMeters: 0.3
     CapsuleHeightMeters: 1.7
+    KillPlaneYMeters: -10
