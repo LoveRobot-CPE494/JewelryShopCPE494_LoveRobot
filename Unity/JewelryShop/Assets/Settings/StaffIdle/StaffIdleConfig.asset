@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: StaffIdleConfig
   m_EditorClassIdentifier: Assembly-CSharp::JewelryShop.StaffConsole.StaffIdleConfig
   _settings:
-    MinIntervalSeconds: 3
+    MinIntervalSeconds: 5
     MaxIntervalSeconds: 9
-    BlendSeconds: 0.15
+    BlendSeconds: 0.3

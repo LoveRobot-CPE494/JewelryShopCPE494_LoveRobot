@@ -127,12 +127,12 @@ namespace JewelryShop.Tests
         }
 
         [Test]
-        public void IdleDefaults_EqualOldConstants()
+        public void IdleDefaults_WaitFiveToNineSecondsBeforeFidgeting()
         {
             var d = IdleSettings.Defaults;
-            Assert.That(d.MinIntervalSeconds, Is.EqualTo(3f));
+            Assert.That(d.MinIntervalSeconds, Is.EqualTo(5f));
             Assert.That(d.MaxIntervalSeconds, Is.EqualTo(9f));
-            Assert.That(d.BlendSeconds, Is.EqualTo(0.15f));
+            Assert.That(d.BlendSeconds, Is.EqualTo(0.3f));
         }
 
         [Test]
@@ -206,7 +206,7 @@ namespace JewelryShop.Tests
             s.MaxIntervalSeconds = 5f;
             var warnings = new List<string>();
             var v = s.Validated(warnings);
-            Assert.That(v.MinIntervalSeconds, Is.EqualTo(3f));
+            Assert.That(v.MinIntervalSeconds, Is.EqualTo(5f));
             Assert.That(v.MaxIntervalSeconds, Is.EqualTo(9f));
             Assert.That(warnings, Has.Count.EqualTo(1));
         }

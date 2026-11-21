@@ -216,7 +216,7 @@ namespace JewelryShop.Core
         }
     }
 
-    /// <summary>Idle fidget timing. Defaults equal the pre-config behaviour.</summary>
+    /// <summary>Timing for the optional Standby variations.</summary>
     [Serializable]
     public struct IdleSettings
     {
@@ -226,9 +226,9 @@ namespace JewelryShop.Core
 
         public static IdleSettings Defaults => new IdleSettings
         {
-            MinIntervalSeconds = 3f,
+            MinIntervalSeconds = 5f,
             MaxIntervalSeconds = 9f,
-            BlendSeconds = 0.15f,
+            BlendSeconds = 0.3f,
         };
 
         /// <summary>A clamped copy; each change is described in <paramref name="warnings"/>.</summary>
