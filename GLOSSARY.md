@@ -94,6 +94,10 @@ _Avoid_: staff app, admin panel, dashboard
 A Staff Console toggle (key 7, OFF at every start) that keeps the Staff Avatar in the plain standing pose instead of playing random Standby fidgets
 _Avoid_: freeze, pause pose
 
+**Expression**:
+A facial look (a VRM preset such as happy, relaxed or sad) the Staff Avatar shows with each gesture, then holds briefly and fades. Without a gesture it keeps a light smile. See [ADR-0019](Docs/adr/0019-staff-avatar-gesture-expressions.md)
+_Avoid_: emote, face animation, blendshape (that is the mesh mechanism, not the term)
+
 **Staff Config**:
 A data-only ScriptableObject asset holding the Staff Console's tuning values (movement or camera), with plain-C# validation in the Core assembly. See [ADR-0018](Docs/adr/0018-staff-config-data-only-scriptable-objects.md)
 _Avoid_: settings file, event channel
