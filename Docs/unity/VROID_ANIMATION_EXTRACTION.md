@@ -141,7 +141,9 @@ the Walk state blends `WALK00_F`, `WALK00_B`, `WALK00_L`, and `WALK00_R` from
 
 ### Staff Console preview clips
 
-After 3–9 seconds in the main standby pose, Cheryll plays one of five standby variations once.
+The main Idle state plays `WAIT00_Idle` for the standing pose and subtle knee movement.
+Cheryll breathes subtly during Idle. With Idle Lock off, she plays one of five
+standby variations after 5–9 seconds. Press 7 to keep the calm standing pose while serving a Customer.
 `Standby01` and `Standby02` use the existing clips. Extract the additions and gesture replacements
 into a temporary directory with Python.
 

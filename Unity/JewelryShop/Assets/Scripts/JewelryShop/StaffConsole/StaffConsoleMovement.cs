@@ -211,6 +211,8 @@ namespace JewelryShop.StaffConsole
         private void SetIdleLock(bool isIdleLockOn)
         {
             _animator.SetBool(s_idleLock, isIdleLockOn);
+            if (isIdleLockOn)
+                _animator.GetBehaviour<StaffConsoleIdleVariations>()?.EndStandby(_animator);
             if (_idleLockStatus != null)
                 _idleLockStatus.text = IdleLock.StatusText(isIdleLockOn);
         }

@@ -7,10 +7,13 @@ using UniVRM10;
 
 namespace JewelryShop.StaffConsole
 {
-    /// <summary>Keeps Cheryll's skirt draped while her thighs move.</summary>
+    /// <summary>Keeps Cheryll's skirt draped and limits bust spring sway during jumps.</summary>
     [DefaultExecutionOrder(10990)] // Apply the pose before Vrm10Instance solves the springs.
     public sealed class StaffConsoleJumpSkirt : MonoBehaviour
     {
+        private const float BustJumpSwingDegrees = 2f;
+        private const float BustJumpMinimumDrag = 0.8f;
+
         [SerializeField] private Vrm10Instance _avatar;
         [SerializeField] private StaffConsoleMovement _movement;
         [SerializeField] private StaffSkirtConfig _skirtConfig;
@@ -18,7 +21,8 @@ namespace JewelryShop.StaffConsole
         private Transform _hips;
         private Animator _animator;
         private (Transform Bone, Pose ParentPose, Pose HipsPose)[] _anchors;
-        private VRM10SpringBoneJoint[] _joints;
+        private VRM10SpringBoneJoint[] _skirtJoints;
+        private VRM10SpringBoneJoint[] _bustJoints;
         private IVrm10SpringBoneRuntime _springs;
         private SkirtSettings _skirt;
         private bool _isLimited;
@@ -48,7 +52,13 @@ namespace JewelryShop.StaffConsole
                     new Pose(_hips.InverseTransformPoint(bone.position),
                         Quaternion.Inverse(_hips.rotation) * bone.rotation)))
                 .ToArray();
-            _joints = chains.SelectMany(chain => chain.Joints)
+            _skirtJoints = chains.SelectMany(chain => chain.Joints)
+                .Where(joint => joint != null)
+                .Distinct()
+                .ToArray();
+            _bustJoints = _avatar.SpringBone.Springs
+                .Where(chain => chain.Name == "Bust")
+                .SelectMany(chain => chain.Joints)
                 .Where(joint => joint != null)
                 .Distinct()
                 .ToArray();
@@ -56,7 +66,7 @@ namespace JewelryShop.StaffConsole
             if (_anchors.Length == 0)
             {
                 Debug.LogWarning("StaffConsoleJumpSkirt could not find skirt springs.", this);
-                enabled = false;
+                enabled = _bustJoints.Length > 0;
             }
         }
 
@@ -70,20 +80,19 @@ namespace JewelryShop.StaffConsole
             {
                 RestoreJumpLimits();
             }
-            else if (!_isLimited)
+            else
             {
-                _springs = _avatar.Runtime.SpringBone;
-                foreach (var joint in _joints)
+                if (!_isLimited)
                 {
-                    var normal = joint.Blittable;
-                    var limited = new BlittableJointMutable(
-                        normal.stiffnessForce, normal.gravityPower, normal.gravityDir,
-                        normal.dragForce, normal.radius, (float)AnglelimitTypes.Cone,
-                        _skirt.SwingDegrees * Mathf.Deg2Rad, 0f, normal.anglelimitOffset);
-                    _springs.SetJointLevel(joint.transform, limited);
+                    _springs = _avatar.Runtime.SpringBone;
+                    foreach (var joint in _skirtJoints)
+                        LimitJumpSwing(joint, _skirt.SwingDegrees, minimumDrag: 0f);
+                    _isLimited = true;
                 }
 
-                _isLimited = true;
+                // The spring buffer may be initialized after the first jump frame.
+                foreach (var joint in _bustJoints)
+                    LimitJumpSwing(joint, BustJumpSwingDegrees, BustJumpMinimumDrag);
             }
 
             // The skirt roots sit under the thighs; keep leg motion from folding the fabric.
@@ -120,6 +129,17 @@ namespace JewelryShop.StaffConsole
             }
         }
 
+        private void LimitJumpSwing(VRM10SpringBoneJoint joint, float swingDegrees, float minimumDrag)
+        {
+            var normal = joint.Blittable;
+            var limited = new BlittableJointMutable(
+                normal.stiffnessForce, normal.gravityPower, normal.gravityDir,
+                Mathf.Max(normal.dragForce, minimumDrag), normal.radius,
+                (float)AnglelimitTypes.Cone, swingDegrees * Mathf.Deg2Rad, 0f,
+                normal.anglelimitOffset);
+            _springs.SetJointLevel(joint.transform, limited);
+        }
+
         private void OnDisable()
         {
             RestoreJumpLimits();
@@ -136,7 +156,9 @@ namespace JewelryShop.StaffConsole
                 return;
 
             _isLimited = false;
-            foreach (var joint in _joints)
+            foreach (var joint in _skirtJoints)
+                _springs.SetJointLevel(joint.transform, joint.Blittable);
+            foreach (var joint in _bustJoints)
                 _springs.SetJointLevel(joint.transform, joint.Blittable);
         }
     }

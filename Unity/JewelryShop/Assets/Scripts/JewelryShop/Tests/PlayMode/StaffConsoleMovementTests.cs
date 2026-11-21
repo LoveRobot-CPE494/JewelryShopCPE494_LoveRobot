@@ -29,12 +29,15 @@ namespace JewelryShop.Tests
         {
             _root = new GameObject("MovementTestRoot");
             _keyboard = InputSystem.AddDevice<Keyboard>();
+            // Host keyboard input may arrive while the Editor runs the tests.
+            InputSystem.onAfterUpdate += _keyboard.MakeCurrent;
         }
 
         [TearDown]
         public void TearDown()
         {
             Hold(); // release held keys before the device goes
+            InputSystem.onAfterUpdate -= _keyboard.MakeCurrent;
             InputSystem.RemoveDevice(_keyboard);
             Object.DestroyImmediate(_root);
         }
@@ -388,6 +391,184 @@ namespace JewelryShop.Tests
             Assert.That(_animator.GetBool("IdleLock"), Is.True);
         }
 
+#if UNITY_EDITOR
+        [UnityTest]
+        public IEnumerator Cheryll_Jump_LimitsBustSpringSwing()
+        {
+            AddFloor();
+            var avatar = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Avatar/Cheryll_3.vrm");
+            Assert.That(avatar, Is.Not.Null);
+            var cheryll = AddCheryll(Vector3.up * 0.05f, avatar: avatar,
+                hasJumpSpringLimits: true);
+            var joints = System.Array.FindAll(cheryll.GetComponentsInChildren<Transform>(),
+                bone => bone.name.EndsWith("_Bust1", System.StringComparison.Ordinal) ||
+                    bone.name.EndsWith("_Bust2", System.StringComparison.Ordinal));
+            Assert.That(joints, Has.Length.EqualTo(4));
+            var rest = System.Array.ConvertAll(joints, joint => joint.localRotation);
+
+            yield return Wait(0.5f);
+            var standingHeightMeters = cheryll.position.y;
+            yield return Tap(Key.Space);
+            var hasAirborneSample = false;
+            var maxSwingDegrees = 0f;
+            for (var elapsedSeconds = 0f; elapsedSeconds < 1.2f;
+                elapsedSeconds += Time.fixedDeltaTime)
+            {
+                yield return new WaitForFixedUpdate();
+                if (!_movement.IsJumping || cheryll.position.y - standingHeightMeters < 0.15f)
+                    continue;
+                hasAirborneSample = true;
+                for (var i = 0; i < joints.Length; i++)
+                    maxSwingDegrees = Mathf.Max(maxSwingDegrees,
+                        Quaternion.Angle(rest[i], joints[i].localRotation));
+            }
+
+            Assert.That(hasAirborneSample, Is.True);
+            Assert.That(maxSwingDegrees, Is.LessThan(2.2f));
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_ReturningToIdle_BlendsIntoTheAuthoredArmPose()
+        {
+            AddFloor();
+            var avatar = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Avatar/Cheryll_3.vrm");
+            Assert.That(avatar, Is.Not.Null);
+            AddCheryll(Vector3.up * 0.05f, avatar: avatar);
+            yield return Wait(0.5f);
+            _animator.GetComponent<StaffConsoleIdleBreathing>().enabled = false;
+            _animator.Play("Base Layer.Idle", 0, 0f);
+            yield return null;
+            AssertUpperArmsAlongsideBody();
+
+            var knee = _animator.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
+            var foot = _animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            var kneeAtRest = knee.position;
+            var plantedFoot = foot.position;
+            yield return Wait(1.2f);
+            Assert.That(Vector3.Distance(kneeAtRest, knee.position), Is.GreaterThan(0.0003f));
+            Assert.That(Vector3.Distance(plantedFoot, foot.position), Is.LessThan(0.003f));
+
+            var arm = _animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            var elbow = _animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
+            float ArmDepthDegrees()
+            {
+                var direction = elbow.position - arm.position;
+                return Vector3.Angle(direction,
+                    Vector3.ProjectOnPlane(direction, _animator.transform.forward));
+            }
+
+            _animator.Play("Base Layer.Standby01", 0, 0f);
+            yield return Wait(0.45f);
+            var standbyDepthDegrees = ArmDepthDegrees();
+            Assert.That(standbyDepthDegrees, Is.GreaterThan(1f));
+
+            _animator.CrossFadeInFixedTime("Base Layer.Idle", 0.8f, 0);
+            yield return Wait(0.35f);
+            Assert.That(_animator.IsInTransition(0), Is.True);
+            Assert.That(_animator.GetNextAnimatorStateInfo(0).IsName("Base Layer.Idle"), Is.True);
+            var blendedDepthDegrees = ArmDepthDegrees();
+            Assert.That(blendedDepthDegrees, Is.InRange(0.2f, standbyDepthDegrees - 0.2f));
+
+            yield return Wait(0.6f);
+            Assert.That(_animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Idle"),
+                Is.True);
+            AssertUpperArmsAlongsideBody();
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_IdleLock_StopsStandbyAndKeepsBreathing()
+        {
+            AddFloor();
+            var avatar = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Avatar/Cheryll_3.vrm");
+            Assert.That(avatar, Is.Not.Null);
+            AddCheryll(Vector3.up * 0.05f, avatar: avatar);
+            yield return Wait(0.5f);
+            Assert.That(_animator.GetComponent<StaffConsoleIdleBreathing>(), Is.Not.Null);
+            var chest = _animator.GetBoneTransform(HumanBodyBones.Chest);
+
+            _animator.Play("Base Layer.Standby01", 0, 0f);
+            yield return null;
+            Assert.That(_animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Standby01"),
+                Is.True);
+            yield return Tap(Key.Digit7);
+            yield return Wait(0.9f);
+            Assert.That(_animator.GetBool("IdleLock"), Is.True);
+            Assert.That(_animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Idle"),
+                Is.True);
+            // Sample the last LateUpdate before the next regular Update clears its offset.
+            yield return new WaitForFixedUpdate();
+            var chestRotation = chest.localRotation;
+            var arm = _animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            var elbow = _animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
+            var hand = _animator.GetBoneTransform(HumanBodyBones.RightHand);
+            var armRotation = arm.localRotation;
+            var elbowRotation = elbow.localRotation;
+            var handRotation = hand.localRotation;
+            var thigh = _animator.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
+            var knee = _animator.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
+            var foot = _animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            var thighRotation = thigh.localRotation;
+            var kneePosition = knee.position;
+            var footPosition = foot.position;
+            AssertUpperArmsAlongsideBody();
+
+            yield return Wait(2f);
+            yield return new WaitForFixedUpdate();
+            Assert.That(Quaternion.Angle(chestRotation, chest.localRotation), Is.GreaterThan(0.3f));
+
+            yield return Wait(1f);
+            yield return new WaitForFixedUpdate();
+            Assert.That(Quaternion.Angle(armRotation, arm.localRotation), Is.GreaterThan(0.5f));
+            Assert.That(Quaternion.Angle(elbowRotation, elbow.localRotation),
+                Is.InRange(0.4f, 2.1f));
+            Assert.That(Quaternion.Angle(handRotation, hand.localRotation), Is.InRange(0.4f, 5.1f));
+            Assert.That(Quaternion.Angle(thighRotation, thigh.localRotation),
+                Is.InRange(0.5f, 10.1f), "subtle knee sway");
+            Assert.That(Vector3.Distance(kneePosition, knee.position),
+                Is.GreaterThan(0.0003f), "the knee moves during idle");
+            Assert.That(Vector3.Distance(footPosition, foot.position),
+                Is.LessThan(0.003f), "the foot stays planted");
+            AssertUpperArmsAlongsideBody();
+
+            for (var elapsed = 0f; elapsed < 9f; elapsed += Time.deltaTime)
+            {
+                Assert.That(_animator.IsInTransition(0), Is.False, "while Idle Lock is on");
+                yield return null;
+            }
+            yield return Tap(Key.Digit7);
+            Assert.That(_animator.GetBool("IdleLock"), Is.False);
+            for (var elapsed = 0f; elapsed < 4.8f; elapsed += Time.deltaTime)
+            {
+                Assert.That(_animator.IsInTransition(0), Is.False, "before the new interval");
+                yield return null;
+            }
+            for (var elapsed = 0f; elapsed < 4.4f && !_animator.IsInTransition(0);
+                elapsed += Time.deltaTime)
+                yield return null;
+            Assert.That(_animator.IsInTransition(0), Is.True, "after the new interval");
+        }
+
+        private void AssertUpperArmsAlongsideBody()
+        {
+            var forward = _animator.transform.forward;
+            var leftDirection = _animator.GetBoneTransform(HumanBodyBones.LeftLowerArm).position -
+                _animator.GetBoneTransform(HumanBodyBones.LeftUpperArm).position;
+            var rightDirection = _animator.GetBoneTransform(HumanBodyBones.RightLowerArm).position -
+                _animator.GetBoneTransform(HumanBodyBones.RightUpperArm).position;
+            Assert.That(Vector3.Dot(leftDirection.normalized, forward),
+                Is.EqualTo(0f).Within(0.02f));
+            Assert.That(Vector3.Dot(rightDirection.normalized, forward),
+                Is.EqualTo(0f).Within(0.02f));
+            Assert.That(Vector3.Dot(leftDirection.normalized, -_animator.transform.up),
+                Is.GreaterThan(0.8f));
+            Assert.That(Vector3.Dot(rightDirection.normalized, -_animator.transform.up),
+                Is.GreaterThan(0.8f));
+        }
+#endif
+
         [UnityTest]
         public IEnumerator Cheryll_KeysRightAfterLeavingEdge_DoNothing()
         {
@@ -540,13 +721,14 @@ namespace JewelryShop.Tests
         }
 
         private Transform AddCheryll(Vector3 position,
-            RuntimeAnimatorController controller = null, StaffCameraConfig cameraConfig = null)
+            RuntimeAnimatorController controller = null, StaffCameraConfig cameraConfig = null,
+            GameObject avatar = null, bool hasJumpSpringLimits = false)
         {
-            var go = new GameObject("Cheryll");
+            var go = avatar != null ? Object.Instantiate(avatar) : new GameObject("Cheryll");
             go.SetActive(false); // Awake must see the injected references
             go.transform.SetParent(_root.transform);
             go.transform.position = position;
-            _animator = go.AddComponent<Animator>();
+            _animator = avatar != null ? go.GetComponent<Animator>() : go.AddComponent<Animator>();
             _animator.runtimeAnimatorController = controller != null ? controller :
                 LoadController();
             var camera = new GameObject("Camera").transform;
@@ -558,6 +740,12 @@ namespace JewelryShop.Tests
             SetField(_movement, "_isFocusRequired", false); // the Editor may not be focused
             if (cameraConfig != null)
                 SetField(_movement, "_cameraConfig", cameraConfig);
+            if (hasJumpSpringLimits)
+            {
+                var springLimits = go.AddComponent<StaffConsoleJumpSkirt>();
+                SetField(springLimits, "_avatar", go.GetComponent("Vrm10Instance"));
+                SetField(springLimits, "_movement", _movement);
+            }
             go.SetActive(true);
             _controller = go.GetComponent<CharacterController>();
             return go.transform;

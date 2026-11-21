@@ -1,4 +1,5 @@
 using System.Linq;
+using JewelryShop.StaffConsole;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -35,9 +36,9 @@ namespace JewelryShop.Tests
             Assert.That(walk.humanMotion, Is.True);
         }
 
-        /// <summary>The preview jump plays once and returns to the main standby.</summary>
+        /// <summary>Jump returns to Idle on landing.</summary>
         [Test]
-        public void PreviewController_Jump_PlaysJumping0OnceAndReturnsToIdle()
+        public void PreviewController_Jump_UsesJumping0AndReturnsToIdleOnLanding()
         {
             var machine = LoadController().layers[0].stateMachine;
             var state = machine.states.SingleOrDefault(child => child.state.name == "Jump").state;
@@ -53,31 +54,54 @@ namespace JewelryShop.Tests
 
             var exit = state.transitions.Single();
             Assert.That(exit.destinationState, Is.EqualTo(machine.defaultState));
-            Assert.That(exit.hasExitTime, Is.True);
-            Assert.That(exit.exitTime, Is.EqualTo(1f));
-            Assert.That(exit.conditions, Is.Empty);
+            Assert.That(exit.hasExitTime, Is.False);
+            var condition = exit.conditions.Single();
+            Assert.That(condition.parameter, Is.EqualTo("IsGrounded"));
+            Assert.That(condition.mode, Is.EqualTo(AnimatorConditionMode.If));
         }
 
-        /// <summary>The default Idle state holds the main standby pose.</summary>
+        /// <summary>Standing Idle plays its own loop and Walk uses the neutral pose.</summary>
         [Test]
         public void PreviewController_Idle_LoopsMainStandbyClip()
         {
-            var idle = LoadController().layers[0].stateMachine.defaultState;
-            var clip = LoadStandbyClip("WAIT00");
+            var machine = LoadController().layers[0].stateMachine;
+            var idle = machine.defaultState;
+            var clip = LoadStandbyClip("WAIT00_Idle");
+            var walk = (BlendTree)machine.states.Single(child => child.state.name == "Walk")
+                .state.motion;
 
             Assert.That(idle.motion, Is.EqualTo(clip));
             Assert.That(clip.humanMotion, Is.True);
             Assert.That(clip.isLooping, Is.True);
+            Assert.That(clip.length, Is.EqualTo(5f).Within(0.01f));
+            Assert.That(idle.iKOnFeet, Is.True);
+            Assert.That(walk.children.Single(child => child.position == Vector2.zero).motion,
+                Is.EqualTo(LoadStandbyClip("WAIT00")));
+        }
+
+        [Test]
+        public void PreviewController_Idle_WaitsFiveToNineSecondsBeforeFidgeting()
+        {
+            var controller = LoadController();
+            var dependencies = AssetDatabase.GetDependencies(
+                AssetDatabase.GetAssetPath(controller), recursive: false);
+            var config = dependencies.Select(AssetDatabase.LoadAssetAtPath<StaffIdleConfig>)
+                .Single(asset => asset != null);
+            var settings = config.Settings;
+
+            Assert.That(settings.MinIntervalSeconds, Is.EqualTo(5f));
+            Assert.That(settings.MaxIntervalSeconds, Is.EqualTo(9f));
+            Assert.That(settings.BlendSeconds, Is.EqualTo(0.3f));
         }
 
         /// <summary>Each standby variation plays once and can be interrupted by walking.</summary>
-        [TestCase("Standby01", "Animation2/Standby01")]
-        [TestCase("Standby02", "Animation2/Standby02")]
-        [TestCase("Standby03", "WAIT01")]
-        [TestCase("Standby04", "WAIT02")]
-        [TestCase("Standby05", "Animation2/Standby05")]
+        [TestCase("Standby01", "Animation2/Standby01", 0.35f)]
+        [TestCase("Standby02", "Animation2/Standby02", 0.35f)]
+        [TestCase("Standby03", "WAIT01", 0.15f)]
+        [TestCase("Standby04", "WAIT02", 0.15f)]
+        [TestCase("Standby05", "Animation2/Standby05", 0.55f)]
         public void PreviewController_Standby_PlaysOnceAndReturnsToIdle(
-            string stateName, string clipName)
+            string stateName, string clipName, float returnBlendSeconds)
         {
             var machine = LoadController().layers[0].stateMachine;
             var state = machine.states.SingleOrDefault(
@@ -95,7 +119,15 @@ namespace JewelryShop.Tests
                 item => item.destinationState == machine.defaultState);
             Assert.That(exit.hasExitTime, Is.True);
             Assert.That(exit.exitTime, Is.EqualTo(1f));
+            Assert.That(exit.hasFixedDuration, Is.True);
+            Assert.That(exit.duration, Is.EqualTo(returnBlendSeconds));
             Assert.That(exit.conditions, Is.Empty);
+            if (returnBlendSeconds > 0.15f)
+            {
+                Assert.That(exit.interruptionSource, Is.EqualTo(TransitionInterruptionSource.Source));
+                Assert.That(exit.orderedInterruption, Is.True);
+                Assert.That(state.transitions[0].destinationState, Is.EqualTo(walk));
+            }
         }
 
         /// <summary>Pressing and releasing movement can switch clips mid-loop.</summary>
