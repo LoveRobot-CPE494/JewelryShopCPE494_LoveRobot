@@ -17,3 +17,8 @@ MonoBehaviour:
     YawLimitDegrees: 45
     PitchLimitDegrees: 25
     SmoothingSeconds: 0.15
+    FrontHalfAngleDegrees: 90
+    FrontHysteresisDegrees: 10
+    BodyTurnSeconds: 0.25
+    FocusEnterMeters: 3.5
+    FocusExitMeters: 4
