@@ -19,7 +19,7 @@ MonoBehaviour:
     GravityMetersPerSecondSquared: 12
     JumpHeightMeters: 0.5
     JumpTakeoffDelaySeconds: 0.14
-    AirControl: 0.3
+    AirControl: 0.7
     StepHeightMeters: 0.3
     SlopeLimitDegrees: 45
     CapsuleRadiusMeters: 0.3

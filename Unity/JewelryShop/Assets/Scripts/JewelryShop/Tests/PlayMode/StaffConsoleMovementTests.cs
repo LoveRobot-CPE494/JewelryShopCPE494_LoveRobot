@@ -290,6 +290,74 @@ namespace JewelryShop.Tests
             Assert.That(_animator.GetCurrentAnimatorStateInfo(0).IsTag("Jump"), Is.False);
         }
 
+        private const float MostlyFacingSideDot = 0.9f;
+        private const float OldAirControl = 0.3f; // the former default; must be clearly beaten
+        private const float SteeringGainOverOld = 1.3f;
+        private const float PoseUnchangedDot = 0.99f;
+
+        private float _airHoldSeconds;
+
+        // Jumps, waits until she has left the ground, then holds D until about the apex.
+        // The hold length comes from the defaults, so it stays inside the arc.
+        private IEnumerator JumpAndHoldSideways()
+        {
+            AddFloor();
+            AddCheryll(Vector3.up * 0.05f);
+            yield return Wait(0.5f);
+            yield return Tap(Key.Space);
+            for (var frame = 0; frame < 120 && _controller.isGrounded; frame++)
+                yield return null;
+            Assert.That(_controller.isGrounded, Is.False, "precondition: airborne");
+            var apexSeconds = Mathf.Sqrt(2f * MovementSettings.Defaults.JumpHeightMeters /
+                MovementSettings.Defaults.GravityMetersPerSecondSquared);
+            Hold(Key.D);
+            for (_airHoldSeconds = 0f; _airHoldSeconds < apexSeconds;
+                _airHoldSeconds += Time.deltaTime)
+                yield return null;
+            Assert.That(_controller.isGrounded, Is.False, "still airborne at the end of the hold");
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_HoldingSideKeyInAir_TurnsToFaceIt()
+        {
+            yield return JumpAndHoldSideways();
+
+            Assert.That(_movement.transform.forward.x, Is.GreaterThan(MostlyFacingSideDot));
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_HoldingSideKeyInAir_SteersFartherThanOldAirControl()
+        {
+            yield return JumpAndHoldSideways();
+
+            // Distance the old Air Control could cover from rest in the same time (it never
+            // reaches walk speed in an apex-long hold), with a margin for the new default.
+            var oldAcceleration = MovementSettings.Defaults.AccelerationMetersPerSecondSquared *
+                OldAirControl;
+            var oldMeters = 0.5f * oldAcceleration * _airHoldSeconds * _airHoldSeconds;
+            Assert.That(_movement.transform.position.x,
+                Is.GreaterThan(SteeringGainOverOld * oldMeters));
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_HoldingSideKeyDuringTakeoff_KeepsPoseUntilLiftOff()
+        {
+            AddFloor();
+            var cheryll = AddCheryll(Vector3.up * 0.05f);
+            yield return Wait(0.5f);
+            var facing = cheryll.forward;
+
+            yield return Tap(Key.Space);
+            Hold(Key.D);
+            // Well inside the take-off delay, by time rather than frame count.
+            var takeoffDelay = MovementSettings.Defaults.JumpTakeoffDelaySeconds;
+            for (var elapsed = 0f; elapsed < takeoffDelay / 4f; elapsed += Time.deltaTime)
+                yield return null;
+
+            Assert.That(_controller.isGrounded, Is.True, "precondition: still taking off");
+            Assert.That(Vector3.Dot(cheryll.forward, facing), Is.GreaterThan(PoseUnchangedDot));
+        }
+
         [UnityTest]
         public IEnumerator Cheryll_GestureAndIdleLockKeys_DoNothingWhileAirborne()
         {
