@@ -64,9 +64,12 @@ namespace JewelryShop.StaffConsole
         private MovementSettings _movement;
         private CameraSettings _camera;
         private float _blendSeconds;
-        private (Key Key, int State)[] _gestures;
+        private (Key Key, int State, string Name)[] _gestures;
         private bool _isManualFirstPerson;
         private float _wallLiftBlend;
+
+        /// <summary>A gesture key started the Animator state with this name.</summary>
+        public event System.Action<string> GestureStarted;
 
         /// <summary>Whether the avatar is in or blending with the jump animation.</summary>
         public bool IsJumping => _animator != null && IsPlayingTag(JumpTag);
@@ -103,7 +106,7 @@ namespace JewelryShop.StaffConsole
             _blendSeconds = gestureMap.BlendSeconds;
             _gestures = gestureMap.Entries
                 .Select(e => ((Key)((int)Key.Digit1 + e.Digit - 1),
-                    Animator.StringToHash(e.StateName)))
+                    Animator.StringToHash(e.StateName), e.StateName))
                 .ToArray();
 
             // RequireComponent does not retrofit scene objects saved before it existed.
@@ -230,12 +233,13 @@ namespace JewelryShop.StaffConsole
 
         private bool TryPlayGesture(Keyboard keyboard)
         {
-            foreach (var (key, state) in _gestures)
+            foreach (var (key, state, stateName) in _gestures)
             {
                 if (!keyboard[key].wasPressedThisFrame)
                     continue;
 
                 _animator.CrossFadeInFixedTime(state, _blendSeconds, 0);
+                GestureStarted?.Invoke(stateName);
                 return true;
             }
 
