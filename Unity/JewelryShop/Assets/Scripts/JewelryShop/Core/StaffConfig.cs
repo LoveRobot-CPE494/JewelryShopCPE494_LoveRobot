@@ -45,7 +45,7 @@ namespace JewelryShop.Core
         {
             WalkSpeedMetersPerSecond = 1f,
             AccelerationMetersPerSecondSquared = 8f,
-            TurnDegreesPerSecond = 180f,
+            TurnDegreesPerSecond = 540f,
             GravityMetersPerSecondSquared = 9.81f,
             JumpHeightMeters = 0.5f,
             JumpTakeoffDelaySeconds = 0.14f,

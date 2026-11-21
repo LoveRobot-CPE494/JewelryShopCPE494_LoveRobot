@@ -191,6 +191,48 @@ namespace JewelryShop.Tests
         }
 
         [UnityTest]
+        public IEnumerator Cheryll_HoldingS_TurnsToFaceCameraAndWalksTowardIt()
+        {
+            AddFloor();
+            var cheryll = AddCheryll(Vector3.up * 0.05f);
+
+            Hold(Key.S);
+            yield return Wait(1f);
+
+            Assert.That(cheryll.position.z, Is.LessThan(-0.5f)); // the camera is toward -z
+            Assert.That(Vector3.Dot(cheryll.forward, Vector3.back), Is.GreaterThan(0.99f));
+            Assert.That(_animator.GetFloat("WalkForward"), Is.GreaterThan(0.9f));
+            Assert.That(_animator.GetFloat("WalkHorizontal"), Is.EqualTo(0f).Within(0.05f));
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_HoldingSAndD_WalksDiagonallyTowardCameraFacingThatWay()
+        {
+            AddFloor();
+            var cheryll = AddCheryll(Vector3.up * 0.05f);
+
+            Hold(Key.S, Key.D);
+            yield return Wait(1f);
+
+            var heading = new Vector3(1f, 0f, -1f).normalized;
+            Assert.That(cheryll.position.x, Is.GreaterThan(0.3f));
+            Assert.That(cheryll.position.z, Is.LessThan(-0.3f));
+            Assert.That(Vector3.Dot(cheryll.forward, heading), Is.GreaterThan(0.99f));
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_HoldingD_TurnsToFaceRight()
+        {
+            AddFloor();
+            var cheryll = AddCheryll(Vector3.up * 0.05f);
+
+            Hold(Key.D);
+            yield return Wait(1f);
+
+            Assert.That(Vector3.Dot(cheryll.forward, Vector3.right), Is.GreaterThan(0.99f));
+        }
+
+        [UnityTest]
         public IEnumerator Cheryll_WalkingIntoDynamicCube_DoesNotPushIt()
         {
             AddFloor();
