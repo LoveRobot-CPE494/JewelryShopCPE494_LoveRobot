@@ -92,6 +92,26 @@ namespace JewelryShop.Tests
         }
 
         [Test]
+        public void Camera_UnsetRelaxSpeed_UsesDefault()
+        {
+            var s = CameraSettings.Defaults;
+            s.CollisionRelaxMetersPerSecond = 0f; // an asset saved before the field existed
+            var warnings = new List<string>();
+            Assert.That(s.Validated(warnings).CollisionRelaxMetersPerSecond,
+                Is.EqualTo(CameraSettings.Defaults.CollisionRelaxMetersPerSecond));
+            Assert.That(warnings, Is.Empty);
+        }
+
+        [Test]
+        public void Camera_TinyRelaxSpeed_IsClamped()
+        {
+            var s = CameraSettings.Defaults;
+            s.CollisionRelaxMetersPerSecond = 0.01f;
+            Assert.That(s.Validated(new List<string>()).CollisionRelaxMetersPerSecond,
+                Is.EqualTo(0.1f));
+        }
+
+        [Test]
         public void GestureMapDefaults_EqualOldKeys()
         {
             var d = GestureMapSettings.Defaults;

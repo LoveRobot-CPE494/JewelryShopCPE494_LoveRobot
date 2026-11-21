@@ -320,8 +320,117 @@ namespace JewelryShop.Tests
             Assert.That(_animator.GetNextAnimatorStateInfo(0).IsTag("Jump"), Is.False);
         }
 
+        // The camera starts at CameraStart, behind Cheryll toward -z. Wall faces: z = -2 and -2.5.
+        private static readonly Vector3 CameraStart = new Vector3(0f, 2f, -3f);
+        private const float CameraSpawnHeightMeters = 0.05f;
+        private const float WallNearFaceZMeters = -2f;
+
+        private Transform AddCameraWall() =>
+            AddBox(new Vector3(0f, 1.5f, -2.25f), new Vector3(10f, 3f, 0.5f)).transform;
+
+        private static Vector3 StartPivot =>
+            Vector3.up * (CameraSpawnHeightMeters + CameraSettings.Defaults.PivotHeightMeters);
+
+        private Vector3 CurrentPivot => _movement.transform.position +
+            Vector3.up * CameraSettings.Defaults.PivotHeightMeters;
+
+        private Transform CameraOf() => GetField<Transform>(_movement, "_staffCamera");
+
+        private static StaffCameraConfig CameraConfig(float radiusMeters, int layerMask)
+        {
+            var settings = CameraSettings.Defaults;
+            settings.CollisionRadiusMeters = radiusMeters;
+            settings.CollisionLayerMask = layerMask;
+            var config = ScriptableObject.CreateInstance<StaffCameraConfig>();
+            SetField(config, "_settings", settings);
+            return config;
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_WallBehindCheryll_StopsOneRadiusInFrontOfWall()
+        {
+            AddFloor();
+            AddCameraWall();
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+
+            yield return Wait(0.3f);
+
+            var radiusMeters = CameraSettings.Defaults.CollisionRadiusMeters;
+            Assert.That(CameraOf().position.z,
+                Is.EqualTo(WallNearFaceZMeters + radiusMeters).Within(0.05f));
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_WallRemoved_RelaxesBackToNormalDistance()
+        {
+            AddFloor();
+            var wall = AddCameraWall();
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+            var camera = CameraOf();
+            yield return Wait(0.3f);
+            Assert.That(camera.position.z, Is.GreaterThan(WallNearFaceZMeters),
+                "precondition: pulled in");
+
+            Object.Destroy(wall.gameObject);
+            yield return null; // Destroy takes effect at the end of the frame
+            yield return Wait(2f);
+
+            var restMeters = Vector3.Distance(CameraStart, StartPivot);
+            var pivot = CurrentPivot;
+            Assert.That(Vector3.Distance(camera.position, pivot),
+                Is.EqualTo(restMeters).Within(0.05f));
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_OrbitedInOpenSpace_SitsAtFullOrbitOffset()
+        {
+            AddFloor();
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters);
+            yield return null;
+            SetField(_movement, "_yawDegrees", 40f);
+            SetField(_movement, "_pitchDegrees", 10f);
+
+            yield return null;
+
+            var restOffset = CameraStart - StartPivot;
+            var orbit = Quaternion.AngleAxis(40f, Vector3.up) *
+                Quaternion.AngleAxis(10f, Vector3.right); // start camera faces +z, so right is +x
+            var pivot = CurrentPivot;
+            Assert.That(Vector3.Distance(CameraOf().position, pivot + orbit * restOffset),
+                Is.LessThan(0.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_WallOnExcludedLayer_DoesNotPullCameraIn()
+        {
+            const int ignoredLayer = 31;
+            AddFloor();
+            AddCameraWall().gameObject.layer = ignoredLayer;
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters,
+                cameraConfig: CameraConfig(0.2f, ~(1 << ignoredLayer)));
+
+            yield return Wait(0.3f);
+
+            Assert.That(CameraOf().position.z, Is.EqualTo(CameraStart.z).Within(0.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator Camera_LargerCollisionRadius_StopsFurtherFromWall()
+        {
+            const float radiusMeters = 0.5f; // under the pivot height, clear of the floor
+            AddFloor();
+            AddCameraWall();
+            AddCheryll(Vector3.up * CameraSpawnHeightMeters,
+                cameraConfig: CameraConfig(radiusMeters, -1));
+
+            yield return Wait(0.3f);
+
+            Assert.That(CameraOf().position.z,
+                Is.EqualTo(WallNearFaceZMeters + radiusMeters).Within(0.05f));
+        }
+
         private Transform AddCheryll(Vector3 position,
-            RuntimeAnimatorController controller = null)
+            RuntimeAnimatorController controller = null, StaffCameraConfig cameraConfig = null)
         {
             var go = new GameObject("Cheryll");
             go.SetActive(false); // Awake must see the injected references
@@ -332,11 +441,13 @@ namespace JewelryShop.Tests
                 LoadController();
             var camera = new GameObject("Camera").transform;
             camera.SetParent(_root.transform);
-            camera.position = new Vector3(0f, 2f, -3f);
+            camera.position = CameraStart;
             _movement = go.AddComponent<StaffConsoleMovement>();
             SetField(_movement, "_animator", _animator);
             SetField(_movement, "_staffCamera", camera);
             SetField(_movement, "_isFocusRequired", false); // the Editor may not be focused
+            if (cameraConfig != null)
+                SetField(_movement, "_cameraConfig", cameraConfig);
             go.SetActive(true);
             _controller = go.GetComponent<CharacterController>();
             return go.transform;

@@ -103,9 +103,10 @@ namespace JewelryShop.Core
         public float LookDegreesPerPixel;
         public float MinPitchDegrees;
         public float MaxPitchDegrees;
-        // Collision fields are validated now and read by a later ticket.
         public float CollisionRadiusMeters;
         public int CollisionLayerMask;
+        /// <summary>How fast the camera eases back out after a wall stops blocking it.</summary>
+        public float CollisionRelaxMetersPerSecond;
 
         public static CameraSettings Defaults => new CameraSettings
         {
@@ -115,6 +116,7 @@ namespace JewelryShop.Core
             MaxPitchDegrees = 25f,
             CollisionRadiusMeters = 0.2f,
             CollisionLayerMask = -1,
+            CollisionRelaxMetersPerSecond = 6f,
         };
 
         /// <summary>A clamped copy; each change is described in <paramref name="warnings"/>.</summary>
@@ -144,6 +146,11 @@ namespace JewelryShop.Core
                 CollisionRadiusMeters = ConfigRule.Clamp(nameof(CollisionRadiusMeters),
                     CollisionRadiusMeters, 0f, 2f, d.CollisionRadiusMeters, warnings),
                 CollisionLayerMask = CollisionLayerMask,
+                // 0 is what a config saved before this field existed reads back: "unset".
+                CollisionRelaxMetersPerSecond = CollisionRelaxMetersPerSecond == 0f ?
+                    d.CollisionRelaxMetersPerSecond : ConfigRule.Clamp(
+                        nameof(CollisionRelaxMetersPerSecond), CollisionRelaxMetersPerSecond,
+                        0.1f, 100f, d.CollisionRelaxMetersPerSecond, warnings),
             };
         }
     }

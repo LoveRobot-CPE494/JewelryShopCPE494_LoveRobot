@@ -44,7 +44,11 @@ namespace JewelryShop.StaffConsole
         private bool _hasMoved; // isGrounded is meaningless before the first controller Move
         private bool _hasGroundedParameter;
         private bool _hasJumpPoseParameter;
+        // 16 is far more than a camera ray crosses; on overflow Unity keeps an arbitrary subset,
+        // so the nearest wall could be missed for that frame.
+        private static readonly RaycastHit[] s_cameraHits = new RaycastHit[16];
         private Vector3 _initialCameraOffsetMeters;
+        private float _cameraDistanceMeters;
         private Quaternion _initialCameraRotation;
         private float _initialCameraYawDegrees;
         private float _yawDegrees;
@@ -123,6 +127,7 @@ namespace JewelryShop.StaffConsole
             _startPositionMeters = transform.position;
             _startRotation = transform.rotation;
             _initialCameraOffsetMeters = _staffCamera.position - CameraPivot;
+            _cameraDistanceMeters = _initialCameraOffsetMeters.magnitude;
             _initialCameraRotation = _staffCamera.rotation;
             _initialCameraYawDegrees = _initialCameraRotation.eulerAngles.y;
         }
@@ -349,6 +354,7 @@ namespace JewelryShop.StaffConsole
             _verticalMetersPerSecond = 0f;
             _isInJumpArc = false;
             _isTakingOff = false;
+            _cameraDistanceMeters = _initialCameraOffsetMeters.magnitude;
             // Back to the start camera heading, and no stale walk blend while a key is still held.
             _yawDegrees = 0f;
             _pitchDegrees = 0f;
@@ -362,8 +368,38 @@ namespace JewelryShop.StaffConsole
             var yaw = Quaternion.AngleAxis(_yawDegrees, Vector3.up);
             var cameraRight = Quaternion.Euler(0f, _initialCameraYawDegrees, 0f) * Vector3.right;
             var orbit = yaw * Quaternion.AngleAxis(_pitchDegrees, cameraRight);
+            var pivot = CameraPivot;
+            var offset = orbit * _initialCameraOffsetMeters;
+            var rotation = orbit * _initialCameraRotation;
+            var restMeters = offset.magnitude;
+            if (restMeters < Mathf.Epsilon)
+            {
+                // Camera rests on the pivot: no direction to cast along.
+                _staffCamera.SetPositionAndRotation(pivot, rotation);
+                return;
+            }
+
+            var direction = offset / restMeters;
+            var clearMeters = ClearDistanceMeters(pivot, direction, restMeters);
+            // Pull in at once so no frame clips the wall; ease back out when the way is clear.
+            _cameraDistanceMeters = clearMeters < _cameraDistanceMeters ? clearMeters :
+                Mathf.MoveTowards(_cameraDistanceMeters, clearMeters,
+                    _camera.CollisionRelaxMetersPerSecond * Time.deltaTime);
             _staffCamera.SetPositionAndRotation(
-                CameraPivot + orbit * _initialCameraOffsetMeters, orbit * _initialCameraRotation);
+                pivot + direction * _cameraDistanceMeters, rotation);
+        }
+
+        // Cheryll's own collider sits around the pivot, so her hits must not count.
+        private float ClearDistanceMeters(Vector3 pivot, Vector3 direction, float maxMeters)
+        {
+            var count = Physics.SphereCastNonAlloc(pivot, _camera.CollisionRadiusMeters, direction,
+                s_cameraHits, maxMeters, _camera.CollisionLayerMask,
+                QueryTriggerInteraction.Ignore);
+            var nearest = maxMeters;
+            for (var i = 0; i < count; i++)
+                if (!s_cameraHits[i].transform.IsChildOf(transform))
+                    nearest = Mathf.Min(nearest, s_cameraHits[i].distance);
+            return nearest;
         }
 
         private void OnDisable()
