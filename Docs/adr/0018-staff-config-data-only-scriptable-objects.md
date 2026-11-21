@@ -23,5 +23,20 @@ Decided:
 ## Consequences
 
 - `StaffConsoleMovement` now reads gravity, step height, slope limit and capsule size for its CharacterController, plus `KillPlaneYMeters` for the respawn. `EdgeMarginMeters` is removed with the circular platform clamp.
-- `StaffConsoleMovement` also reads `JumpHeightMeters`, `JumpTakeoffDelaySeconds` and `AirControl`. Takeoff speed comes from jump height and the configured gravity. The Jump pose follows takeoff and landing. Camera collision fields are validated but not read yet; the next tickets wire them.
+- `StaffConsoleMovement` also reads `JumpHeightMeters`, `JumpTakeoffDelaySeconds` and `AirControl`.
+  - Takeoff speed comes from jump height and the configured gravity.
+  - The Jump pose follows takeoff and landing.
+- `StaffConsoleMovement` reads the camera fields too.
+  - The camera reads the collision radius, layer mask and relax speed. The default mask targets
+    the `CameraBlocking` layer used by walls and ceilings.
+  - `EyeHeightMeters` sets the orbit pivot and first-person height. `FirstPersonForwardMeters`
+    and `FirstPersonMaxLookDownDegrees` set the first-person placement and pitch limit.
+  - `EyeHeightMeters` replaces `PivotHeightMeters` (0.9 m, mid-body). An old asset reads it as 0
+    and gets the 1.6 m default with a warning.
+  - A wall squeezing the third-person camera raises it above the Staff Avatar, with the ceiling
+    limiting how high it goes. The lift threshold keeps the serialized name
+    `FirstPersonThresholdMeters`.
+  - V cuts directly between third and first person. The Staff Avatar's head and hair stay visible.
+  - The Jewelry shop camera collider uses the solid part of the shell mesh. The exterior glass
+    stays in the avatar's collision mesh and the camera can pass through it for a wide view.
 - The two assets must be created in the Editor and assigned on the movement component by a human.

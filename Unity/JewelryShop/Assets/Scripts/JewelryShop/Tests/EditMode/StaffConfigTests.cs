@@ -19,10 +19,14 @@ namespace JewelryShop.Tests
         }
 
         [Test]
-        public void CameraDefaults_EqualOldConstants()
+        public void CameraDefaults_AreEyeHeightLayerAndFirstPersonValues()
         {
             var d = CameraSettings.Defaults;
-            Assert.That(d.PivotHeightMeters, Is.EqualTo(0.9f));
+            Assert.That(d.EyeHeightMeters, Is.EqualTo(1.6f));
+            Assert.That(d.CollisionLayerMask, Is.EqualTo(1 << CameraSettings.CameraBlockingLayer));
+            Assert.That(d.FirstPersonThresholdMeters, Is.EqualTo(0.6f));
+            Assert.That(d.FirstPersonForwardMeters, Is.EqualTo(0.1f));
+            Assert.That(d.FirstPersonMaxLookDownDegrees, Is.EqualTo(20f));
             Assert.That(d.LookDegreesPerPixel, Is.EqualTo(0.15f));
             Assert.That(d.MinPitchDegrees, Is.EqualTo(-20f));
             Assert.That(d.MaxPitchDegrees, Is.EqualTo(25f));
@@ -109,6 +113,39 @@ namespace JewelryShop.Tests
             s.CollisionRelaxMetersPerSecond = 0.01f;
             Assert.That(s.Validated(new List<string>()).CollisionRelaxMetersPerSecond,
                 Is.EqualTo(0.1f));
+        }
+
+        [Test]
+        public void Camera_FirstPersonValuesOutOfRange_AreClampedOrDefaultedWithWarning()
+        {
+            var s = CameraSettings.Defaults;
+            s.EyeHeightMeters = 9f;
+            s.FirstPersonThresholdMeters = 50f;
+            s.FirstPersonForwardMeters = -1f;
+            s.FirstPersonMaxLookDownDegrees = 200f;
+            var warnings = new List<string>();
+            var v = s.Validated(warnings);
+            Assert.That(v.EyeHeightMeters, Is.EqualTo(CameraSettings.Defaults.EyeHeightMeters));
+            Assert.That(v.FirstPersonThresholdMeters,
+                Is.EqualTo(CameraSettings.Defaults.FirstPersonThresholdMeters));
+            Assert.That(v.FirstPersonForwardMeters, Is.EqualTo(0f));
+            Assert.That(v.FirstPersonMaxLookDownDegrees, Is.EqualTo(89f));
+            Assert.That(warnings, Has.Count.EqualTo(4));
+        }
+
+        [Test]
+        public void Camera_ZeroEyeHeightAndThreshold_UseDefaultsWithWarning()
+        {
+            var s = CameraSettings.Defaults;
+            s.EyeHeightMeters = 0f; // also what an asset saved before the fields existed reads
+            s.FirstPersonThresholdMeters = 0f;
+            var warnings = new List<string>();
+            var v = s.Validated(warnings);
+            Assert.That(v.EyeHeightMeters, Is.EqualTo(CameraSettings.Defaults.EyeHeightMeters));
+            Assert.That(v.FirstPersonThresholdMeters,
+                Is.EqualTo(CameraSettings.Defaults.FirstPersonThresholdMeters));
+            Assert.That(warnings, Has.Count.EqualTo(2));
+            Assert.That(warnings[0], Does.Contain("EyeHeightMeters"));
         }
 
         [Test]

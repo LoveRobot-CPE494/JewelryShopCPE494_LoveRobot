@@ -13,9 +13,13 @@ MonoBehaviour:
   m_Name: StaffCameraConfig
   m_EditorClassIdentifier: Assembly-CSharp:JewelryShop.StaffConsole:StaffCameraConfig
   _settings:
-    PivotHeightMeters: 0.9
+    EyeHeightMeters: 1.6
     LookDegreesPerPixel: 0.15
     MinPitchDegrees: -20
     MaxPitchDegrees: 25
     CollisionRadiusMeters: 0.2
-    CollisionLayerMask: -1
+    CollisionLayerMask: 64
+    CollisionRelaxMetersPerSecond: 6
+    FirstPersonThresholdMeters: 0.6
+    FirstPersonForwardMeters: 0.1
+    FirstPersonMaxLookDownDegrees: 20

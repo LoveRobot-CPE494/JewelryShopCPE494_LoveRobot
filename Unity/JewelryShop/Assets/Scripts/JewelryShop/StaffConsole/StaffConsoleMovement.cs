@@ -18,6 +18,10 @@ namespace JewelryShop.StaffConsole
         // Foot contact frames in Jumping0 (normalized clip time).
         private const float JumpTakeoffPose = 0.36f;
         private const float JumpLandingPose = 0.75f;
+        private const float WallLiftBlendSeconds = 0.2f;
+        private const float WallLiftApproachMeters = 0.45f;
+        private const float WallLiftHeightMeters = 1.15f;
+        private const float WallLiftBackMeters = 0.15f;
         private const string IdleLockStatusName = "Idle Lock Status";
         private static readonly int s_isMoving = Animator.StringToHash("IsMoving");
         private static readonly int s_idleLock = Animator.StringToHash("IdleLock");
@@ -61,15 +65,22 @@ namespace JewelryShop.StaffConsole
         private CameraSettings _camera;
         private float _blendSeconds;
         private (Key Key, int State)[] _gestures;
+        private bool _isManualFirstPerson;
+        private float _wallLiftBlend;
 
         /// <summary>Whether the avatar is in or blending with the jump animation.</summary>
         public bool IsJumping => _animator != null && IsPlayingTag(JumpTag);
+
+        /// <summary>Whether the viewer selected first person with V.</summary>
+        public bool IsFirstPerson => _isManualFirstPerson;
 
         // Space, gestures and Idle Lock need real ground, with no grace after leaving an edge.
         private bool CanUseGroundKeys => !_isInJumpArc && !_isTakingOff &&
             (!_hasMoved || _controller.isGrounded);
 
-        private Vector3 CameraPivot => transform.position + Vector3.up * _camera.PivotHeightMeters;
+        private bool HasFocus => !_isFocusRequired || Application.isFocused;
+
+        private Vector3 CameraPivot => transform.position + Vector3.up * _camera.EyeHeightMeters;
 
         private void Reset()
         {
@@ -149,7 +160,7 @@ namespace JewelryShop.StaffConsole
 
         private void Update()
         {
-            if (_isFocusRequired && !Application.isFocused)
+            if (!HasFocus)
             {
                 _walkVelocityMetersPerSecond = Vector3.zero;
                 Move(Vector2.zero, Time.deltaTime);
@@ -353,6 +364,7 @@ namespace JewelryShop.StaffConsole
             _isInJumpArc = false;
             _isTakingOff = false;
             _cameraDistanceMeters = _initialCameraOffsetMeters.magnitude;
+            _wallLiftBlend = 0f;
             // Back to the start camera heading, and no stale walk blend while a key is still held.
             _yawDegrees = 0f;
             _pitchDegrees = 0f;
@@ -363,16 +375,35 @@ namespace JewelryShop.StaffConsole
 
         private void LateUpdate()
         {
+            var keyboard = Keyboard.current;
+            if (HasFocus && keyboard != null && keyboard.vKey.wasPressedThisFrame)
+            {
+                _isManualFirstPerson = !_isManualFirstPerson;
+                _cameraDistanceMeters = _initialCameraOffsetMeters.magnitude;
+                _wallLiftBlend = 0f;
+            }
+
             var yaw = Quaternion.AngleAxis(_yawDegrees, Vector3.up);
-            var cameraRight = Quaternion.Euler(0f, _initialCameraYawDegrees, 0f) * Vector3.right;
-            var orbit = yaw * Quaternion.AngleAxis(_pitchDegrees, cameraRight);
+            var headingRotation = Quaternion.Euler(0f, _initialCameraYawDegrees, 0f);
+            var cameraRight = headingRotation * Vector3.right;
             var pivot = CameraPivot;
-            var offset = orbit * _initialCameraOffsetMeters;
+            if (_isManualFirstPerson)
+            {
+                var heading = yaw * headingRotation * Vector3.forward;
+                var pitch = Mathf.Min(_pitchDegrees, _camera.FirstPersonMaxLookDownDegrees);
+                var firstPersonRotation = yaw * Quaternion.AngleAxis(pitch, cameraRight) *
+                    _initialCameraRotation;
+                _staffCamera.SetPositionAndRotation(
+                    pivot + heading * _camera.FirstPersonForwardMeters, firstPersonRotation);
+                return;
+            }
+
+            var orbit = yaw * Quaternion.AngleAxis(_pitchDegrees, cameraRight);
             var rotation = orbit * _initialCameraRotation;
+            var offset = orbit * _initialCameraOffsetMeters;
             var restMeters = offset.magnitude;
             if (restMeters < Mathf.Epsilon)
             {
-                // Camera rests on the pivot: no direction to cast along.
                 _staffCamera.SetPositionAndRotation(pivot, rotation);
                 return;
             }
@@ -383,8 +414,39 @@ namespace JewelryShop.StaffConsole
             _cameraDistanceMeters = clearMeters < _cameraDistanceMeters ? clearMeters :
                 Mathf.MoveTowards(_cameraDistanceMeters, clearMeters,
                     _camera.CollisionRelaxMetersPerSecond * Time.deltaTime);
-            _staffCamera.SetPositionAndRotation(
-                pivot + direction * _cameraDistanceMeters, rotation);
+
+            // Keep the legacy threshold below rest distance so open space never lifts the camera.
+            var liftThresholdMeters = Mathf.Min(_camera.FirstPersonThresholdMeters,
+                restMeters * 0.9f);
+            var liftStartMeters = Mathf.Min(restMeters,
+                liftThresholdMeters + WallLiftApproachMeters);
+            var desiredLift = Mathf.InverseLerp(liftStartMeters, liftThresholdMeters,
+                _cameraDistanceMeters);
+            // A sudden squeeze needs the lift before the camera's near plane reaches her face.
+            _wallLiftBlend = clearMeters <= liftThresholdMeters ? 1f :
+                Mathf.MoveTowards(_wallLiftBlend, desiredLift,
+                    Time.deltaTime / WallLiftBlendSeconds);
+
+            offset = direction * _cameraDistanceMeters;
+            if (_wallLiftBlend > 0f)
+            {
+                var back = Vector3.ProjectOnPlane(direction, Vector3.up).normalized;
+                if (back == Vector3.zero)
+                    back = yaw * headingRotation * Vector3.back;
+
+                // A wall can leave room overhead even when the camera cannot move back.
+                var backMeters = ClearDistanceMeters(pivot, back, WallLiftBackMeters);
+                var raisedOffset = Vector3.up * WallLiftHeightMeters + back * backMeters;
+                offset = Vector3.Lerp(offset, raisedOffset, _wallLiftBlend);
+                var raisedRotation = Quaternion.LookRotation(-raisedOffset, -back);
+                rotation = Quaternion.Slerp(rotation, raisedRotation, _wallLiftBlend);
+                // The tilted ray can hit a different wall or the ceiling.
+                var liftedDirection = offset.normalized;
+                offset = liftedDirection * ClearDistanceMeters(pivot, liftedDirection,
+                    offset.magnitude);
+            }
+
+            _staffCamera.SetPositionAndRotation(pivot + offset, rotation);
         }
 
         // Cheryll's own collider sits around the pivot, so her hits must not count.
@@ -403,6 +465,8 @@ namespace JewelryShop.StaffConsole
         private void OnDisable()
         {
             _walkVelocityMetersPerSecond = Vector3.zero;
+            _isManualFirstPerson = false;
+            _wallLiftBlend = 0f;
             if (_animator != null && _animator.runtimeAnimatorController != null)
                 _animator.SetBool(s_isMoving, false);
         }
