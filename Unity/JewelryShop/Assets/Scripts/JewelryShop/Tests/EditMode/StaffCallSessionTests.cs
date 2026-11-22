@@ -22,9 +22,11 @@ namespace JewelryShop.Tests
 
         private sealed class FakeSpawner : ICheryllSpawner
         {
-            public int Spawns, Despawns;
+            public int Spawns, Despawns, ToDoor, ToRoom;
             public void Spawn() => Spawns++;
             public void Despawn() => Despawns++;
+            public void WarpToDoor() => ToDoor++;
+            public void WarpToRoom() => ToRoom++;
         }
 
         // One end of the call: its link, facade, clock, spawner and session.
@@ -79,7 +81,8 @@ namespace JewelryShop.Tests
             staff.Session.Answer();
             Flush(staff, customer, ref s);
             Assert.That(staff.Session.State, Is.EqualTo(StaffCallState.Serving));
-            Assert.That(staff.Spawner.Spawns, Is.EqualTo(1));
+            Assert.That(staff.Spawner.ToDoor, Is.EqualTo(1));
+            Assert.That(staff.Spawner.Spawns, Is.EqualTo(0)); // spawning is the link's job now
             Assert.That(customer.Session.State, Is.EqualTo(StaffCallState.StaffComing));
             Assert.That(customer.Session.IsCheryllVisible, Is.True);
 
@@ -93,7 +96,8 @@ namespace JewelryShop.Tests
             Assert.That(customer.Session.State, Is.EqualTo(StaffCallState.Idle));
             Assert.That(customer.Session.IsCheryllVisible, Is.False);
             Assert.That(staff.Session.State, Is.EqualTo(StaffCallState.Idle));
-            Assert.That(staff.Spawner.Despawns, Is.EqualTo(1));
+            Assert.That(staff.Spawner.ToRoom, Is.EqualTo(1));
+            Assert.That(staff.Spawner.Despawns, Is.EqualTo(0));
         }
 
         [Test]
@@ -139,7 +143,7 @@ namespace JewelryShop.Tests
 
         // The Customer's Cancel (or timeout) crossed the Staff's Answer on the wire.
         [Test]
-        public void Cancel_ArrivesAfterStaffAnswered_StaffGoesIdleAndCheryllDespawns()
+        public void Cancel_ArrivesAfterStaffAnswered_StaffGoesIdleAndCheryllWarpsBack()
         {
             var staff = Staff();
             staff.Link.Receive(StaffCallMessage.Call);
@@ -148,7 +152,7 @@ namespace JewelryShop.Tests
             staff.Link.Receive(StaffCallMessage.Cancel);
 
             Assert.That(staff.Session.State, Is.EqualTo(StaffCallState.Idle));
-            Assert.That(staff.Spawner.Despawns, Is.EqualTo(1));
+            Assert.That(staff.Spawner.ToRoom, Is.EqualTo(1));
         }
 
         [Test]
@@ -197,7 +201,7 @@ namespace JewelryShop.Tests
             Flush(staff, customer, ref s);
 
             Assert.That(staff.Session.State, Is.EqualTo(StaffCallState.Idle));
-            Assert.That(staff.Spawner.Despawns, Is.EqualTo(1));
+            Assert.That(staff.Spawner.ToRoom, Is.EqualTo(1));
             Assert.That(customer.Session.State, Is.EqualTo(StaffCallState.Idle));
             Assert.That(customer.Session.IsCheryllVisible, Is.False);
         }
@@ -217,7 +221,7 @@ namespace JewelryShop.Tests
         }
 
         [Test]
-        public void LinkLost_StaffServing_DespawnsCheryll()
+        public void LinkLost_StaffServing_WarpsCheryllBackToRoom()
         {
             var staff = Staff();
             staff.Link.Receive(StaffCallMessage.Call);
@@ -226,7 +230,7 @@ namespace JewelryShop.Tests
             staff.DropLink();
 
             Assert.That(staff.Session.State, Is.EqualTo(StaffCallState.Idle));
-            Assert.That(staff.Spawner.Despawns, Is.EqualTo(1));
+            Assert.That(staff.Spawner.ToRoom, Is.EqualTo(1));
         }
 
         [Test]
@@ -239,6 +243,19 @@ namespace JewelryShop.Tests
 
             Assert.That(customer.Session.State, Is.EqualTo(StaffCallState.Idle));
             Assert.That(customer.Unavailables, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Answer_NeverSpawnsOrDespawns_ThroughTheCall()
+        {
+            var staff = Staff();
+            staff.Link.Receive(StaffCallMessage.Call);
+
+            staff.Session.Answer();
+            staff.Session.HangUp();
+
+            Assert.That(staff.Spawner.Spawns, Is.EqualTo(0));
+            Assert.That(staff.Spawner.Despawns, Is.EqualTo(0));
         }
 
         [Test]

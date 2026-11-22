@@ -4,6 +4,8 @@ status: accepted
 
 # Staff Call is live: a real Staff drives the Staff Avatar from a Staff Console in the same Unity project
 
+Amended by [ADR-0022](0022-cheryll-exists-from-link-connect.md): the Staff Avatar is visible from link connect, not only after Answer.
+
 Supersedes [ADR-0006](0006-prerecorded-staff-clip.md). Brief item 4a.iii awards 5 points for "actually talking with the staff", and a pre-recorded clip risks losing them, so a real Staff now serves the Customer live from a Staff Console. The Staff Console is a second scene in `Unity/JewelryShop/` with its own Windows build. It is not a separate Unity project, because the Staff Console and the Quest build both need the Staff Avatar, the Gem Models and the messages exchanged between them.
 
 ## Considered Options

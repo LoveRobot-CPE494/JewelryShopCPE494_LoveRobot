@@ -44,9 +44,12 @@ namespace JewelryShop.Networking
         [Tooltip("Networked prefab (has a NetworkObject). Put it on BOTH ends: "
             + "the Quest must know it to show her.")]
         [SerializeField] private GameObject _cheryllPrefab;
-        [Tooltip("Host only: where she appears (the Staff Door).")]
+        [Tooltip("Host only: where Answer warps her (the Staff Door).")]
         [SerializeField] private Transform _cheryllSpawnPoint;
-        [Tooltip("Host only: the Staff's own Cheryll. She is warped to the door and the spawned copy follows her.")]
+        [Tooltip("Host only: her spot in the Staff Room; hang-up warps her back here.")]
+        [SerializeField] private Transform _cheryllRoomPoint;
+        [Tooltip("Host only: the Staff's own Cheryll. The copy spawns on link connect and "
+            + "follows her; Answer and hang-up warp her.")]
         [SerializeField] private Transform _cheryllSource;
 
         [Header("Customer pose (Customer Avatar on the Staff Console)")]
@@ -98,8 +101,14 @@ namespace JewelryShop.Networking
             {
                 networkManager.AddNetworkPrefab(_cheryllPrefab);
                 if (_role == LinkRole.Host)
+                {
+                    if (_cheryllSpawnPoint == null || _cheryllRoomPoint == null
+                        || _cheryllSource == null)
+                        Debug.LogWarning("StaffLinkBehaviour: Cheryll door point, room point or "
+                            + "source not wired; Answer or hang-up will not move her.", this);
                     _cheryllSpawner = new NetcodeCheryllSpawner(
-                        _cheryllPrefab, _cheryllSpawnPoint, _cheryllSource);
+                        _cheryllPrefab, _cheryllSpawnPoint, _cheryllRoomPoint, _cheryllSource);
+                }
             }
             // Loud on both ends: a client without the prefab registered cannot take the Host's spawn.
             if (_customerPosePrefab == null)
@@ -135,6 +144,7 @@ namespace JewelryShop.Networking
             _facade = new StaffLinkFacade(link, _reconnectIntervalSeconds, attemptBudgetSeconds);
             _facade.ConnectionChanged += Show;
             if (_customerPoseSpawner != null) _facade.ConnectionChanged += _customerPoseSpawner.SetConnected;
+            if (_role == LinkRole.Host) _facade.ConnectionChanged += SetCheryllPresent;
             Show(false);
         }
 
@@ -150,6 +160,7 @@ namespace JewelryShop.Networking
         {
             if (_facade == null) return;
             _facade.ConnectionChanged -= Show;
+            _facade.ConnectionChanged -= SetCheryllPresent;
             if (_customerPoseSpawner != null) _facade.ConnectionChanged -= _customerPoseSpawner.SetConnected;
             _facade.Disconnect();
             Destroy(_managerObject); // it is a scene root, so it would outlive this object
@@ -160,6 +171,13 @@ namespace JewelryShop.Networking
             Debug.LogError($"Staff link ({_role}): {message}", this);
             if (_statusText != null) _statusText.text = message;
             _facade.Disconnect(); // retrying a port that is taken never helps
+        }
+
+        // Cheryll's copy exists exactly while a Customer is linked (ADR-0022).
+        private void SetCheryllPresent(bool isConnected)
+        {
+            if (isConnected) _cheryllSpawner.Spawn();
+            else _cheryllSpawner.Despawn();
         }
 
         private void Show(bool isConnected)

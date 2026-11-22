@@ -35,7 +35,10 @@ namespace JewelryShop.Core
         /// <summary>Where this end of the call is right now.</summary>
         public StaffCallState State { get; private set; } = StaffCallState.Idle;
 
-        /// <summary>The Customer sees Cheryll from Staff coming until the call ends.</summary>
+        /// <summary>
+        /// Cheryll is serving this Customer (Staff coming until the call ends). She is visible
+        /// from the link connecting, so this does not gate her renderer.
+        /// </summary>
         public bool IsCheryllVisible =>
             State == StaffCallState.StaffComing || State == StaffCallState.InCall;
 
@@ -47,7 +50,7 @@ namespace JewelryShop.Core
         /// </summary>
         public event Action Unavailable;
 
-        // Answered and not yet hung up: Cheryll exists (or is on her way) while this holds.
+        // Answered and not yet hung up: Cheryll is serving (or on her way) while this holds.
         private bool IsCallActive => State == StaffCallState.StaffComing
             || State == StaffCallState.InCall || State == StaffCallState.Serving;
 
@@ -76,12 +79,12 @@ namespace JewelryShop.Core
             SetState(StaffCallState.Idle);
         }
 
-        /// <summary>Staff: answer the incoming Staff Call; Cheryll appears.</summary>
+        /// <summary>Staff: answer the incoming call; Cheryll warps to the Staff Door.</summary>
         public void Answer()
         {
             if (_role != StaffCallRole.Staff || State != StaffCallState.Incoming) return;
             _link.Send(StaffCallMessage.Answer);
-            _cheryll.Spawn();
+            _cheryll.WarpToDoor();
             SetState(StaffCallState.Serving);
         }
 
@@ -94,7 +97,7 @@ namespace JewelryShop.Core
             _link.Send(StaffCallMessage.Arrived);
         }
 
-        /// <summary>Either side: end the call and Cheryll disappears.</summary>
+        /// <summary>Either side: end the call and Cheryll jumps back to the Staff Room.</summary>
         public void HangUp()
         {
             if (!IsCallActive) return;
@@ -146,7 +149,7 @@ namespace JewelryShop.Core
 
         private void End()
         {
-            if (_role == StaffCallRole.Staff) _cheryll.Despawn();
+            if (_role == StaffCallRole.Staff) _cheryll.WarpToRoom();
             SetState(StaffCallState.Idle);
         }
 

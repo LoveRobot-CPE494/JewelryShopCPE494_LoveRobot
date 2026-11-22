@@ -5,29 +5,32 @@ using UnityEngine;
 namespace JewelryShop.Networking
 {
     /// <summary>
-    /// Host side: spawns Cheryll from her networked prefab at the Staff Door and despawns her.
-    /// The Staff's own Cheryll is warped to the door too, and the spawned copy follows her.
+    /// Host side: spawns Cheryll's networked copy where the Staff's own Cheryll stands (the Staff
+    /// Room) and despawns it. Answer warps the Staff's Cheryll to the Staff Door, hang-up back to
+    /// the room spot; the copy follows her.
     /// The prefab must be registered on both ends (StaffLinkBehaviour does it).
     /// </summary>
     internal sealed class NetcodeCheryllSpawner : ICheryllSpawner
     {
         private readonly GameObject _prefab;
-        private readonly Transform _spawnPoint;
+        private readonly Transform _doorPoint;
+        private readonly Transform _roomPoint;
         private readonly Transform _source;
         private NetworkObject _spawned;
 
-        public NetcodeCheryllSpawner(GameObject prefab, Transform spawnPoint, Transform source)
+        public NetcodeCheryllSpawner(
+            GameObject prefab, Transform doorPoint, Transform roomPoint, Transform source)
         {
             _prefab = prefab;
-            _spawnPoint = spawnPoint;
+            _doorPoint = doorPoint;
+            _roomPoint = roomPoint;
             _source = source;
         }
 
         public void Spawn()
         {
             if (_spawned != null) return;
-            if (_spawnPoint != null && _source != null) Warp(_source, _spawnPoint);
-            var pose = _source != null ? _source : _spawnPoint;
+            var pose = _source != null ? _source : _roomPoint;
             var position = pose != null ? pose.position : Vector3.zero;
             var rotation = pose != null ? pose.rotation : Quaternion.identity;
             var instance = Object.Instantiate(_prefab, position, rotation);
@@ -46,9 +49,14 @@ namespace JewelryShop.Networking
             _spawned = null;
         }
 
+        public void WarpToDoor() => Warp(_source, _doorPoint);
+
+        public void WarpToRoom() => Warp(_source, _roomPoint);
+
         // A CharacterController overrides direct teleports, so switch it off for the jump.
         private static void Warp(Transform who, Transform to)
         {
+            if (who == null || to == null) return;
             var controller = who.GetComponent<CharacterController>();
             if (controller != null) controller.enabled = false;
             who.SetPositionAndRotation(to.position, to.rotation);
