@@ -347,24 +347,20 @@ namespace JewelryShop.StaffConsole
             displacementMeters.y = 0f;
             var isMoving =
                 displacementMeters.sqrMagnitude > MinimumMovementMeters * MinimumMovementMeters;
+            // She faces the pressed direction, never the slide along a wall; speed and gait
+            // do not matter. Take-off holds the pose; in the air she turns like on the ground.
+            if (input != Vector2.zero && !_isTakingOff)
+                transform.rotation = Quaternion.RotateTowards(
+                    transform.rotation, Quaternion.LookRotation(direction),
+                    _movement.TurnDegreesPerSecond * elapsedSeconds);
+
             var walkBlend = Vector2.zero;
             if (isMoving)
             {
-                var cameraDisplacementMeters = Quaternion.Inverse(heading) * displacementMeters;
                 var fullSpeedDistanceMeters = Mathf.Max(MinimumMovementMeters,
                     _movement.WalkSpeedMetersPerSecond * elapsedSeconds);
-                var cameraDirection = new Vector2(cameraDisplacementMeters.x,
-                    cameraDisplacementMeters.z) / fullSpeedDistanceMeters;
-                var turnDegrees = Mathf.Atan2(cameraDirection.x, cameraDirection.y) *
-                    Mathf.Rad2Deg;
-                var targetRotation = heading * Quaternion.Euler(0f, turnDegrees, 0f);
-                // Take-off holds the pose; in the air she turns like on the ground.
-                var rotation = _isTakingOff ? transform.rotation : Quaternion.RotateTowards(
-                    transform.rotation, targetRotation,
-                    _movement.TurnDegreesPerSecond * elapsedSeconds);
-                transform.rotation = rotation;
-
-                var localDisplacementMeters = Quaternion.Inverse(rotation) * displacementMeters;
+                var localDisplacementMeters =
+                    Quaternion.Inverse(transform.rotation) * displacementMeters;
                 var localDirection = new Vector2(localDisplacementMeters.x,
                     localDisplacementMeters.z) / fullSpeedDistanceMeters;
                 walkBlend = Vector2.ClampMagnitude(localDirection, 1f);
