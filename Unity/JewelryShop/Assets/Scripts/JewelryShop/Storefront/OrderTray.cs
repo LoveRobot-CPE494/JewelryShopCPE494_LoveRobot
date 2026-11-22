@@ -27,12 +27,17 @@ namespace JewelryShop.Storefront
         [SerializeField] private int _tokensPerRow = 10;
 
         private readonly List<GameObject> _tokens = new List<GameObject>();
+        private readonly Dictionary<GemKey, string> _gemNamesByKey = new Dictionary<GemKey, string>();
         private Order _order;
         private GemModel _lastDropped;
         private int _lastDropFrame = -1;
 
         /// <summary>The Order being built; created on first use.</summary>
         public Order Order => _order ??= new Order(_maxGems);
+
+        // shortcut: names come from drops because no catalog list exists; a central catalog would replace this lookup.
+        /// <summary>Display name of a Gem dropped in this tray, or null if never dropped (#80).</summary>
+        public string NameOf(GemKey key) => _gemNamesByKey.TryGetValue(key, out var name) ? name : null;
 
         private void Awake()
         {
@@ -59,7 +64,10 @@ namespace JewelryShop.Storefront
                 grab.interactionManager.CancelInteractableSelection(
                     (IXRSelectInteractable)grab);
             if (gem.TryGetKey(out var key))
+            {
+                _gemNamesByKey[key] = gem.Entry.GemName; // before Add: Changed listeners read it
                 Order.Add(key, gem.Entry.PriceBaht, gem.Entry.StartingStockCount);
+            }
             // shortcut: refused drops go home too; the AddResult is dropped until the
             // refusal-feedback ticket (001-06) needs it.
             gem.ReturnHomeNow();
