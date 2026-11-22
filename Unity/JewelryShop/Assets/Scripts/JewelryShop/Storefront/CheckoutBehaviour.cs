@@ -17,6 +17,8 @@ namespace JewelryShop.Storefront
         [SerializeField] private CheckoutFeedback _feedback;
         [Tooltip("Optional: the Receipt slip that slides out on Approved.")]
         [SerializeField] private ReceiptSlip _receipt;
+        [Tooltip("Optional: the Payment Card that returns to the counter on Approved.")]
+        [SerializeField] private PaymentCard _card;
         [Tooltip("Least seconds Processing… shows, even when the reply is instant.")]
         [SerializeField] private float _minProcessingSeconds = 1.5f;
         [Tooltip("Seconds Approved ✓ shows before the screen goes idle.")]
@@ -65,6 +67,7 @@ namespace JewelryShop.Storefront
         {
             if (_feedback != null) _feedback.PlayApproved();
             if (_receipt != null) _receipt.Show(ReceiptText.Build(sold, _tray.NameOf));
+            if (_card != null) _card.ReturnHome();
         }
 
         private void ShowScreen()
