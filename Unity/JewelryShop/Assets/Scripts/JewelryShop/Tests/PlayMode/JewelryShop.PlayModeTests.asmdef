@@ -4,6 +4,7 @@
     "references": [
         "JewelryShop.Core",
         "JewelryShop.StaffConsole",
+        "JewelryShop.Networking",
         "Unity.InputSystem",
         "UnityEngine.TestRunner"
     ],
