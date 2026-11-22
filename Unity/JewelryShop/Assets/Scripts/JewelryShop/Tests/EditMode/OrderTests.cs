@@ -35,7 +35,7 @@ namespace JewelryShop.Tests
                 order.Add(RedRound, 1, 1000);
             Assert.That(order.Add(RedRound, 1, 1000), Is.EqualTo(Order.AddResult.Full));
             Assert.That(order.Lines.Count, Is.EqualTo(Order.DefaultMaxGems));
-            Assert.That(order.TotalBaht, Is.EqualTo(30));
+            Assert.That(order.TotalBaht, Is.EqualTo(Order.DefaultMaxGems));
         }
 
         [Test]

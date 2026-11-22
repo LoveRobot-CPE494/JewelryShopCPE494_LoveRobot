@@ -1,4 +1,5 @@
 using JewelryShop.Core;
+using TMPro;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
@@ -14,7 +15,13 @@ namespace JewelryShop.Storefront
         [Tooltip("Seconds the fly home takes.")]
         [SerializeField] private float _flightDurationSeconds = 0.5f;
 
+        [Tooltip("Metres above the Display Case position where the Sold out tag floats.")]
+        [SerializeField] private float _soldOutTagHeightM = 0.08f;
+        [Tooltip("Sold out tag text size.")]
+        [SerializeField] private float _soldOutTagFontSize = 0.1f;
+
         private XRGrabInteractable _grab;
+        private TextMeshPro _soldOutTag;
         private Rigidbody _body;
         private GemReturnTimer _timer;
         private Pose _home;
@@ -57,6 +64,7 @@ namespace JewelryShop.Storefront
         {
             _timer = new GemReturnTimer(_returnDelaySeconds, _flightDurationSeconds);
             _home = new Pose(transform.position, transform.rotation);
+            _soldOutTag = MakeSoldOutTag();
             _body = GetComponent<Rigidbody>();
             if (_body != null)
             {
@@ -99,8 +107,41 @@ namespace JewelryShop.Storefront
             _isBodyRestorePending = true; // XRI may restore our saved mid-flight state
         }
 
+        // The tag stays at the Display Case position (a sibling, not a child) while the Gem is held.
+        private TextMeshPro MakeSoldOutTag()
+        {
+            var tagObject = new GameObject(name + " SoldOutTag");
+            tagObject.transform.SetParent(transform.parent, false);
+            tagObject.transform.position = _home.position + Vector3.up * _soldOutTagHeightM;
+            var tag = tagObject.AddComponent<TextMeshPro>();
+            tag.text = OrderFeedback.SoldOutMessage;
+            tag.fontSize = _soldOutTagFontSize;
+            tag.alignment = TextAlignmentOptions.Center;
+            tag.color = Color.red;
+            tagObject.SetActive(false);
+            return tag;
+        }
+
+        // Polled so a Stock Count edited at run time (Simulator check) shows at once.
+        private void UpdateSoldOutTag()
+        {
+            if (_entry == null) return;
+            bool isSoldOut = OrderFeedback.ShowsSoldOutTag(_entry.StartingStockCount);
+            if (_soldOutTag.gameObject.activeSelf != isSoldOut) _soldOutTag.gameObject.SetActive(isSoldOut);
+            var cam = Camera.main;
+            if (isSoldOut && cam != null)
+                _soldOutTag.transform.rotation = Quaternion.LookRotation(
+                    _soldOutTag.transform.position - cam.transform.position);
+        }
+
+        private void OnDestroy()
+        {
+            if (_soldOutTag != null) Destroy(_soldOutTag.gameObject);
+        }
+
         private void Update()
         {
+            UpdateSoldOutTag();
             if (_isBodyRestorePending)
             {
                 _isBodyRestorePending = false;

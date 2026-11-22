@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using JewelryShop.Core;
+using TMPro;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
@@ -25,12 +26,17 @@ namespace JewelryShop.Storefront
         [Tooltip("Gap between token centres, metres.")]
         [SerializeField] private float _tokenSpacingM = 0.04f;
         [SerializeField] private int _tokensPerRow = 10;
+        [Tooltip("Shows \"Order is full\" / \"Sold out\" after a refused drop (#81); no message when unwired.")]
+        [SerializeField] private TMP_Text _message;
+        [Tooltip("Seconds a refusal message stays.")]
+        [SerializeField] private float _messageSeconds = 3f;
 
         private readonly List<GameObject> _tokens = new List<GameObject>();
         private readonly Dictionary<GemKey, string> _gemNamesByKey = new Dictionary<GemKey, string>();
         private Order _order;
         private GemModel _lastDropped;
         private int _lastDropFrame = -1;
+        private float _messageHideTime;
 
         /// <summary>The Order being built; created on first use.</summary>
         public Order Order => _order ??= new Order(_maxGems);
@@ -44,6 +50,14 @@ namespace JewelryShop.Storefront
             if (!GetComponent<Collider>().isTrigger)
                 Debug.LogWarning("OrderTray: collider is not a trigger; drops unseen.", this);
             if (_tokenRoot == null) _tokenRoot = transform;
+            if (_message == null) Debug.LogWarning("OrderTray: no message text wired; refusals show nothing.", this);
+            else _message.gameObject.SetActive(false);
+        }
+
+        private void Update()
+        {
+            if (_message != null && _message.gameObject.activeSelf && Time.time >= _messageHideTime)
+                _message.gameObject.SetActive(false);
         }
 
         private void OnEnable() => Order.Changed += RebuildTokens;
@@ -66,14 +80,21 @@ namespace JewelryShop.Storefront
             if (gem.TryGetKey(out var key))
             {
                 _gemNamesByKey[key] = gem.Entry.GemName; // before Add: Changed listeners read it
-                Order.Add(key, gem.Entry.PriceBaht, gem.Entry.StartingStockCount);
+                ShowMessage(OrderFeedback.MessageFor(
+                    Order.Add(key, gem.Entry.PriceBaht, gem.Entry.StartingStockCount)));
             }
-            // shortcut: refused drops go home too; the AddResult is dropped until the
-            // refusal-feedback ticket (001-06) needs it.
-            gem.ReturnHomeNow();
+            gem.ReturnHomeNow(); // refused drops go home too
         }
 
-        // shortcut: rebuilds every token on each change; fine for <= 30 Gems, upgrade if Orders grow.
+        private void ShowMessage(string text)
+        {
+            if (text == null || _message == null) return;
+            _message.text = text;
+            _message.gameObject.SetActive(true);
+            _messageHideTime = Time.time + _messageSeconds;
+        }
+
+        // shortcut: rebuilds every token on each change; fine for a handful of Gems, upgrade if Orders grow.
         private void RebuildTokens()
         {
             foreach (var old in _tokens) Destroy(old);
