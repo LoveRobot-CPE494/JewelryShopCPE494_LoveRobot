@@ -20,3 +20,5 @@ In remote maintenance mode (item 4b) the operator uses the controllers that ship
 
 - **Decided:** item 4a.i (storefront) says "the view changes with the movement of the buyer's **hand**". The team reads "hand" as the Quest 3 controller, so the Storefront also uses controllers.
 - After a Dropped Gem is sucked up, the Maintenance Operator uses Teleop to put it back into the correct Stock Slot themselves. The system does not need to know that piece's Cut + Color (automatic put-back may be added later if time allows).
+
+**Amended (2026-11-22):** the Quest 3 has both Controllers, not only the right one ([ADR-0021](0021-two-controllers-in-the-storefront.md)). The table above is for the right Controller. The left Controller plays no part in Teleop.

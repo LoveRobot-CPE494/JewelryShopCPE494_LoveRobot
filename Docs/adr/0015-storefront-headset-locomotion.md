@@ -34,3 +34,7 @@ Walking with the stick on the headset made the tester dizzy, and the controller'
 - **The controller model is turned to lie along the ray.** The ray follows the Quest's aim pose and is correct. The XRI generic controller model's body sits about 25° nose-up from that pose, so each `Controller Visual` is rotated about 25° nose-down (about 2° sideways) around the ray's start. The ray is unchanged. A real Quest Touch Plus model was considered and left for later: it needs a new asset.
 
 These values were also set through Unity MCP at the human's request, as one-off exceptions to the Editor pen, after testing on the headset.
+
+## Amended 2026-11-22
+
+The right stick now teleports (Floor only, no snap turn), reversing "Teleport alongside walking: rejected" above. See [ADR-0021](0021-two-controllers-in-the-storefront.md).

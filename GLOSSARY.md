@@ -11,7 +11,7 @@ The jewelry store in the virtual world where a Customer browses and buys through
 _Avoid_: AR shop, shop scene, AR storefront
 
 **Controller**:
-The single right-hand controller that ships with the team's Quest 3 (there is no left Controller), used as the "hand" of both the Customer and the Maintenance Operator
+The Quest 3's hand controllers, left and right (the team first thought it had only a right one), used as the "hands" of the Customer. The right Controller is also the Maintenance Operator's hand that drives the arm in Teleop; the left plays no part in Teleop ([ADR-0021](Docs/adr/0021-two-controllers-in-the-storefront.md))
 _Avoid_: gripper (that word means the arm's end effector, see Suction Cup), joystick, hand
 
 **Customer**:
