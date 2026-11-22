@@ -5,6 +5,7 @@
         "JewelryShop.Core",
         "JewelryShop.Networking",
         "Unity.XR.CoreUtils",
+        "Unity.TextMeshPro",
         "Unity.XR.Interaction.Toolkit",
         "Unity.InputSystem"
     ],
