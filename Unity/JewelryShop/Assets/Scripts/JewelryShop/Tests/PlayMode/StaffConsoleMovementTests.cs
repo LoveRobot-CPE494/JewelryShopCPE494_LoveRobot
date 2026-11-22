@@ -215,6 +215,35 @@ namespace JewelryShop.Tests
             Assert.That(cheryll.position.x, Is.GreaterThan(1.5f));
         }
 
+        [UnityTest]
+        public IEnumerator Cheryll_WalkingAtAngleIntoWall_FacesPressedDirectionNotSlide()
+        {
+            AddFloor();
+            AddBox(new Vector3(0f, 1.5f, 2f), new Vector3(20f, 3f, 0.5f));
+            var cheryll = AddCheryll(Vector3.up * 0.05f);
+
+            Hold(Key.W, Key.D);
+            yield return Wait(3f);
+
+            Assert.That(cheryll.position.x, Is.GreaterThan(1.5f), "precondition: she slid");
+            Assert.That(Vector3.Dot(cheryll.forward, new Vector3(1f, 0f, 1f).normalized),
+                Is.GreaterThan(0.99f));
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_PushingStraightIntoWall_FacesPressedDirectionAndIdles()
+        {
+            AddFloor();
+            AddBox(new Vector3(0f, 1.5f, -1.25f), new Vector3(10f, 3f, 0.5f)); // face at z = -1
+            var cheryll = AddCheryll(Vector3.up * 0.05f);
+
+            Hold(Key.S);
+            yield return Wait(3f);
+
+            Assert.That(Vector3.Dot(cheryll.forward, Vector3.back), Is.GreaterThan(0.99f));
+            Assert.That(_animator.GetBool("IsMoving"), Is.False);
+        }
+
         // Geometry: a wide, deep slab whose front face is at z = 1 and whose top is a step height
         // above the floor. Cheryll rests one skinWidth above any surface, and the controller
         // measures a step from there, so the reachable height is StepHeightMeters + skinWidth.
