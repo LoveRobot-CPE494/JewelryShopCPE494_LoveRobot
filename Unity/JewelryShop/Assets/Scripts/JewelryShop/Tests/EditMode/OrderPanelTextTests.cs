@@ -109,7 +109,7 @@ namespace JewelryShop.Tests
         [Test]
         public void Rows_FullOrderOf30_FitsAndKeepsTheTotal()
         {
-            var order = OrderOf(Order.DefaultMaxGems);
+            var order = OrderOf(30); // independent of the Order limit
             var rows = OrderPanelText.Rows(order, NameOf);
             Assert.That(rows.Count, Is.EqualTo(OrderPanelText.MaxRows));
             Assert.That(rows[rows.Count - 1].Name, Is.EqualTo("+23 more"));

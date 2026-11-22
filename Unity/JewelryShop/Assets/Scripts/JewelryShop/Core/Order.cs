@@ -19,8 +19,8 @@ namespace JewelryShop.Core
     /// <summary>The Gems a Customer pays for in one payment: ordered, repeats allowed.</summary>
     public class Order
     {
-        /// <summary>The default most Gems one Order may hold.</summary>
-        public const int DefaultMaxGems = 30;
+        /// <summary>The default most Gems one Order may hold (5 for now, easy to hit while testing).</summary>
+        public const int DefaultMaxGems = 5;
 
         /// <summary>What Add did.</summary>
         public enum AddResult { Added, Full, SoldOut }
