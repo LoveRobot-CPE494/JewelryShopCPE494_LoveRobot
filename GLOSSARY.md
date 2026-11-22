@@ -119,7 +119,7 @@ A data-only ScriptableObject asset holding the Staff Console's tuning values (mo
 _Avoid_: settings file, event channel
 
 **Staff Room**:
-The back room behind the Storefront, out of the Customer's sight, where the Staff Avatar waits while no Staff Call is being served
+The back room behind the Storefront, where the Staff Avatar waits while no Staff Call is being served. The Customer can see in from the Storefront. See [ADR-0022](Docs/adr/0022-cheryll-exists-from-link-connect.md)
 _Avoid_: back office, backstage
 
 **Staff Door**:

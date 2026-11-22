@@ -4,6 +4,8 @@ status: accepted
 
 # Staff Call travels directly between the Quest and the Staff Console over Netcode for GameObjects, not through the Hub
 
+Amended by [ADR-0022](0022-cheryll-exists-from-link-connect.md): the link relays Cheryll for as long as it is connected, not only during a call.
+
 [ADR-0001](0001-pc-orchestrator-hub.md) routes everything the Quest sends through the Python Hub. Staff Call is the exception: the Quest and the Staff Console talk directly over the LAN with Unity Netcode for GameObjects, with the Staff Console as host (running on the Hub PC by default) and the Quest connecting to its IP. Both ends are Unity builds of the same project ([ADR-0009](0009-live-staff-via-staff-console.md)), so the Staff Avatar's and Customer Avatar's positions and animations stay in sync with almost no code of our own, and live voice avoids an extra hop through Python. The Hub keeps sole charge of the Packing Station.
 
 ## Considered Options
