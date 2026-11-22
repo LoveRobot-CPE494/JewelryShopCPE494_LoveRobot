@@ -33,6 +33,8 @@ namespace JewelryShop.Storefront
 
         private readonly List<GameObject> _tokens = new List<GameObject>();
         private readonly Dictionary<GemKey, string> _gemNamesByKey = new Dictionary<GemKey, string>();
+        // Session Stock Counts (ADR-0011): seeded on a Gem's first drop, gone on app restart.
+        private readonly Dictionary<GemKey, int> _stock = new Dictionary<GemKey, int>();
         private Order _order;
         private GemModel _lastDropped;
         private int _lastDropFrame = -1;
@@ -44,6 +46,10 @@ namespace JewelryShop.Storefront
         // shortcut: names come from drops because no catalog list exists; a central catalog would replace this lookup.
         /// <summary>Display name of a Gem dropped in this tray, or null if never dropped (#80).</summary>
         public string NameOf(GemKey key) => _gemNamesByKey.TryGetValue(key, out var name) ? name : null;
+
+        /// <summary>For the Checkout (#12): payment succeeded, so lower Stock Counts and empty the Order.</summary>
+        [ContextMenu("Checkout succeeded (Editor test)")] // temporary human trigger until #12 exists
+        public void CheckoutSucceeded() => Order.CheckoutSucceeded(_stock);
 
         private void Awake()
         {
@@ -80,8 +86,9 @@ namespace JewelryShop.Storefront
             if (gem.TryGetKey(out var key))
             {
                 _gemNamesByKey[key] = gem.Entry.GemName; // before Add: Changed listeners read it
+                _stock.TryAdd(key, gem.Entry.StartingStockCount);
                 ShowMessage(OrderFeedback.MessageFor(
-                    Order.Add(key, gem.Entry.PriceBaht, gem.Entry.StartingStockCount)));
+                    Order.Add(key, gem.Entry.PriceBaht, _stock[key])));
             }
             gem.ReturnHomeNow(); // refused drops go home too
         }

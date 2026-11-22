@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using JewelryShop.Core;
 using NUnit.Framework;
 
@@ -139,6 +140,69 @@ namespace JewelryShop.Tests
             Assert.That(order.RemoveAt(index), Is.False);
             Assert.That(order.Lines.Count, Is.EqualTo(1));
             Assert.That(raised, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CheckoutSucceeded_LowersStockByNumberBoughtPerKey()
+        {
+            var order = new Order();
+            order.Add(RedRound, 10, 5);
+            order.Add(RedRound, 10, 5);
+            order.Add(BlueEmerald, 20, 5);
+            var stock = new Dictionary<GemKey, int> { [RedRound] = 5, [BlueEmerald] = 3 };
+            order.CheckoutSucceeded(stock);
+            Assert.That(stock[RedRound], Is.EqualTo(3));
+            Assert.That(stock[BlueEmerald], Is.EqualTo(2));
+        }
+
+        [Test]
+        public void CheckoutSucceeded_EmptiesOrderAndRaisesChangedOnce()
+        {
+            var order = new Order();
+            order.Add(RedRound, 10, 5);
+            order.Add(BlueEmerald, 20, 5);
+            int raised = 0;
+            order.Changed += () => raised++;
+            order.CheckoutSucceeded(new Dictionary<GemKey, int> { [RedRound] = 5, [BlueEmerald] = 5 });
+            Assert.That(order.Lines.Count, Is.EqualTo(0));
+            Assert.That(order.TotalBaht, Is.EqualTo(0));
+            Assert.That(raised, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void CheckoutSucceeded_EmptyOrder_ChangesNothing()
+        {
+            var order = new Order();
+            var stock = new Dictionary<GemKey, int> { [RedRound] = 5 };
+            int raised = 0;
+            order.Changed += () => raised++;
+            order.CheckoutSucceeded(stock);
+            Assert.That(stock[RedRound], Is.EqualTo(5));
+            Assert.That(raised, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CheckoutSucceeded_StockReachesZero_NextAddIsSoldOut()
+        {
+            var order = new Order();
+            var stock = new Dictionary<GemKey, int> { [RedRound] = 2 };
+            order.Add(RedRound, 10, stock[RedRound]);
+            order.Add(RedRound, 10, stock[RedRound]);
+            order.CheckoutSucceeded(stock);
+            Assert.That(stock[RedRound], Is.EqualTo(0));
+            Assert.That(order.Add(RedRound, 10, stock[RedRound]), Is.EqualTo(Order.AddResult.SoldOut));
+        }
+
+        [Test]
+        public void CheckoutSucceeded_StockRemains_NextAddCountsAgainstRemaining()
+        {
+            var order = new Order();
+            var stock = new Dictionary<GemKey, int> { [RedRound] = 3 };
+            order.Add(RedRound, 10, stock[RedRound]);
+            order.CheckoutSucceeded(stock);
+            Assert.That(order.Add(RedRound, 10, stock[RedRound]), Is.EqualTo(Order.AddResult.Added));
+            Assert.That(order.Add(RedRound, 10, stock[RedRound]), Is.EqualTo(Order.AddResult.Added));
+            Assert.That(order.Add(RedRound, 10, stock[RedRound]), Is.EqualTo(Order.AddResult.SoldOut));
         }
 
         [Test]

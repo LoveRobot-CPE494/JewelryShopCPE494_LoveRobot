@@ -56,6 +56,20 @@ namespace JewelryShop.Core
             return AddResult.Added;
         }
 
+        /// <summary>Payment went through: lowers each bought Cut + Color's Stock Count in
+        /// <paramref name="stock"/> (ADR-0011, never below 0), then empties the Order and raises
+        /// Changed once. An empty Order changes nothing.</summary>
+        public void CheckoutSucceeded(IDictionary<GemKey, int> stock)
+        {
+            if (_lines.Count == 0) return;
+            foreach (var line in _lines)
+                if (stock.TryGetValue(line.Key, out var left))
+                    stock[line.Key] = Math.Max(0, left - 1);
+            _lines.Clear();
+            TotalBaht = 0;
+            Changed?.Invoke();
+        }
+
         /// <summary>Removes the Gem at <paramref name="index"/>; false and no event when out of range.</summary>
         public bool RemoveAt(int index)
         {
