@@ -7,7 +7,7 @@ using UniVRM10;
 
 namespace JewelryShop.StaffConsole
 {
-    /// <summary>Keeps Cheryll's skirt draped and limits bust spring sway during jumps.</summary>
+    /// <summary>Keeps Cheryll's skirt draped through strides, jumps and bows.</summary>
     [DefaultExecutionOrder(10990)] // Apply the pose before Vrm10Instance solves the springs.
     public sealed class StaffConsoleJumpSkirt : MonoBehaviour
     {
@@ -19,6 +19,8 @@ namespace JewelryShop.StaffConsole
         [SerializeField] private StaffSkirtConfig _skirtConfig;
 
         private Transform _hips;
+        private Transform _leftKnee;
+        private Transform _rightKnee;
         private Animator _animator;
         private (Transform Bone, Pose ParentPose, Pose HipsPose)[] _anchors;
         private VRM10SpringBoneJoint[] _skirtJoints;
@@ -27,6 +29,7 @@ namespace JewelryShop.StaffConsole
         private SkirtSettings _skirt;
         private bool _isLimited;
         private float _jumpFlareDegrees;
+        private float _runClearanceMeters;
 
         private void Awake()
         {
@@ -42,6 +45,8 @@ namespace JewelryShop.StaffConsole
                 return;
             }
 
+            _leftKnee = _avatar.Humanoid.LeftLowerLeg;
+            _rightKnee = _avatar.Humanoid.RightLowerLeg;
             var chains = _avatar.SpringBone.Springs
                 .Where(chain => chain.Name == "Skirt" && chain.Joints.Count > 0 &&
                     chain.Joints[0] != null && chain.Joints[0].transform.parent != null)
@@ -73,9 +78,15 @@ namespace JewelryShop.StaffConsole
         private void LateUpdate()
         {
             var isJumping = _movement.IsJumping;
+            var flareStepDegrees = _skirt.FlareSpeedDegreesPerSecond * Time.deltaTime;
             _jumpFlareDegrees = Mathf.MoveTowards(_jumpFlareDegrees,
-                isJumping ? _skirt.FlareDegrees : 0f,
-                _skirt.FlareSpeedDegreesPerSecond * Time.deltaTime);
+                isJumping ? _skirt.FlareDegrees : 0f, flareStepDegrees);
+            var runWeight = _movement.RunBlend;
+            var kneeLeadMeters = _leftKnee != null && _rightKnee != null ? Mathf.Max(
+                Vector3.Dot(_leftKnee.position - _hips.position, transform.forward),
+                Vector3.Dot(_rightKnee.position - _hips.position, transform.forward)) : 0f;
+            _runClearanceMeters = SkirtSettings.ReleaseRunClearance(_runClearanceMeters,
+                _skirt.RunKneeClearance(kneeLeadMeters) * runWeight, runWeight, Time.deltaTime);
             if (!isJumping)
             {
                 RestoreJumpLimits();
@@ -113,14 +124,20 @@ namespace JewelryShop.StaffConsole
                 position = _hips.position + correction * (position - _hips.position);
                 rotation = correction * rotation;
 
-                if (_jumpFlareDegrees > 0f)
+                if (_jumpFlareDegrees > 0f || runWeight > 0f || _runClearanceMeters > 0f)
                 {
                     var radial = new Vector3(pose.position.x, 0f, pose.position.z);
                     if (radial.sqrMagnitude > 0.0001f)
                     {
                         var outward = hipsRotation * radial.normalized;
+                        // The knee needs clearance mainly in front of the running avatar.
+                        var frontWeight = Mathf.Clamp01(Vector3.Dot(transform.forward, outward));
+                        var clearanceWeight = Mathf.Clamp01(frontWeight * 1.25f);
+                        position += transform.forward * (_runClearanceMeters * clearanceWeight);
+                        var flareDegrees = Mathf.Max(_jumpFlareDegrees,
+                            _skirt.RunAnchorFlare(frontWeight) * runWeight);
                         var direction = Vector3.down + outward *
-                            Mathf.Tan(_jumpFlareDegrees * Mathf.Deg2Rad);
+                            Mathf.Tan(flareDegrees * Mathf.Deg2Rad);
                         rotation = Quaternion.FromToRotation(Vector3.down, direction) * rotation;
                     }
                 }
@@ -142,6 +159,7 @@ namespace JewelryShop.StaffConsole
 
         private void OnDisable()
         {
+            _runClearanceMeters = 0f;
             RestoreJumpLimits();
             if (_anchors == null)
                 return;

@@ -22,6 +22,7 @@ namespace JewelryShop.Tests
         private Keyboard _keyboard;
         private InputSettings.BackgroundBehavior _originalBackgroundBehavior;
         private InputSettings.EditorInputBehaviorInPlayMode _originalEditorInputBehavior;
+        private float _originalCaptureDeltaSeconds;
         private CharacterController _controller;
         private Animator _animator;
         private StaffConsoleMovement _movement;
@@ -30,6 +31,9 @@ namespace JewelryShop.Tests
         public void SetUp()
         {
             _root = new GameObject("MovementTestRoot");
+            // Keep CharacterController step sizes stable in the Editor and in batch mode.
+            _originalCaptureDeltaSeconds = Time.captureDeltaTime;
+            Time.captureFramerate = 60;
             // The test runner may be unfocused while it feeds the simulated keyboard.
             var settings = InputSystem.settings;
             _originalBackgroundBehavior = settings.backgroundBehavior;
@@ -50,6 +54,7 @@ namespace JewelryShop.Tests
             InputSystem.RemoveDevice(_keyboard);
             InputSystem.settings.backgroundBehavior = _originalBackgroundBehavior;
             InputSystem.settings.editorInputBehaviorInPlayMode = _originalEditorInputBehavior;
+            Time.captureDeltaTime = _originalCaptureDeltaSeconds;
             Object.DestroyImmediate(_root);
         }
 
@@ -71,6 +76,116 @@ namespace JewelryShop.Tests
                     $"frame {frame}");
             }
         }
+
+        [UnityTest]
+        public IEnumerator Cheryll_EitherShiftWithDirection_BlendsBetweenGaits()
+        {
+            AddFloor();
+            var cheryll = AddCheryll(Vector3.up * 0.05f);
+            Hold(Key.LeftShift);
+            yield return Wait(0.4f);
+            Assert.That(cheryll.position.z, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(_animator.GetBool("IsMoving"), Is.False);
+
+            Hold(Key.W, Key.LeftShift);
+            yield return Wait(0.45f);
+            var startMeters = cheryll.position.z;
+            yield return Wait(0.4f);
+            Assert.That(cheryll.position.z - startMeters, Is.GreaterThan(0.65f));
+            Assert.That(_movement.RunBlend, Is.GreaterThan(0.95f));
+
+            Hold(Key.W);
+            yield return Wait(0.45f);
+            startMeters = cheryll.position.z;
+            yield return Wait(0.4f);
+            Assert.That(cheryll.position.z - startMeters, Is.InRange(0.35f, 0.54f));
+            Assert.That(_movement.RunBlend, Is.LessThan(0.05f));
+
+            Hold(Key.RightShift, Key.W, Key.D);
+            yield return Wait(0.45f);
+            var start = cheryll.position;
+            yield return Wait(0.4f);
+            var displacement = cheryll.position - start;
+            Assert.That(displacement.x, Is.EqualTo(displacement.z).Within(0.02f));
+            Assert.That(displacement.magnitude, Is.InRange(0.78f, 1.16f));
+
+            Hold(Key.RightShift);
+            yield return Wait(0.45f);
+            Assert.That(_animator.GetBool("IsMoving"), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_RunAgainstWall_DoesNotRunInPlace()
+        {
+            AddFloor();
+            AddBox(new Vector3(0f, 1.5f, 2f), new Vector3(10f, 3f, 0.5f));
+            AddCheryll(Vector3.up * 0.05f);
+
+            Hold(Key.W, Key.LeftShift);
+            yield return Wait(1.6f);
+
+            Assert.That(_movement.RunBlend, Is.LessThan(0.05f));
+            Assert.That(_animator.GetBool("IsMoving"), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_RunningJump_ResumesRunOnLanding()
+        {
+            AddFloor();
+            AddCheryll(Vector3.up * 0.05f);
+            Hold(Key.W, Key.LeftShift);
+            yield return Wait(0.55f);
+            Assert.That(_movement.RunBlend, Is.GreaterThan(0.95f));
+
+            InputSystem.QueueStateEvent(_keyboard,
+                new KeyboardState(Key.W, Key.LeftShift, Key.Space));
+            yield return Wait(0.2f);
+            Assert.That(_movement.IsJumping, Is.True);
+            Hold(Key.W, Key.LeftShift);
+            yield return Wait(0.95f);
+            Assert.That(_movement.IsJumping, Is.False);
+            Assert.That(_movement.RunBlend, Is.GreaterThan(0.95f));
+        }
+
+        [UnityTest]
+        public IEnumerator Cheryll_GestureWhileRunning_ResumesHeldGait()
+        {
+            AddFloor();
+            AddCheryll(Vector3.up * 0.05f);
+            Hold(Key.W, Key.LeftShift);
+            yield return Wait(0.55f);
+            Assert.That(_movement.RunBlend, Is.GreaterThan(0.95f));
+            InputSystem.QueueStateEvent(_keyboard,
+                new KeyboardState(Key.W, Key.LeftShift, Key.Digit4));
+            yield return Wait(0.25f);
+            Assert.That(_animator.GetCurrentAnimatorStateInfo(0).IsTag("Gesture"), Is.True);
+            Assert.That(_movement.RunBlend, Is.LessThan(0.05f));
+            Hold(Key.W, Key.LeftShift);
+            yield return Wait(3f);
+            Assert.That(_movement.RunBlend, Is.GreaterThan(0.95f));
+        }
+
+#if UNITY_EDITOR
+        [UnityTest]
+        public IEnumerator Cheryll_ResetLook_PlaysStepsBeforeReachingCameraHeading()
+        {
+            AddFloor();
+            var avatar = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Avatar/Cheryll_3.vrm");
+            var cheryll = AddCheryll(Vector3.up * 0.05f, avatar: avatar, hasLookAt: true);
+            yield return Wait(0.1f);
+            cheryll.rotation = Quaternion.Euler(0f, 110f, 0f);
+
+            yield return Tap(Key.R);
+            yield return Wait(0.15f);
+
+            Assert.That(Vector3.Angle(Vector3.forward, cheryll.forward), Is.InRange(10f, 105f));
+            Assert.That(_animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Turn In Place"),
+                Is.True);
+            yield return Wait(1.2f);
+            Assert.That(Vector3.Angle(Vector3.forward, cheryll.forward), Is.LessThan(1f));
+        }
+#endif
 
         [UnityTest]
         public IEnumerator Cheryll_WalkingIntoWall_DoesNotPassThrough()
@@ -164,7 +279,7 @@ namespace JewelryShop.Tests
             var start = new Vector3(0f, 0.05f, 0f);
             var cheryll = AddCheryll(start);
 
-            Hold(Key.W); // stays held through the respawn
+            Hold(Key.W, Key.LeftShift); // stay held through the respawn
             var fell = false;
             var respawned = false;
             for (var elapsed = 0f; elapsed < 8f && !respawned; elapsed += Time.deltaTime)
@@ -183,11 +298,12 @@ namespace JewelryShop.Tests
             Assert.That(respawned, Is.True);
             Assert.That(GetField<float>(_movement, "_yawDegrees"), Is.EqualTo(0f));
             Assert.That(GetField<float>(_movement, "_pitchDegrees"), Is.EqualTo(0f));
-            Assert.That(GetField<Vector3>(_movement, "_walkVelocityMetersPerSecond"),
+            Assert.That(GetField<Vector3>(_movement, "_horizontalVelocityMetersPerSecond"),
                 Is.EqualTo(Vector3.zero));
             Assert.That(_animator.GetBool("IsMoving"), Is.False);
             Assert.That(_animator.GetFloat("WalkForward"), Is.EqualTo(0f));
             Assert.That(_animator.GetFloat("WalkHorizontal"), Is.EqualTo(0f));
+            Assert.That(_movement.RunBlend, Is.Zero);
         }
 
         [UnityTest]
@@ -700,12 +816,12 @@ namespace JewelryShop.Tests
             SetField(_movement, "_yawDegrees", 40f);
             SetField(_movement, "_pitchDegrees", 10f);
 
+            var pivot = CurrentPivot; // the pivot LateUpdate will use before the test resumes
             yield return null;
 
             var restOffset = CameraStart - StartPivot;
             var orbit = Quaternion.AngleAxis(40f, Vector3.up) *
                 Quaternion.AngleAxis(10f, Vector3.right); // start camera faces +z, so right is +x
-            var pivot = CurrentPivot;
             Assert.That(Vector3.Distance(CameraOf().position, pivot + orbit * restOffset),
                 Is.LessThan(0.01f));
         }
@@ -934,7 +1050,7 @@ namespace JewelryShop.Tests
 
         private Transform AddCheryll(Vector3 position,
             RuntimeAnimatorController controller = null, StaffCameraConfig cameraConfig = null,
-            GameObject avatar = null, bool hasJumpSpringLimits = false)
+            GameObject avatar = null, bool hasJumpSpringLimits = false, bool hasLookAt = false)
         {
             var go = avatar != null ? Object.Instantiate(avatar) : new GameObject("Cheryll");
             go.SetActive(false); // Awake must see the injected references
@@ -958,6 +1074,8 @@ namespace JewelryShop.Tests
                 SetField(springLimits, "_avatar", go.GetComponent("Vrm10Instance"));
                 SetField(springLimits, "_movement", _movement);
             }
+            if (hasLookAt)
+                SetField(go.AddComponent<StaffLookAtDriver>(), "_staffCamera", camera);
             go.SetActive(true);
             _controller = go.GetComponent<CharacterController>();
             return go.transform;

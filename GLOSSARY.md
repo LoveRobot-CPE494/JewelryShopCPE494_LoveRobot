@@ -103,15 +103,15 @@ A Staff Console toggle (key 8, OFF by default, remembered between runs) that mak
 _Avoid_: gaze, head tracking
 
 **Focus**:
-A Staff Console toggle (key F, OFF at every start) that makes Look-At target the Customer Avatar while it is close. Works only while Look-At is ON, and turns OFF with it. See [ADR-0020](Docs/adr/0020-staff-avatar-look-at.md)
+A Staff Console toggle (key F, OFF at every start) that aims at a nearby Customer Avatar or an Interest Target. It operates independently of key 8. See [ADR-0020](Docs/adr/0020-staff-avatar-look-at.md)
 _Avoid_: lock-on, glance
 
 **Reset Look**:
-A Staff Console one-shot command (key R) that turns the Staff Avatar's body back to face where the Staff Console camera faces, undoing a body turn left by a gesture. See [ADR-0020](Docs/adr/0020-staff-avatar-look-at.md)
+A Staff Console one-shot command (key R) that steps the Staff Avatar back toward the Staff Console camera heading. The same turn plays after a gesture. See [ADR-0020](Docs/adr/0020-staff-avatar-look-at.md)
 _Avoid_: recenter, reset pose
 
 **Interest Target**:
-An optional object a human assigns in the Inspector for Look-At to follow instead of the camera direction, for testing or pointing at a display. Focus outranks it. See [ADR-0020](Docs/adr/0020-staff-avatar-look-at.md)
+An object Focus can aim at. Assign it in the Inspector or aim the camera at a collidable surface and press F. See [ADR-0020](Docs/adr/0020-staff-avatar-look-at.md)
 _Avoid_: look target, aim point
 
 **Staff Config**:

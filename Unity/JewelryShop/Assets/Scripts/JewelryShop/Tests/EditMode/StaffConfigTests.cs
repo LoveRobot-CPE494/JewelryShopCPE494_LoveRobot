@@ -13,9 +13,67 @@ namespace JewelryShop.Tests
         {
             var d = MovementSettings.Defaults;
             Assert.That(d.WalkSpeedMetersPerSecond, Is.EqualTo(1f));
+            Assert.That(d.RunSpeedMetersPerSecond, Is.GreaterThan(d.WalkSpeedMetersPerSecond));
+            Assert.That(d.RunBlendSeconds, Is.GreaterThan(0f));
+            Assert.That(d.RunPlaybackRate, Is.EqualTo(1f));
             Assert.That(d.AccelerationMetersPerSecondSquared, Is.EqualTo(8f));
             Assert.That(d.TurnDegreesPerSecond, Is.EqualTo(540f));
             Assert.That(d.KillPlaneYMeters, Is.EqualTo(-10f));
+        }
+
+        [Test]
+        public void Validated_LegacyRunFields_UsesDefaultsAndKeepsRunFasterThanWalk()
+        {
+            var settings = MovementSettings.Defaults;
+            settings.WalkSpeedMetersPerSecond = 3f;
+            settings.RunSpeedMetersPerSecond = 0f;
+            settings.RunBlendSeconds = 0f;
+            settings.RunPlaybackRate = float.NaN;
+            var warnings = new List<string>();
+
+            var result = settings.Validated(warnings);
+
+            Assert.That(result.RunSpeedMetersPerSecond, Is.GreaterThan(3f));
+            Assert.That(result.RunBlendSeconds,
+                Is.EqualTo(MovementSettings.Defaults.RunBlendSeconds));
+            Assert.That(result.RunPlaybackRate, Is.EqualTo(1f));
+            Assert.That(warnings, Has.Count.EqualTo(3));
+        }
+
+        [TestCase(0f, 0f, 0f)]
+        [TestCase(1.75f, 0.5f, 0.7f)]
+        [TestCase(2.5f, 1f, 1f)]
+        public void RunGait_GroundSpeed_MatchesBlendAndPlayback(float speedMetersPerSecond,
+            float expectedWeight, float expectedPlayback)
+        {
+            var settings = MovementSettings.Defaults;
+            settings.RunSpeedMetersPerSecond = 2.5f;
+
+            var (weight, playbackRate) = settings.RunGait(speedMetersPerSecond);
+
+            Assert.That(weight, Is.EqualTo(expectedWeight).Within(0.001f));
+            Assert.That(playbackRate, Is.EqualTo(expectedPlayback).Within(0.001f));
+        }
+
+        [TestCase(0.1f, 0f)]
+        [TestCase(0.2f, 0.1f)]
+        [TestCase(0.3f, 0.2f)]
+        public void RunKneeClearance_KneeLead_ScalesBetweenZeroAndFullClearance(
+            float kneeLeadMeters, float expectedMeters)
+        {
+            Assert.That(SkirtSettings.Defaults.RunKneeClearance(kneeLeadMeters),
+                Is.EqualTo(expectedMeters).Within(0.001f));
+        }
+
+        [TestCase(0f, 0.2f, 1f, 0.2f)]
+        [TestCase(0.2f, 0f, 1f, 0.165f)]
+        [TestCase(0.2f, 0f, 0f, 0.11f)]
+        public void ReleaseRunClearance_KneeMoves_OpensImmediatelyAndSettlesGradually(
+            float currentMeters, float requiredMeters, float runWeight, float expectedMeters)
+        {
+            var clearance = SkirtSettings.ReleaseRunClearance(currentMeters, requiredMeters,
+                runWeight, 0.1f);
+            Assert.That(clearance, Is.EqualTo(expectedMeters).Within(0.001f));
         }
 
         [Test]

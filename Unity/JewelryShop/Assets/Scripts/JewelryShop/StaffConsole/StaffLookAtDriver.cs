@@ -7,11 +7,7 @@ using UniVRM10;
 namespace JewelryShop.StaffConsole
 {
     /// <summary>
-    /// Key 8 toggles Look-At and F toggles Focus on the Customer Avatar: Cheryll's head
-    /// follows the target (Customer, Interest Target or the Staff Console camera) within the
-    /// config limits and the body turns the excess; after a gesture the body turns to the
-    /// target winning at its end, and R is Reset Look (ADR-0020). Head, eyes and body; the
-    /// rules live in <see cref="LookAt"/>.
+    /// Key 8 toggles Camera Look-At, F toggles Focus, and R resets heading (ADR-0020).
     /// </summary>
     // Run after StaffConsoleMovement.LateUpdate moves the camera, so we read this frame's
     // camera direction, not last frame's (a one-frame lag shakes the head while walking).
@@ -25,6 +21,8 @@ namespace JewelryShop.StaffConsole
         private const float MinimumTurnDegreesPerSecond = 6f;
         private const float FullTurnDegreesPerSecond = 60f;
         private const float MaxTurnStepWeight = 0.65f;
+        private const float FocusRayMeters = 20f;
+        private static readonly RaycastHit[] s_focusHits = new RaycastHit[16];
         private static readonly int s_isMoving = Animator.StringToHash("IsMoving");
         private static readonly int s_isGrounded = Animator.StringToHash("IsGrounded");
         private static readonly int s_turnAmount = Animator.StringToHash("LookAtTurnAmount");
@@ -37,7 +35,7 @@ namespace JewelryShop.StaffConsole
         [SerializeField] private Transform _staffCamera;
         [Tooltip("Optional. Focus (F) looks at it while it is in range.")]
         [SerializeField] private Transform _customerAvatar;
-        [Tooltip("Optional. Looked at when Focus has no Customer; for testing or a display.")]
+        [Tooltip("Optional. Focus (F) looks at this when no Customer is in range.")]
         [SerializeField] private Transform _interestTarget;
 
         private sealed class PlayerPrefsStore : ILookAtStore
@@ -58,13 +56,19 @@ namespace JewelryShop.StaffConsole
         private readonly CameraAim _cameraAim = new CameraAim();
         private readonly LookAtFocus _focus = new LookAtFocus();
         private readonly GestureLook _gesture = new GestureLook();
-        private LookAtTarget _latchedTarget;
         private Animator _animator;
+        private StaffConsoleMovement _movement;
         private LookAtSettings _settings;
         private Transform _headBone;
         private Text _status;
         private bool _isOn;
         private bool _hasTurnAnimation;
+        private Transform _selectedTarget;
+        private Vector3 _selectedPoint;
+
+        private Transform InterestTarget => _interestTarget != null ? _interestTarget :
+            _selectedTarget;
+        private bool HasFocus => _movement != null ? _movement.HasFocus : Application.isFocused;
 
         private void Reset()
         {
@@ -80,6 +84,7 @@ namespace JewelryShop.StaffConsole
             if (_staffCamera == null && Camera.main != null)
                 _staffCamera = Camera.main.transform;
             _animator = GetComponent<Animator>();
+            _movement = GetComponent<StaffConsoleMovement>();
             _headBone = _animator.GetBoneTransform(HumanBodyBones.Head);
             if (_staffCamera == null || _headBone == null)
             {
@@ -113,8 +118,10 @@ namespace JewelryShop.StaffConsole
         private void Update()
         {
             var keyboard = Keyboard.current;
-            if (keyboard == null) return;
-            if (keyboard.digit8Key.wasPressedThisFrame)
+            if (keyboard == null || !HasFocus) return;
+            var isLookTogglePressed = keyboard.digit8Key.wasPressedThisFrame;
+            var isFocusTogglePressed = keyboard.fKey.wasPressedThisFrame;
+            if (isLookTogglePressed)
                 _isOn = LookAt.Toggle(_store, _settings);
 
             var hasCustomer = _customerAvatar != null;
@@ -124,41 +131,61 @@ namespace JewelryShop.StaffConsole
                 var offset = _customerAvatar.position - transform.position;
                 distance = new Vector2(offset.x, offset.z).magnitude;
             }
+            var previousTarget = CurrentTarget();
+            _focus.Tick(isFocusTogglePressed, hasCustomer, distance, _settings);
+            if (isFocusTogglePressed)
+            {
+                _selectedTarget = null;
+                if (_focus.IsOn && _interestTarget == null)
+                    SelectInterestPoint();
+            }
+            if (isLookTogglePressed || isFocusTogglePressed || previousTarget != CurrentTarget() ||
+                (Mouse.current != null && Mouse.current.rightButton.isPressed))
+                _gesture.ResumeBodyFollow();
             if (keyboard.rKey.wasPressedThisFrame) _gesture.RequestReset();
-            _focus.Tick(_isOn, keyboard.fKey.wasPressedThisFrame, hasCustomer, distance, _settings);
             ShowStatus();
         }
 
         // After the Animator has posed the head: turn the body past the limit, then the head.
         private void LateUpdate()
         {
-            var (rawYaw, rawPitch) = Raw(CurrentTarget());
-
-            // The body does not turn during a gesture. When one ends it latches the winning
-            // target and turns to it; that turn and Reset Look own the body until done, then
-            // Body Follow yields the heading and pose to locomotion, jumps and gestures.
             var elapsedSeconds = Time.deltaTime;
-            var isMoving = _animator.GetBool(s_isMoving);
-            if (isMoving) _gesture.CancelReset();
-            if (_gesture.Tick(IsPlayingTag(GestureTag), _isOn)) _latchedTarget = CurrentTarget();
-            var face = transform.InverseTransformDirection(_staffCamera.forward);
-            var stepDegrees = _gesture.Step(
-                _gesture.Turning ? Raw(_latchedTarget).Yaw : 0f,
-                LookAt.RawAngles(face.x, 0f, face.z).Yaw, elapsedSeconds, _settings);
-            if (stepDegrees != 0f)
-                transform.Rotate(0f, stepDegrees, 0f, Space.World);
-            else if (_isOn && _animator.GetBool(s_isGrounded) && !isMoving &&
-                !_gesture.InGesture && !IsPlayingTag(JumpTag))
+            var isMoving = _animator.GetBool(s_isMoving) ||
+                (_movement != null && _movement.HasMovementInput);
+            var canTurn = HasFocus && !isMoving && _animator.GetBool(s_isGrounded) &&
+                !IsPlayingTag(JumpTag);
+            _gesture.Tick(IsPlayingTag(GestureTag));
+            if (!canTurn && _gesture.Resetting)
+            {
+                _gesture.CancelReset();
+                _gesture.ResumeBodyFollow();
+            }
+            if (isMoving) _gesture.ResumeBodyFollow();
+
+            var target = CurrentTarget();
+            var isAiming = _isOn || target != LookAtTarget.Camera;
+            var (rawYaw, rawPitch) = Raw(target);
+            var stepDegrees = 0f;
+            if (canTurn && _gesture.Resetting)
+            {
+                var face = transform.InverseTransformDirection(_staffCamera.forward);
+                var cameraYawDegrees = LookAt.RawAngles(face.x, 0f, face.z).Yaw;
+                stepDegrees = _gesture.Step(cameraYawDegrees, elapsedSeconds, _settings);
+            }
+            else if (canTurn && isAiming && !_gesture.IsBodyFollowPaused && !_gesture.InGesture)
             {
                 stepDegrees = LookAt.BodyStep(LookAt.ExcessYaw(rawYaw, _settings),
                     elapsedSeconds, _settings);
-                transform.Rotate(0f, stepDegrees, 0f, Space.World);
             }
-            rawYaw -= stepDegrees;
+            if (stepDegrees != 0f)
+            {
+                transform.Rotate(0f, stepDegrees, 0f, Space.World);
+                (rawYaw, rawPitch) = Raw(target);
+            }
             AnimateTurn(elapsedSeconds > 0f ? stepDegrees / elapsedSeconds : 0f);
 
             var (yaw, pitch) = LookAt.Clamp(rawYaw, rawPitch, _settings);
-            var pose = _head.Tick(elapsedSeconds, _isOn, yaw, pitch, _settings,
+            var pose = _head.Tick(elapsedSeconds, isAiming, yaw, pitch, _settings,
                 _gesture.InGesture);
             if (_avatar != null)
             {
@@ -177,7 +204,7 @@ namespace JewelryShop.StaffConsole
         // to the camera for this frame.
         private (float Yaw, float Pitch) Raw(LookAtTarget target)
         {
-            var aimed = target == LookAtTarget.Customer ? _customerAvatar : _interestTarget;
+            var aimed = target == LookAtTarget.Customer ? _customerAvatar : InterestTarget;
             if (target == LookAtTarget.Camera || aimed == null)
             {
                 var to = transform.InverseTransformDirection(
@@ -186,8 +213,28 @@ namespace JewelryShop.StaffConsole
                 return _cameraAim.Aim(to.x, to.y, to.z, face.x, face.y, face.z, _settings);
             }
 
-            var toAimed = transform.InverseTransformDirection(aimed.position - _headBone.position);
+            var point = target == LookAtTarget.Interest && aimed == _selectedTarget
+                ? aimed.TransformPoint(_selectedPoint) : aimed.position;
+            var toAimed = transform.InverseTransformDirection(point - _headBone.position);
             return LookAt.RawAngles(toAimed.x, toAimed.y, toAimed.z);
+        }
+
+        private void SelectInterestPoint()
+        {
+            var count = Physics.RaycastNonAlloc(_staffCamera.position, _staffCamera.forward,
+                s_focusHits, FocusRayMeters, Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
+            var nearestMeters = FocusRayMeters;
+            for (var i = 0; i < count; i++)
+            {
+                var hit = s_focusHits[i];
+                if (hit.distance >= nearestMeters || hit.transform.IsChildOf(transform))
+                    continue;
+
+                nearestMeters = hit.distance;
+                _selectedTarget = hit.transform;
+                _selectedPoint = _selectedTarget.InverseTransformPoint(hit.point);
+            }
         }
 
         private void AnimateTurn(float degreesPerSecond)
@@ -209,13 +256,14 @@ namespace JewelryShop.StaffConsole
             _animator.GetNextAnimatorStateInfo(0).IsTag(tag);
 
         private LookAtTarget CurrentTarget() =>
-            LookAt.PickTarget(_focus.InRange, _interestTarget != null);
+            _selectedTarget != null ? LookAtTarget.Interest :
+                LookAt.PickTarget(_focus.InRange, _focus.IsOn && InterestTarget != null);
 
         private void ShowStatus()
         {
             if (_status == null) return;
-            _status.text = LookAt.StatusText(_isOn, _focus, _customerAvatar != null,
-                CurrentTarget(), _interestTarget != null ? _interestTarget.name : "");
+            _status.text = "      " + LookAt.StatusText(_isOn, _focus, _customerAvatar != null,
+                CurrentTarget(), InterestTarget != null ? InterestTarget.name : "");
         }
     }
 }

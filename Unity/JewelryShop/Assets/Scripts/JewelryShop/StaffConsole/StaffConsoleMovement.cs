@@ -27,6 +27,8 @@ namespace JewelryShop.StaffConsole
         private static readonly int s_idleLock = Animator.StringToHash("IdleLock");
         private static readonly int s_walkHorizontal = Animator.StringToHash("WalkHorizontal");
         private static readonly int s_walkForward = Animator.StringToHash("WalkForward");
+        private static readonly int s_runBlend = Animator.StringToHash("RunBlend");
+        private static readonly int s_gaitPlaybackRate = Animator.StringToHash("GaitPlaybackRate");
         private static readonly int s_jump = Animator.StringToHash("Base Layer.Jump");
         private static readonly int s_isGrounded = Animator.StringToHash("IsGrounded");
         private static readonly int s_jumpPose = Animator.StringToHash("JumpPose");
@@ -48,6 +50,7 @@ namespace JewelryShop.StaffConsole
         private bool _hasMoved; // isGrounded is meaningless before the first controller Move
         private bool _hasGroundedParameter;
         private bool _hasJumpPoseParameter;
+        private bool _hasRunParameters;
         // 16 is far more than a camera ray crosses; on overflow Unity keeps an arbitrary subset,
         // so the nearest wall could be missed for that frame.
         private static readonly RaycastHit[] s_cameraHits = new RaycastHit[16];
@@ -57,7 +60,7 @@ namespace JewelryShop.StaffConsole
         private float _initialCameraYawDegrees;
         private float _yawDegrees;
         private float _pitchDegrees;
-        private Vector3 _walkVelocityMetersPerSecond;
+        private Vector3 _horizontalVelocityMetersPerSecond;
         // PlayMode tests turn it off so an unfocused Editor still walks.
         private bool _isFocusRequired = true;
         private Text _idleLockStatus;
@@ -77,11 +80,15 @@ namespace JewelryShop.StaffConsole
         /// <summary>Whether the viewer selected first person with V.</summary>
         public bool IsFirstPerson => _isManualFirstPerson;
 
+        /// <summary>How much the current ground gait is blended toward running.</summary>
+        public float RunBlend { get; private set; }
+
         // Space, gestures and Idle Lock need real ground, with no grace after leaving an edge.
         private bool CanUseGroundKeys => !_isInJumpArc && !_isTakingOff &&
             (!_hasMoved || _controller.isGrounded);
 
-        private bool HasFocus => !_isFocusRequired || Application.isFocused;
+        internal bool HasFocus => !_isFocusRequired || Application.isFocused;
+        internal bool HasMovementInput { get; private set; }
 
         private Vector3 CameraPivot => transform.position + Vector3.up * _camera.EyeHeightMeters;
 
@@ -126,6 +133,11 @@ namespace JewelryShop.StaffConsole
             }
 
             _animator.applyRootMotion = false;
+            var parameters = _animator.parameters;
+            _hasRunParameters = parameters.Any(p => p.nameHash == s_runBlend &&
+                p.type == AnimatorControllerParameterType.Float) &&
+                parameters.Any(p => p.nameHash == s_gaitPlaybackRate &&
+                    p.type == AnimatorControllerParameterType.Float);
             var statusObject = GameObject.Find(IdleLockStatusName);
             _idleLockStatus = statusObject != null ? statusObject.GetComponent<Text>() : null;
             if (_idleLockStatus == null)
@@ -163,9 +175,11 @@ namespace JewelryShop.StaffConsole
 
         private void Update()
         {
+            HasMovementInput = false;
             if (!HasFocus)
             {
-                _walkVelocityMetersPerSecond = Vector3.zero;
+                _horizontalVelocityMetersPerSecond = Vector3.zero;
+                ClearRunBlend();
                 Move(Vector2.zero, Time.deltaTime);
                 return;
             }
@@ -178,6 +192,7 @@ namespace JewelryShop.StaffConsole
             var keyboard = Keyboard.current;
             var mouse = Mouse.current;
             var movement = Vector2.zero;
+            var isRunRequested = false;
             var isJumping = IsJumping;
             if (mouse != null && mouse.rightButton.isPressed)
             {
@@ -207,19 +222,23 @@ namespace JewelryShop.StaffConsole
                 else if (!isJumping && ((onGround && TryPlayGesture(keyboard)) ||
                     IsPlayingTag(GestureTag)))
                 {
-                    _walkVelocityMetersPerSecond = Vector3.zero;
+                    _horizontalVelocityMetersPerSecond = Vector3.zero;
                     canMove = false;
                 }
 
+                var direction = new Vector2(
+                    keyboard.dKey.ReadValue() - keyboard.aKey.ReadValue(),
+                    keyboard.wKey.ReadValue() - keyboard.sKey.ReadValue());
+                HasMovementInput = direction != Vector2.zero;
                 if (canMove)
                 {
-                    movement = new Vector2(
-                        keyboard.dKey.ReadValue() - keyboard.aKey.ReadValue(),
-                        keyboard.wKey.ReadValue() - keyboard.sKey.ReadValue());
+                    movement = direction;
+                    isRunRequested = keyboard.leftShiftKey.isPressed ||
+                        keyboard.rightShiftKey.isPressed;
                 }
             }
 
-            Move(movement, Time.deltaTime);
+            Move(movement, Time.deltaTime, isRunRequested);
         }
 
         private void SetIdleLock(bool isIdleLockOn)
@@ -252,15 +271,20 @@ namespace JewelryShop.StaffConsole
                 _animator.GetNextAnimatorStateInfo(0).IsTag(tag);
         }
 
-        private void Move(Vector2 movement, float elapsedSeconds)
+        private void Move(Vector2 movement, float elapsedSeconds, bool isRunRequested = false)
         {
             var input = Vector2.ClampMagnitude(movement, 1f);
             var heading = Quaternion.Euler(0f, _initialCameraYawDegrees + _yawDegrees, 0f);
             var direction = heading * new Vector3(input.x, 0f, input.y);
-            var targetVelocityMetersPerSecond = direction * _movement.WalkSpeedMetersPerSecond;
             var isGrounded = _controller.isGrounded && !_isInJumpArc;
-            _walkVelocityMetersPerSecond = Vector3.MoveTowards(_walkVelocityMetersPerSecond,
-                targetVelocityMetersPerSecond,
+            var walkSpeedMetersPerSecond = _movement.WalkSpeedMetersPerSecond;
+            var canRun = isGrounded || _horizontalVelocityMetersPerSecond.sqrMagnitude >
+                walkSpeedMetersPerSecond * walkSpeedMetersPerSecond;
+            var targetSpeedMetersPerSecond = isRunRequested && canRun
+                ? _movement.RunSpeedMetersPerSecond : walkSpeedMetersPerSecond;
+            var targetVelocityMetersPerSecond = direction * targetSpeedMetersPerSecond;
+            _horizontalVelocityMetersPerSecond = Vector3.MoveTowards(
+                _horizontalVelocityMetersPerSecond, targetVelocityMetersPerSecond,
                 _movement.AccelerationMetersPerSecondSquared *
                 JumpMath.ControlScale(isGrounded, _movement.AirControl) * elapsedSeconds);
             if (isGrounded)
@@ -289,8 +313,8 @@ namespace JewelryShop.StaffConsole
                 ? (_verticalMetersPerSecond - 0.5f * gravityDelta) * gravitySeconds
                 : _verticalMetersPerSecond * elapsedSeconds;
             _verticalMetersPerSecond -= gravityDelta;
-            var contacts = _controller.Move(_walkVelocityMetersPerSecond * elapsedSeconds +
-                Vector3.up * verticalDistance);
+            var contacts = _controller.Move(
+                _horizontalVelocityMetersPerSecond * elapsedSeconds + Vector3.up * verticalDistance);
             if ((contacts & CollisionFlags.Above) != 0)
                 _verticalMetersPerSecond = Mathf.Min(0f, _verticalMetersPerSecond);
             // Landing is detected here, in the Move that lands, so the Animator bool does not lag.
@@ -349,10 +373,31 @@ namespace JewelryShop.StaffConsole
             _animator.SetFloat(s_walkHorizontal, walkBlend.x);
             _animator.SetFloat(s_walkForward, walkBlend.y);
             _animator.SetBool(s_isMoving, isMoving);
-            // False from the Space press until she lands, so Jump -> Idle fires only on landing.
+            UpdateRunBlend(isMoving && landed && !_isTakingOff && elapsedSeconds > 0f ?
+                displacementMeters.magnitude / elapsedSeconds : 0f, elapsedSeconds);
+            // The Animator can leave Jump for the ground gait on the frame she lands.
             if (_hasGroundedParameter)
                 _animator.SetBool(s_isGrounded,
                     _controller.isGrounded && !_isInJumpArc && !_isTakingOff);
+        }
+
+        private void UpdateRunBlend(float groundSpeedMetersPerSecond, float elapsedSeconds)
+        {
+            if (!_hasRunParameters) return;
+
+            var (targetBlend, runRate) = _movement.RunGait(groundSpeedMetersPerSecond);
+            RunBlend = Mathf.MoveTowards(RunBlend, targetBlend,
+                elapsedSeconds / _movement.RunBlendSeconds);
+            _animator.SetFloat(s_runBlend, RunBlend);
+            _animator.SetFloat(s_gaitPlaybackRate, Mathf.Lerp(1f, runRate, RunBlend));
+        }
+
+        private void ClearRunBlend()
+        {
+            RunBlend = 0f;
+            if (!_hasRunParameters) return;
+            _animator.SetFloat(s_runBlend, 0f);
+            _animator.SetFloat(s_gaitPlaybackRate, 1f);
         }
 
         private void Respawn()
@@ -363,7 +408,7 @@ namespace JewelryShop.StaffConsole
             _controller.enabled = false; // a CharacterController overrides direct teleports
             transform.SetPositionAndRotation(_startPositionMeters, _startRotation);
             _controller.enabled = true;
-            _walkVelocityMetersPerSecond = Vector3.zero;
+            _horizontalVelocityMetersPerSecond = Vector3.zero;
             _verticalMetersPerSecond = 0f;
             _isInJumpArc = false;
             _isTakingOff = false;
@@ -375,6 +420,7 @@ namespace JewelryShop.StaffConsole
             _animator.SetFloat(s_walkHorizontal, 0f);
             _animator.SetFloat(s_walkForward, 0f);
             _animator.SetBool(s_isMoving, false);
+            ClearRunBlend();
         }
 
         private void LateUpdate()
@@ -468,11 +514,15 @@ namespace JewelryShop.StaffConsole
 
         private void OnDisable()
         {
-            _walkVelocityMetersPerSecond = Vector3.zero;
+            HasMovementInput = false;
+            _horizontalVelocityMetersPerSecond = Vector3.zero;
             _isManualFirstPerson = false;
             _wallLiftBlend = 0f;
             if (_animator != null && _animator.runtimeAnimatorController != null)
+            {
                 _animator.SetBool(s_isMoving, false);
+                ClearRunBlend();
+            }
         }
     }
 }
