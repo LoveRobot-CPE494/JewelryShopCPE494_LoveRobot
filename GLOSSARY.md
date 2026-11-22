@@ -146,6 +146,15 @@ _Avoid_: player model, buyer avatar
 A Customer's request for the Staff to come and serve them live in the Storefront
 _Avoid_: call button, help
 
+**Incoming**:
+The Staff Console state while a Staff Call rings and has not been answered yet
+
+**Serving**:
+The Staff Console state from answering a Staff Call until it ends, while Cheryll is out serving the Customer
+
+**In call**:
+The Customer state once Cheryll has reached them, until the Staff Call ends
+
 ### Packing station
 
 **Packing Station**:

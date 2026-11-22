@@ -23,7 +23,14 @@ namespace JewelryShop.Core
             _link = link ?? throw new ArgumentNullException(nameof(link));
             _retrySeconds = retrySeconds;
             _attemptTimeoutSeconds = attemptTimeoutSeconds;
+            _link.MessageReceived += message => MessageReceived?.Invoke(message);
         }
+
+        /// <summary>Raised when the other end sends a Staff Call message.</summary>
+        public event Action<StaffCallMessage> MessageReceived;
+
+        /// <summary>Send a Staff Call message; the link drops it when not connected.</summary>
+        public void Send(StaffCallMessage message) => _link.Send(message);
 
         /// <summary>Whether the link is connected right now (as of the last tick).</summary>
         public bool IsConnected => _isConnected;
