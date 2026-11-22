@@ -1,5 +1,6 @@
 using System;
 using JewelryShop.Core;
+using Unity.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 
@@ -26,6 +27,7 @@ namespace JewelryShop.Networking
     /// </summary>
     internal sealed class NetcodeStaffLink : IStaffLink
     {
+        private const string MessageName = "StaffCall";
         private readonly NetworkManager _networkManager;
         private readonly UnityTransport _transport;
         private readonly StaffLinkSettings _settings;
@@ -54,6 +56,9 @@ namespace JewelryShop.Networking
             && !_networkManager.IsConnectedClient
             && !_networkManager.ShutdownInProgress;
 
+        /// <inheritdoc />
+        public event Action<StaffCallMessage> MessageReceived;
+
         public void Connect()
         {
             // Listening already means hosting, connected, or a client attempt still in flight.
@@ -64,15 +69,52 @@ namespace JewelryShop.Networking
                     _settings.ListenAddress, _settings.Port, _settings.ListenAddress);
                 if (!_networkManager.StartHost())
                     Failed?.Invoke($"Cannot host on port {_settings.Port} (port in use?)");
+                else RegisterMessageHandler();
                 return;
             }
             _transport.SetConnectionData(_settings.ServerAddress, _settings.Port);
-            _networkManager.StartClient();
+            if (_networkManager.StartClient()) RegisterMessageHandler();
+        }
+
+        public void Send(StaffCallMessage message)
+        {
+            // No peer: drop the message, never loop it back to ourselves.
+            if (!IsConnected || !TryGetPeerId(out var target)) return;
+            using var writer = new FastBufferWriter(1, Allocator.Temp);
+            writer.WriteByteSafe(StaffCallMessageCodec.Encode(message));
+            _networkManager.CustomMessagingManager.SendNamedMessage(MessageName, target, writer);
+        }
+
+        // The messaging manager is rebuilt on every start, so register after each one.
+        private void RegisterMessageHandler() => _networkManager.CustomMessagingManager
+            .RegisterNamedMessageHandler(MessageName, OnMessage);
+
+        private void OnMessage(ulong senderId, FastBufferReader reader)
+        {
+            reader.ReadByteSafe(out var value);
+            // Trust boundary: ignore a value this build does not know.
+            if (StaffCallMessageCodec.TryDecode(value, out var message))
+                MessageReceived?.Invoke(message);
+        }
+
+        private bool TryGetPeerId(out ulong peerId)
+        {
+            if (!_settings.IsHost) { peerId = NetworkManager.ServerClientId; return true; }
+            foreach (var id in _networkManager.ConnectedClientsIds)
+            {
+                if (id == _networkManager.LocalClientId) continue;
+                peerId = id;
+                return true;
+            }
+            peerId = default;
+            return false;
         }
 
         public void Disconnect()
         {
-            if (_networkManager.IsListening) _networkManager.Shutdown();
+            if (!_networkManager.IsListening) return;
+            _networkManager.CustomMessagingManager?.UnregisterNamedMessageHandler(MessageName);
+            _networkManager.Shutdown();
         }
     }
 }

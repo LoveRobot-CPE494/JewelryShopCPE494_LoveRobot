@@ -1,3 +1,5 @@
+using System;
+
 namespace JewelryShop.Core
 {
     /// <summary>The wire to the other end of Staff Call. The Netcode-backed one lives in JewelryShop.Networking.</summary>
@@ -14,5 +16,11 @@ namespace JewelryShop.Core
 
         /// <summary>Drop the link and abort any attempt in flight.</summary>
         void Disconnect();
+
+        /// <summary>Send one message to the other end; dropped when not connected.</summary>
+        void Send(StaffCallMessage message);
+
+        /// <summary>Raised when the other end sends a message.</summary>
+        event Action<StaffCallMessage> MessageReceived;
     }
 }

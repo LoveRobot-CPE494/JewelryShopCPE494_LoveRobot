@@ -18,6 +18,25 @@ namespace JewelryShop.Tests
             public int Disconnects;
             public void Connect() => Connects++;
             public void Disconnect() { Disconnects++; IsConnected = false; IsConnecting = false; }
+            public event System.Action<StaffCallMessage> MessageReceived;
+            public readonly List<StaffCallMessage> Sent = new List<StaffCallMessage>();
+            public void Send(StaffCallMessage message) => Sent.Add(message);
+            public void Receive(StaffCallMessage message) => MessageReceived?.Invoke(message);
+        }
+
+        [Test]
+        public void SendAndReceive_PassThroughTheLink()
+        {
+            var link = new FakeLink();
+            var facade = Wanted(link);
+            var got = new List<StaffCallMessage>();
+            facade.MessageReceived += got.Add;
+
+            facade.Send(StaffCallMessage.Call);
+            link.Receive(StaffCallMessage.Answer);
+
+            Assert.That(link.Sent, Is.EqualTo(new[] { StaffCallMessage.Call }));
+            Assert.That(got, Is.EqualTo(new[] { StaffCallMessage.Answer }));
         }
 
         private static StaffLinkFacade Wanted(FakeLink link)

@@ -4,8 +4,11 @@
     "references": [
         "JewelryShop.Core",
         "Unity.Netcode.Runtime",
+        "Unity.Collections",
         "Unity.Networking.Transport",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "UnityEngine.UI",
+        "VRM10"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

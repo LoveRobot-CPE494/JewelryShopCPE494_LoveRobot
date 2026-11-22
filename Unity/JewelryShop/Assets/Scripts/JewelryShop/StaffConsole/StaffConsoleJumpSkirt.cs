@@ -13,6 +13,7 @@ namespace JewelryShop.StaffConsole
     {
         private const float BustJumpSwingDegrees = 2f;
         private const float BustJumpMinimumDrag = 0.8f;
+        private static readonly int s_runBlend = Animator.StringToHash("RunBlend");
 
         [SerializeField] private Vrm10Instance _avatar;
         [SerializeField] private StaffConsoleMovement _movement;
@@ -38,9 +39,9 @@ namespace JewelryShop.StaffConsole
             _skirt = _skirtConfig != null ? _skirtConfig.Settings : SkirtSettings.Defaults;
             _hips = _avatar != null ? _avatar.Humanoid.Hips : null;
             _animator = GetComponent<Animator>();
-            if (_hips == null || _movement == null || _animator == null)
+            if (_hips == null || _animator == null)
             {
-                Debug.LogWarning("StaffConsoleJumpSkirt needs a VRM avatar and movement.", this);
+                Debug.LogWarning("StaffConsoleJumpSkirt needs a VRM avatar and Animator.", this);
                 enabled = false;
                 return;
             }
@@ -77,11 +78,14 @@ namespace JewelryShop.StaffConsole
 
         private void LateUpdate()
         {
-            var isJumping = _movement.IsJumping;
+            // The Storefront replica gets its jump state and run blend through NetworkAnimator.
+            var isJumping = _movement != null ? _movement.IsJumping :
+                _animator.GetCurrentAnimatorStateInfo(0).IsTag("Jump") ||
+                _animator.GetNextAnimatorStateInfo(0).IsTag("Jump");
             var flareStepDegrees = _skirt.FlareSpeedDegreesPerSecond * Time.deltaTime;
             _jumpFlareDegrees = Mathf.MoveTowards(_jumpFlareDegrees,
                 isJumping ? _skirt.FlareDegrees : 0f, flareStepDegrees);
-            var runWeight = _movement.RunBlend;
+            var runWeight = _movement != null ? _movement.RunBlend : _animator.GetFloat(s_runBlend);
             var kneeLeadMeters = _leftKnee != null && _rightKnee != null ? Mathf.Max(
                 Vector3.Dot(_leftKnee.position - _hips.position, transform.forward),
                 Vector3.Dot(_rightKnee.position - _hips.position, transform.forward)) : 0f;

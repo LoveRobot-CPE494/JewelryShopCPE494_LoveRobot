@@ -40,11 +40,27 @@ namespace JewelryShop.Networking
         [SerializeField] private TMP_Text _statusText;
         [SerializeField] private UnityEvent<bool> _onConnectionChanged;
 
+        [Header("Cheryll (Staff Avatar)")]
+        [Tooltip("Networked prefab (has a NetworkObject). Put it on BOTH ends: "
+            + "the Quest must know it to show her.")]
+        [SerializeField] private GameObject _cheryllPrefab;
+        [Tooltip("Host only: where she appears (the Staff Door).")]
+        [SerializeField] private Transform _cheryllSpawnPoint;
+        [Tooltip("Host only: the Staff's own Cheryll. She is warped to the door and the spawned copy follows her.")]
+        [SerializeField] private Transform _cheryllSource;
+
         private StaffLinkFacade _facade;
         private GameObject _managerObject;
+        private ICheryllSpawner _cheryllSpawner = new NullCheryllSpawner();
 
         /// <summary>The link's Facade: connect, disconnect and the connection event.</summary>
         public StaffLinkFacade Facade => _facade;
+
+        /// <summary>True on the Staff Console.</summary>
+        public bool IsHost => _role == LinkRole.Host;
+
+        /// <summary>Spawns Cheryll on the host; a no-op when the prefab is not wired.</summary>
+        public ICheryllSpawner CheryllSpawner => _cheryllSpawner;
 
         private void Awake()
         {
@@ -64,6 +80,18 @@ namespace JewelryShop.Networking
                 NetworkTransport = transport,
                 EnableSceneManagement = false,
             };
+            if (_cheryllPrefab == null)
+                Debug.LogWarning(
+                    "StaffLinkBehaviour: Cheryll prefab not wired; she will not appear.", this);
+            else if (_cheryllPrefab.GetComponent<NetworkObject>() == null)
+                Debug.LogError("StaffLinkBehaviour: Cheryll prefab has no NetworkObject.", this);
+            else
+            {
+                networkManager.AddNetworkPrefab(_cheryllPrefab);
+                if (_role == LinkRole.Host)
+                    _cheryllSpawner = new NetcodeCheryllSpawner(
+                        _cheryllPrefab, _cheryllSpawnPoint, _cheryllSource);
+            }
             _managerObject.SetActive(true);
 
             var link = new NetcodeStaffLink(networkManager, transport, new StaffLinkSettings
