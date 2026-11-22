@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace JewelryShop.Core
 {
@@ -59,8 +60,9 @@ namespace JewelryShop.Core
         /// <summary>Raised whenever State or ScreenText may have changed.</summary>
         public event Action Changed;
 
-        /// <summary>Raised once per Checkout, on entering Approved after the Order is emptied; never on Declined.</summary>
-        public event Action Approved;
+        /// <summary>Raised once per Checkout, on entering Approved after the Order is emptied; never on Declined.
+        /// Carries the Gems as they were at approval.</summary>
+        public event Action<IReadOnlyList<OrderLine>> Approved;
 
         /// <summary>The Payment Card entered the tap zone while held.</summary>
         public void Tap()
@@ -85,9 +87,10 @@ namespace JewelryShop.Core
                 if (_elapsedSeconds < _minProcessingSeconds || _reply == null) return;
                 if (_reply == SubmitReply.Accepted)
                 {
+                    var sold = new List<OrderLine>(_order.Lines); // the Order empties in _checkoutSucceeded
                     Enter(CheckoutState.Approved);
                     _checkoutSucceeded();
-                    Approved?.Invoke();
+                    Approved?.Invoke(sold);
                 }
                 else Enter(CheckoutState.Declined);
             }

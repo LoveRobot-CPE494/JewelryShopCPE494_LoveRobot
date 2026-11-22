@@ -170,7 +170,7 @@ namespace JewelryShop.Tests
         public void Accepted_RaisesApprovedOnce_AfterCheckoutSucceeded()
         {
             int raised = 0, linesAtRaise = -1;
-            _flow.Approved += () => { raised++; linesAtRaise = _order.Lines.Count; };
+            _flow.Approved += _ => { raised++; linesAtRaise = _order.Lines.Count; };
             TapToProcessing();
             _submitter.Reply(SubmitReply.Accepted);
             _flow.Tick(1.5f);
@@ -180,10 +180,25 @@ namespace JewelryShop.Tests
         }
 
         [Test]
+        public void Approved_CarriesTheGemsAsTheyWereBeforeTheOrderEmptied()
+        {
+            IReadOnlyList<OrderLine> sold = null;
+            _flow.Approved += lines => sold = lines;
+            AddGem();
+            AddGem();
+            _flow.Tap();
+            _submitter.Reply(SubmitReply.Accepted);
+            _flow.Tick(1.5f);
+            Assert.That(_order.Lines.Count, Is.EqualTo(0));
+            Assert.That(sold.Count, Is.EqualTo(2));
+            Assert.That(sold[0].PriceBaht, Is.EqualTo(100));
+        }
+
+        [Test]
         public void Declined_DoesNotRaiseApproved()
         {
             var raised = 0;
-            _flow.Approved += () => raised++;
+            _flow.Approved += _ => raised++;
             TapToProcessing();
             _submitter.Reply(SubmitReply.Declined);
             _flow.Tick(1.5f);
