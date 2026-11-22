@@ -37,7 +37,7 @@ namespace JewelryShop.Core
         /// <summary>Sum of every line's price, in baht.</summary>
         public int TotalBaht { get; private set; }
 
-        /// <summary>Raised after every successful Add (Observer, ADR-0008).</summary>
+        /// <summary>Raised after every successful Add or RemoveAt (Observer, ADR-0008).</summary>
         public event Action Changed;
 
         /// <summary>Adds one Gem unless the Order is Full or this Cut + Color already
@@ -54,6 +54,16 @@ namespace JewelryShop.Core
             TotalBaht += priceBaht;
             Changed?.Invoke();
             return AddResult.Added;
+        }
+
+        /// <summary>Removes the Gem at <paramref name="index"/>; false and no event when out of range.</summary>
+        public bool RemoveAt(int index)
+        {
+            if (index < 0 || index >= _lines.Count) return false;
+            TotalBaht -= _lines[index].PriceBaht;
+            _lines.RemoveAt(index);
+            Changed?.Invoke();
+            return true;
         }
     }
 }

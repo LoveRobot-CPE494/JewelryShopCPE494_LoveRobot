@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using JewelryShop.Core;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
@@ -7,7 +8,8 @@ namespace JewelryShop.Storefront
 {
     /// <summary>The Order Tray on the Checkout Counter: a held Gem Model dropped into its
     /// trigger collider adds that Gem to the Order and shows one token; the Gem Model
-    /// flies home at once, added or refused (#78).</summary>
+    /// flies home at once, added or refused (#78). A token pulled out and released outside
+    /// the tray removes its Gem; released inside, it returns to its slot (#79).</summary>
     [RequireComponent(typeof(Collider))]
     public class OrderTray : MonoBehaviour
     {
@@ -24,6 +26,7 @@ namespace JewelryShop.Storefront
         [SerializeField] private float _tokenSpacingM = 0.04f;
         [SerializeField] private int _tokensPerRow = 10;
 
+        private readonly List<GameObject> _tokens = new List<GameObject>();
         private Order _order;
         private GemModel _lastDropped;
         private int _lastDropFrame = -1;
@@ -38,11 +41,12 @@ namespace JewelryShop.Storefront
             if (_tokenRoot == null) _tokenRoot = transform;
         }
 
-        private void OnEnable() => Order.Changed += ShowNewestToken;
-        private void OnDisable() => Order.Changed -= ShowNewestToken;
+        private void OnEnable() => Order.Changed += RebuildTokens;
+        private void OnDisable() => Order.Changed -= RebuildTokens;
 
         private void OnTriggerEnter(Collider other)
         {
+            if (other.GetComponentInParent<OrderToken>() != null) return; // a token is not a Gem drop
             var grab = other.GetComponentInParent<XRGrabInteractable>();
             var gem = other.GetComponentInParent<GemModel>();
             if (gem == null || grab == null || !grab.isSelected) return; // only a held Gem Model
@@ -61,24 +65,59 @@ namespace JewelryShop.Storefront
             gem.ReturnHomeNow();
         }
 
-        private void ShowNewestToken()
+        // shortcut: rebuilds every token on each change; fine for <= 30 Gems, upgrade if Orders grow.
+        private void RebuildTokens()
         {
-            int index = Order.Lines.Count - 1;
-            var key = Order.Lines[index].Key;
-            var token = _tokenPrefab != null
-                ? Instantiate(_tokenPrefab, _tokenRoot)
-                : MakeFallbackToken(key);
-            token.transform.localPosition = new Vector3(
-                (index % _tokensPerRow) * _tokenSpacingM,
-                _tokenSizeM,
-                (index / _tokensPerRow) * _tokenSpacingM);
+            foreach (var old in _tokens) Destroy(old);
+            _tokens.Clear();
+            for (int i = 0; i < Order.Lines.Count; i++)
+            {
+                var token = _tokenPrefab != null
+                    ? Instantiate(_tokenPrefab, _tokenRoot)
+                    : MakeFallbackToken(Order.Lines[i].Key);
+                token.transform.localPosition = SlotPosition(i);
+                MakeGrabbable(token, i);
+                _tokens.Add(token);
+            }
+        }
+
+        private Vector3 SlotPosition(int index) => new Vector3(
+            (index % _tokensPerRow) * _tokenSpacingM,
+            _tokenSizeM,
+            (index / _tokensPerRow) * _tokenSpacingM);
+
+        private void MakeGrabbable(GameObject token, int index)
+        {
+            token.AddComponent<OrderToken>().Index = index;
+            if (token.GetComponentInChildren<Collider>() == null) token.AddComponent<BoxCollider>();
+            var body = token.GetComponent<Rigidbody>();
+            if (body == null) body = token.AddComponent<Rigidbody>();
+            body.isKinematic = true;
+            var grab = token.GetComponent<XRGrabInteractable>();
+            if (grab == null) grab = token.AddComponent<XRGrabInteractable>();
+            grab.selectExited.AddListener(_ => OnTokenReleased(token));
+        }
+
+        /// <summary>Let go outside the tray removes that Gem; inside, the token goes back to its slot.</summary>
+        private void OnTokenReleased(GameObject token)
+        {
+            int index = token.GetComponent<OrderToken>().Index;
+            if (GetComponent<Collider>().bounds.Contains(token.transform.position))
+            {
+                token.transform.SetParent(_tokenRoot, true);
+                token.transform.localPosition = SlotPosition(index);
+                token.transform.localRotation = Quaternion.identity;
+            }
+            else
+            {
+                Order.RemoveAt(index); // Changed rebuilds the tokens, destroying this one
+            }
         }
 
         private GameObject MakeFallbackToken(GemKey key)
         {
             var token = GameObject.CreatePrimitive(
                 key.Cut == GemCut.Round ? PrimitiveType.Sphere : PrimitiveType.Cube);
-            Destroy(token.GetComponent<Collider>()); // must not re-trigger the tray
             token.transform.SetParent(_tokenRoot, false);
             token.transform.localScale = Vector3.one * _tokenSizeM;
             token.GetComponent<Renderer>().material.color = ColorOf(key.Color);

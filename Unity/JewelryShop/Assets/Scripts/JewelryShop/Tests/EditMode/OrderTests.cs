@@ -94,6 +94,54 @@ namespace JewelryShop.Tests
         }
 
         [Test]
+        public void RemoveAt_ValidIndex_RemovesThatGemAndItsPrice()
+        {
+            var order = new Order();
+            order.Add(RedRound, 100, 5);
+            order.Add(BlueEmerald, 250, 5);
+            Assert.That(order.RemoveAt(0), Is.True);
+            Assert.That(order.Lines.Count, Is.EqualTo(1));
+            Assert.That(order.Lines[0].Key, Is.EqualTo(BlueEmerald));
+            Assert.That(order.TotalBaht, Is.EqualTo(250));
+        }
+
+        [Test]
+        public void RemoveAt_OneOfTwoRepeats_KeepsTheOther()
+        {
+            var order = new Order();
+            order.Add(RedRound, 100, 5);
+            order.Add(RedRound, 100, 5);
+            order.RemoveAt(1);
+            Assert.That(order.Lines.Count, Is.EqualTo(1));
+            Assert.That(order.Lines[0].Key, Is.EqualTo(RedRound));
+            Assert.That(order.TotalBaht, Is.EqualTo(100));
+        }
+
+        [Test]
+        public void RemoveAt_RaisesChanged()
+        {
+            var order = new Order();
+            order.Add(RedRound, 1, 5);
+            int raised = 0;
+            order.Changed += () => raised++;
+            order.RemoveAt(0);
+            Assert.That(raised, Is.EqualTo(1));
+        }
+
+        [TestCase(-1)]
+        [TestCase(1)]
+        public void RemoveAt_OutOfRange_IsNoOpWithoutEvent(int index)
+        {
+            var order = new Order();
+            order.Add(RedRound, 1, 5);
+            int raised = 0;
+            order.Changed += () => raised++;
+            Assert.That(order.RemoveAt(index), Is.False);
+            Assert.That(order.Lines.Count, Is.EqualTo(1));
+            Assert.That(raised, Is.EqualTo(0));
+        }
+
+        [Test]
         public void Changed_RaisedOnAddOnly()
         {
             var order = new Order(1);
