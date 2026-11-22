@@ -4870,6 +4870,8 @@ MonoBehaviour:
   _screen: {fileID: 473494499}
   _minProcessingSeconds: 1.5
   _approvedSeconds: 2
+  _noticeSeconds: 2
+  _declineOrders: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

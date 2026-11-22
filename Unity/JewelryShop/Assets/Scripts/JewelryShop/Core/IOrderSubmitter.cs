@@ -13,9 +13,13 @@ namespace JewelryShop.Core
         void Submit(Order order, Action<SubmitReply> onReply);
     }
 
-    /// <summary>Local stand-in until the Hub link exists (#75): accepts every Order at once.</summary>
+    /// <summary>Local stand-in until the Hub link exists (#75): answers every Order at once,
+    /// Accepted unless <see cref="Decline"/> is set.</summary>
     public class LocalOrderSubmitter : IOrderSubmitter
     {
-        public void Submit(Order order, Action<SubmitReply> onReply) => onReply(SubmitReply.Accepted);
+        public bool Decline;
+
+        public void Submit(Order order, Action<SubmitReply> onReply) =>
+            onReply(Decline ? SubmitReply.Declined : SubmitReply.Accepted);
     }
 }

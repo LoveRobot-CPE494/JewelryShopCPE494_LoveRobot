@@ -17,7 +17,13 @@ namespace JewelryShop.Storefront
         [Tooltip("Seconds Approved ✓ shows before the screen goes idle.")]
         [SerializeField] private float _approvedSeconds = 2f;
 
+        [Tooltip("Seconds the empty-Order hint and Declined show.")]
+        [SerializeField] private float _noticeSeconds = 2f;
+        [Tooltip("Stand-in submitter declines every Order (to try the Declined path). Changeable in play.")]
+        [SerializeField] private bool _declineOrders;
+
         private CheckoutFlow _flow;
+        private readonly LocalOrderSubmitter _submitter = new LocalOrderSubmitter();
 
         private void OnEnable()
         {
@@ -26,8 +32,8 @@ namespace JewelryShop.Storefront
                 Debug.LogWarning("CheckoutBehaviour: tray, tap zone or screen is unwired; Checkout is off.", this);
                 return;
             }
-            _flow = new CheckoutFlow(_tray.Order, new LocalOrderSubmitter(), _tray.CheckoutSucceeded,
-                _minProcessingSeconds, _approvedSeconds);
+            _flow = new CheckoutFlow(_tray.Order, _submitter, _tray.CheckoutSucceeded,
+                _minProcessingSeconds, _approvedSeconds, _noticeSeconds);
             _flow.Changed += ShowScreen;
             _tapZone.Tapped += _flow.Tap;
             ShowScreen();
@@ -42,7 +48,11 @@ namespace JewelryShop.Storefront
             _flow = null;
         }
 
-        private void Update() => _flow?.Tick(Time.deltaTime);
+        private void Update()
+        {
+            _submitter.Decline = _declineOrders;
+            _flow?.Tick(Time.deltaTime);
+        }
 
         private void ShowScreen() => _screen.text = _flow.ScreenText;
     }

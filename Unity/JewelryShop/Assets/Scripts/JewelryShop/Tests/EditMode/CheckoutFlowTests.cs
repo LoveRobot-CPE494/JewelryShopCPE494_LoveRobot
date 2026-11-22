@@ -131,6 +131,50 @@ namespace JewelryShop.Tests
         }
 
         [Test]
+        public void Tap_WhileIdle_ShowsHintBriefly_SubmitsNothing()
+        {
+            _flow.Tap();
+            Assert.That(_flow.ScreenText, Is.EqualTo(CheckoutFlow.EmptyOrderHintText));
+            Assert.That(_submitter.Submitted, Is.EqualTo(0));
+            _flow.Tick(2f);
+            Assert.That(_flow.ScreenText, Is.EqualTo(CheckoutFlow.IdleText));
+        }
+
+        [Test]
+        public void Declined_ShowsText_ThenAwaitingTap_OrderAndStockUnchanged()
+        {
+            TapToProcessing();
+            _submitter.Reply(SubmitReply.Declined);
+            _flow.Tick(1.5f);
+            Assert.That(_flow.State, Is.EqualTo(CheckoutState.Declined));
+            Assert.That(_flow.ScreenText, Is.EqualTo(CheckoutFlow.DeclinedText));
+            _flow.Tick(2f);
+            Assert.That(_flow.State, Is.EqualTo(CheckoutState.AwaitingTap));
+            Assert.That(_order.Lines.Count, Is.EqualTo(1));
+            Assert.That(_stock[RedRound], Is.EqualTo(3));
+        }
+
+        [Test]
+        public void RetryTap_AfterDecline_SubmitsAgain()
+        {
+            TapToProcessing();
+            _submitter.Reply(SubmitReply.Declined);
+            _flow.Tick(1.5f);
+            _flow.Tick(2f);
+            _flow.Tap();
+            Assert.That(_flow.State, Is.EqualTo(CheckoutState.Processing));
+            Assert.That(_submitter.Submitted, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void StandIn_DeclinesWhenSwitched()
+        {
+            var reply = (SubmitReply?)null;
+            new LocalOrderSubmitter { Decline = true }.Submit(_order, r => reply = r);
+            Assert.That(reply, Is.EqualTo(SubmitReply.Declined));
+        }
+
+        [Test]
         public void StandIn_AcceptsEveryOrder()
         {
             var reply = (SubmitReply?)null;
