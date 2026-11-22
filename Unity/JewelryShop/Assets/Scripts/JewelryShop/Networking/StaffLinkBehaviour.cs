@@ -49,12 +49,21 @@ namespace JewelryShop.Networking
         [Tooltip("Host only: the Staff's own Cheryll. She is warped to the door and the spawned copy follows her.")]
         [SerializeField] private Transform _cheryllSource;
 
+        [Header("Customer pose (Customer Avatar on the Staff Console)")]
+        [Tooltip("Networked prefab with a NetworkObject + CustomerPoseNetwork and NO visuals. "
+            + "Put it on BOTH ends. Host spawns it when the Quest connects.")]
+        [SerializeField] private GameObject _customerPosePrefab;
+
         private StaffLinkFacade _facade;
+        private NetcodeCustomerPoseSpawner _customerPoseSpawner;
         private GameObject _managerObject;
         private ICheryllSpawner _cheryllSpawner = new NullCheryllSpawner();
 
         /// <summary>The link's Facade: connect, disconnect and the connection event.</summary>
         public StaffLinkFacade Facade => _facade;
+
+        /// <summary>The Customer's latest pose: the Quest scene writes it, the Staff Console reads it.</summary>
+        public CustomerPoseMailbox CustomerPose { get; } = new CustomerPoseMailbox();
 
         /// <summary>True on the Staff Console.</summary>
         public bool IsHost => _role == LinkRole.Host;
@@ -92,6 +101,21 @@ namespace JewelryShop.Networking
                     _cheryllSpawner = new NetcodeCheryllSpawner(
                         _cheryllPrefab, _cheryllSpawnPoint, _cheryllSource);
             }
+            // Loud on both ends: a client without the prefab registered cannot take the Host's spawn.
+            if (_customerPosePrefab == null)
+                Debug.LogError(
+                    "StaffLinkBehaviour: Customer pose prefab not wired; the Customer Avatar will not appear.", this);
+            else if (_customerPosePrefab.GetComponent<NetworkObject>() == null
+                || _customerPosePrefab.GetComponent<CustomerPoseNetwork>() == null)
+                Debug.LogError(
+                    "StaffLinkBehaviour: Customer pose prefab needs a NetworkObject and a CustomerPoseNetwork.", this);
+            else
+            {
+                networkManager.AddNetworkPrefab(_customerPosePrefab);
+                if (_role == LinkRole.Host)
+                    _customerPoseSpawner = new NetcodeCustomerPoseSpawner(
+                        networkManager, _customerPosePrefab, CustomerPose);
+            }
             _managerObject.SetActive(true);
 
             var link = new NetcodeStaffLink(networkManager, transport, new StaffLinkSettings
@@ -110,17 +134,23 @@ namespace JewelryShop.Networking
                 _connectTimeoutMilliseconds * _maxConnectAttempts / 1000.0 + 1.0;
             _facade = new StaffLinkFacade(link, _reconnectIntervalSeconds, attemptBudgetSeconds);
             _facade.ConnectionChanged += Show;
+            if (_customerPoseSpawner != null) _facade.ConnectionChanged += _customerPoseSpawner.SetConnected;
             Show(false);
         }
 
         private void Start() => _facade.Connect();
 
-        private void Update() => _facade.Tick(Time.realtimeSinceStartupAsDouble);
+        private void Update()
+        {
+            _facade.Tick(Time.realtimeSinceStartupAsDouble);
+            _customerPoseSpawner?.Tick();
+        }
 
         private void OnDestroy()
         {
             if (_facade == null) return;
             _facade.ConnectionChanged -= Show;
+            if (_customerPoseSpawner != null) _facade.ConnectionChanged -= _customerPoseSpawner.SetConnected;
             _facade.Disconnect();
             Destroy(_managerObject); // it is a scene root, so it would outlive this object
         }

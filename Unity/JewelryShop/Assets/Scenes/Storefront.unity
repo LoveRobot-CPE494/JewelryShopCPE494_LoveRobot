@@ -342,6 +342,7 @@ GameObject:
   - component: {fileID: 350033155}
   - component: {fileID: 350033154}
   - component: {fileID: 350033156}
+  - component: {fileID: 350033157}
   m_Layer: 0
   m_Name: Staff Link
   m_TagString: Untagged
@@ -376,6 +377,8 @@ MonoBehaviour:
       m_Calls: []
   _cheryllPrefab: {fileID: 3699839479061563210, guid: 3a55b98318341394e9716f6826627703, type: 3}
   _cheryllSpawnPoint: {fileID: 0}
+  _cheryllSource: {fileID: 0}
+  _customerPosePrefab: {fileID: 3406297040503169419, guid: 93e5db6825194d74480a3a026615466e, type: 3}
 --- !u!4 &350033155
 Transform:
   m_ObjectHideFlags: 0
@@ -413,6 +416,22 @@ MonoBehaviour:
   _onStateChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &350033157
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 350033153}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57497a6347bc973448f45602aede7bf3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JewelryShop.Storefront::JewelryShop.Storefront.CustomerPoseSource
+  _link: {fileID: 350033154}
+  _head: {fileID: 1217203839}
+  _rightController: {fileID: 1614837440}
+  _rightInteractor: {fileID: 1614837437}
 --- !u!1 &463675544
 GameObject:
   m_ObjectHideFlags: 0
@@ -1632,6 +1651,11 @@ MonoBehaviour:
   _controllerVisual: {fileID: 801115619}
   _degreesPerPixel: 0.3
   _degreesPerScrollUnit: 0.25
+--- !u!4 &1614837440 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1670256625, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+  m_PrefabInstance: {fileID: 1614837436}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1730827361
 GameObject:
   m_ObjectHideFlags: 0

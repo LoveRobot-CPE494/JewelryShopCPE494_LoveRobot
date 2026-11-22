@@ -3,6 +3,7 @@
     "rootNamespace": "JewelryShop.StaffConsole",
     "references": [
         "JewelryShop.Core",
+        "JewelryShop.Networking",
         "Unity.InputSystem",
         "UnityEngine.UI",
         "VRM10",
