@@ -59,6 +59,9 @@ namespace JewelryShop.Core
         /// <summary>Raised whenever State or ScreenText may have changed.</summary>
         public event Action Changed;
 
+        /// <summary>Raised once per Checkout, on entering Approved after the Order is emptied; never on Declined.</summary>
+        public event Action Approved;
+
         /// <summary>The Payment Card entered the tap zone while held.</summary>
         public void Tap()
         {
@@ -84,6 +87,7 @@ namespace JewelryShop.Core
                 {
                     Enter(CheckoutState.Approved);
                     _checkoutSucceeded();
+                    Approved?.Invoke();
                 }
                 else Enter(CheckoutState.Declined);
             }

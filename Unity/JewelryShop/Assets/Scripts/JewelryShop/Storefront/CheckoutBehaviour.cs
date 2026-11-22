@@ -12,6 +12,8 @@ namespace JewelryShop.Storefront
         [SerializeField] private OrderTray _tray;
         [SerializeField] private CardTerminalZone _tapZone;
         [SerializeField] private TMP_Text _screen;
+        [Tooltip("Optional: spinner, Approved animation, beep and haptic.")]
+        [SerializeField] private CheckoutFeedback _feedback;
         [Tooltip("Least seconds Processing… shows, even when the reply is instant.")]
         [SerializeField] private float _minProcessingSeconds = 1.5f;
         [Tooltip("Seconds Approved ✓ shows before the screen goes idle.")]
@@ -35,6 +37,7 @@ namespace JewelryShop.Storefront
             _flow = new CheckoutFlow(_tray.Order, _submitter, _tray.CheckoutSucceeded,
                 _minProcessingSeconds, _approvedSeconds, _noticeSeconds);
             _flow.Changed += ShowScreen;
+            if (_feedback != null) _flow.Approved += _feedback.PlayApproved;
             _tapZone.Tapped += _flow.Tap;
             ShowScreen();
         }
@@ -43,6 +46,7 @@ namespace JewelryShop.Storefront
         {
             if (_flow == null) return;
             _flow.Changed -= ShowScreen;
+            if (_feedback != null) _flow.Approved -= _feedback.PlayApproved;
             _tapZone.Tapped -= _flow.Tap;
             _flow.Detach();
             _flow = null;
@@ -54,6 +58,10 @@ namespace JewelryShop.Storefront
             _flow?.Tick(Time.deltaTime);
         }
 
-        private void ShowScreen() => _screen.text = _flow.ScreenText;
+        private void ShowScreen()
+        {
+            _screen.text = _flow.ScreenText;
+            if (_feedback != null) _feedback.StateChanged(_flow.State);
+        }
     }
 }
