@@ -139,6 +139,15 @@ Use Unity asset moves to retain GUIDs when organizing clips. In `CheryllPreview.
 the Walk state blends `WALK00_F`, `WALK00_B`, `WALK00_L`, and `WALK00_R` from
 `VRoid_AIM/Locomotion` with the main `WAIT00` pose at its center. Space plays `Jumping0` once.
 
+### Photo Booth Running
+
+In VRoid Studio 2.16.0, **Animations 2 → Running** uses `RUN00_F#198` from
+`sharedassets0.assets`. The recovered `VRoid_F00_PhotoBooth` AnimatorController
+(PathID `281`) references that clip in its `RUN00_F` state. The alternatives
+`run_00#199`, `RUN00_L#8332` and `RUN00_R#8333` have no reference in that controller.
+The Staff Console uses the 0.8-second looping Humanoid clip at
+`Assets/Avatar/VRoid_AIM/Locomotion/RUN00_F.anim`.
+
 ### Staff Console preview clips
 
 The main Idle state plays `WAIT00_Idle` for the standing pose and subtle knee movement.

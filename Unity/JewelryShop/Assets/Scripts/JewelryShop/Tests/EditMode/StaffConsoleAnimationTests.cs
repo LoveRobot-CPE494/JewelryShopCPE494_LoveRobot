@@ -23,12 +23,8 @@ namespace JewelryShop.Tests
             var controller = LoadController();
             var walk = AssetDatabase.LoadAssetAtPath<AnimationClip>(
                 $"Assets/Avatar/VRoid_AIM/Locomotion/{name}.anim");
-            var walkState = controller.layers[0].stateMachine.states.Single(
-                child => child.state.name == "Walk").state;
-
             Assert.That(walk, Is.Not.Null);
-            Assert.That(walkState.motion, Is.TypeOf<BlendTree>());
-            var tree = (BlendTree)walkState.motion;
+            var tree = (BlendTree)LoadGroundGait(controller).children[0].motion;
             var direction = new Vector2(horizontal, forward);
             Assert.That(tree.children.Single(child => child.position == direction).motion,
                 Is.EqualTo(walk));
@@ -36,9 +32,29 @@ namespace JewelryShop.Tests
             Assert.That(walk.humanMotion, Is.True);
         }
 
-        /// <summary>Jump returns to Idle on landing.</summary>
         [Test]
-        public void PreviewController_Jump_UsesJumping0AndReturnsToIdleOnLanding()
+        public void PreviewController_Run_BlendsThePhotoBoothLoopWithWalk()
+        {
+            var controller = LoadController();
+            var tree = LoadGroundGait(controller);
+            var run = AssetDatabase.LoadAssetAtPath<AnimationClip>(
+                "Assets/Avatar/VRoid_AIM/Locomotion/RUN00_F.anim");
+            var gait = controller.layers[0].stateMachine.states.Single(
+                child => child.state.name == "Walk").state;
+
+            Assert.That(run, Is.Not.Null);
+            Assert.That(run.humanMotion, Is.True);
+            Assert.That(run.isLooping, Is.True);
+            Assert.That(tree.blendParameter, Is.EqualTo("RunBlend"));
+            Assert.That(tree.children.Single(child => child.threshold == 1f).motion,
+                Is.EqualTo(run));
+            Assert.That(gait.speedParameterActive, Is.True);
+            Assert.That(gait.speedParameter, Is.EqualTo("GaitPlaybackRate"));
+        }
+
+        /// <summary>Jump returns to the ground gait or Idle on landing.</summary>
+        [Test]
+        public void PreviewController_Jump_UsesJumping0AndReturnsToGroundGaitOnLanding()
         {
             var machine = LoadController().layers[0].stateMachine;
             var state = machine.states.SingleOrDefault(child => child.state.name == "Jump").state;
@@ -52,12 +68,20 @@ namespace JewelryShop.Tests
             Assert.That(clip.humanMotion, Is.True);
             Assert.That(clip.isLooping, Is.False);
 
-            var exit = state.transitions.Single();
-            Assert.That(exit.destinationState, Is.EqualTo(machine.defaultState));
+            var idleExit = state.transitions.Single(
+                item => item.destinationState == machine.defaultState);
+            Assert.That(idleExit.hasExitTime, Is.False);
+            Assert.That(idleExit.conditions.Single(item => item.parameter == "IsGrounded").mode,
+                Is.EqualTo(AnimatorConditionMode.If));
+            Assert.That(idleExit.conditions.Single(item => item.parameter == "IsMoving").mode,
+                Is.EqualTo(AnimatorConditionMode.IfNot));
+
+            var exit = state.transitions[0];
+            Assert.That(exit.destinationState.name, Is.EqualTo("Walk"));
             Assert.That(exit.hasExitTime, Is.False);
-            var condition = exit.conditions.Single();
-            Assert.That(condition.parameter, Is.EqualTo("IsGrounded"));
-            Assert.That(condition.mode, Is.EqualTo(AnimatorConditionMode.If));
+            Assert.That(exit.conditions.Select(item => item.parameter),
+                Is.EquivalentTo(new[] { "IsGrounded", "IsMoving" }));
+            Assert.That(exit.conditions.All(item => item.mode == AnimatorConditionMode.If));
         }
 
         /// <summary>Standing Idle plays its own loop and Walk uses the neutral pose.</summary>
@@ -67,8 +91,7 @@ namespace JewelryShop.Tests
             var machine = LoadController().layers[0].stateMachine;
             var idle = machine.defaultState;
             var clip = LoadStandbyClip("WAIT00_Idle");
-            var walk = (BlendTree)machine.states.Single(child => child.state.name == "Walk")
-                .state.motion;
+            var walk = (BlendTree)LoadGroundGait(LoadController()).children[0].motion;
 
             Assert.That(idle.motion, Is.EqualTo(clip));
             Assert.That(clip.humanMotion, Is.True);
@@ -186,6 +209,10 @@ namespace JewelryShop.Tests
             return AssetDatabase.LoadAssetAtPath<AnimatorController>(
                 AnimationFolder + "CheryllPreview.controller");
         }
+
+        private static BlendTree LoadGroundGait(AnimatorController controller) =>
+            (BlendTree)controller.layers[0].stateMachine.states
+                .Single(child => child.state.name == "Walk").state.motion;
 
         private static AnimationClip LoadClip(string path)
         {

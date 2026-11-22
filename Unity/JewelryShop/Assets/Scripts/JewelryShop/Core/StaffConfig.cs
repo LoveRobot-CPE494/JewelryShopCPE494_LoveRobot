@@ -37,6 +37,12 @@ namespace JewelryShop.Core
     public struct MovementSettings
     {
         public float WalkSpeedMetersPerSecond;
+        /// <summary>Target ground speed while Shift and movement are held.</summary>
+        public float RunSpeedMetersPerSecond;
+        /// <summary>Time for the ground gait to blend all the way from walk to run.</summary>
+        public float RunBlendSeconds;
+        /// <summary>Running clip playback multiplier at full run speed.</summary>
+        public float RunPlaybackRate;
         public float AccelerationMetersPerSecondSquared;
         public float TurnDegreesPerSecond;
         public float GravityMetersPerSecondSquared;
@@ -54,6 +60,9 @@ namespace JewelryShop.Core
         public static MovementSettings Defaults => new MovementSettings
         {
             WalkSpeedMetersPerSecond = 1f,
+            RunSpeedMetersPerSecond = 2.4f,
+            RunBlendSeconds = 0.16f,
+            RunPlaybackRate = 1f,
             AccelerationMetersPerSecondSquared = 8f,
             TurnDegreesPerSecond = 540f,
             GravityMetersPerSecondSquared = 9.81f,
@@ -71,10 +80,21 @@ namespace JewelryShop.Core
         public MovementSettings Validated(List<string> warnings)
         {
             var d = Defaults;
+            var walkSpeedMetersPerSecond = ConfigRule.Clamp(nameof(WalkSpeedMetersPerSecond),
+                WalkSpeedMetersPerSecond, 0f, 10f, d.WalkSpeedMetersPerSecond, warnings);
+            var minimumRunSpeedMetersPerSecond = walkSpeedMetersPerSecond + 0.1f;
+            var defaultRunSpeedMetersPerSecond = Math.Max(d.RunSpeedMetersPerSecond,
+                minimumRunSpeedMetersPerSecond);
             return new MovementSettings
             {
-                WalkSpeedMetersPerSecond = ConfigRule.Clamp(nameof(WalkSpeedMetersPerSecond),
-                    WalkSpeedMetersPerSecond, 0f, 10f, d.WalkSpeedMetersPerSecond, warnings),
+                WalkSpeedMetersPerSecond = walkSpeedMetersPerSecond,
+                RunSpeedMetersPerSecond = ClampRunSetting(nameof(RunSpeedMetersPerSecond),
+                    RunSpeedMetersPerSecond, minimumRunSpeedMetersPerSecond, 15f,
+                    defaultRunSpeedMetersPerSecond, warnings),
+                RunBlendSeconds = ClampRunSetting(nameof(RunBlendSeconds), RunBlendSeconds,
+                    0.01f, 2f, d.RunBlendSeconds, warnings),
+                RunPlaybackRate = ClampRunSetting(nameof(RunPlaybackRate), RunPlaybackRate,
+                    0.1f, 3f, d.RunPlaybackRate, warnings),
                 AccelerationMetersPerSecondSquared = ConfigRule.Clamp(
                     nameof(AccelerationMetersPerSecondSquared),
                     AccelerationMetersPerSecondSquared, 0.1f, 100f,
@@ -102,6 +122,24 @@ namespace JewelryShop.Core
                 KillPlaneYMeters = ConfigRule.Clamp(nameof(KillPlaneYMeters),
                     KillPlaneYMeters, -1000f, 1000f, d.KillPlaneYMeters, warnings),
             };
+        }
+
+        /// <summary>Run weight and playback target for the actual ground speed.</summary>
+        public (float Weight, float PlaybackRate) RunGait(float groundSpeedMetersPerSecond)
+        {
+            var runFraction = (groundSpeedMetersPerSecond - WalkSpeedMetersPerSecond) /
+                (RunSpeedMetersPerSecond - WalkSpeedMetersPerSecond);
+            var playbackFraction = groundSpeedMetersPerSecond / RunSpeedMetersPerSecond;
+            return (Math.Min(1f, Math.Max(0f, runFraction)),
+                Math.Min(1f, Math.Max(0f, playbackFraction)) * RunPlaybackRate);
+        }
+
+        private static float ClampRunSetting(string name, float value, float min, float max,
+            float fallback, List<string> warnings)
+        {
+            // An older serialized asset has zero in each missing run field.
+            return value == 0f ? ConfigRule.DefaultIfOutside(name, value, min, max, fallback,
+                warnings) : ConfigRule.Clamp(name, value, min, max, fallback, warnings);
         }
     }
 
@@ -295,10 +333,19 @@ namespace JewelryShop.Core
     [Serializable]
     public struct SkirtSettings
     {
+        private const float ClearanceStartMeters = 0.12f;
+        private const float FullClearanceMeters = 0.28f;
+        private const float RunClearanceReleaseMetersPerSecond = 0.35f;
+        private const float GroundClearanceReleaseMetersPerSecond = 0.9f;
+
         public float SwingDegrees;
         public float FlareDegrees;
         public float FlareSpeedDegreesPerSecond;
         public float BowUprightWeight;
+        /// <summary>Maximum outward angle added to the skirt anchors at full run blend.</summary>
+        public float RunFlareDegrees;
+        /// <summary>Forward clearance for the skirt anchors when a running knee lifts.</summary>
+        public float RunFrontClearanceMeters;
 
         public static SkirtSettings Defaults => new SkirtSettings
         {
@@ -306,7 +353,31 @@ namespace JewelryShop.Core
             FlareDegrees = 8f,
             FlareSpeedDegreesPerSecond = 80f,
             BowUprightWeight = 0.8f,
+            RunFlareDegrees = 22f,
+            RunFrontClearanceMeters = 0.2f,
         };
+
+        /// <summary>Forward clearance for the current running knee lead.</summary>
+        public float RunKneeClearance(float kneeLeadMeters)
+        {
+            var weight = (kneeLeadMeters - ClearanceStartMeters) /
+                (FullClearanceMeters - ClearanceStartMeters);
+            return RunFrontClearanceMeters * Math.Min(1f, Math.Max(0f, weight));
+        }
+
+        /// <summary>Clears a rising knee immediately and eases the skirt back between strides.</summary>
+        public static float ReleaseRunClearance(float currentMeters, float requiredMeters,
+            float runWeight, float elapsedSeconds)
+        {
+            var releaseMetersPerSecond = GroundClearanceReleaseMetersPerSecond +
+                (RunClearanceReleaseMetersPerSecond - GroundClearanceReleaseMetersPerSecond) *
+                runWeight;
+            return Math.Max(requiredMeters, currentMeters - releaseMetersPerSecond * elapsedSeconds);
+        }
+
+        /// <summary>Run flare eases outward from the side and rear toward the front.</summary>
+        public float RunAnchorFlare(float frontWeight) =>
+            RunFlareDegrees * (0.3f + 0.7f * frontWeight);
 
         /// <summary>A clamped copy; each change is described in <paramref name="warnings"/>.</summary>
         public SkirtSettings Validated(List<string> warnings)
@@ -323,6 +394,10 @@ namespace JewelryShop.Core
                     FlareSpeedDegreesPerSecond, 1f, 1000f, d.FlareSpeedDegreesPerSecond, warnings),
                 BowUprightWeight = ConfigRule.Clamp(nameof(BowUprightWeight),
                     BowUprightWeight, 0f, 1f, d.BowUprightWeight, warnings),
+                RunFlareDegrees = ConfigRule.Clamp(nameof(RunFlareDegrees),
+                    RunFlareDegrees, 0f, 30f, d.RunFlareDegrees, warnings),
+                RunFrontClearanceMeters = ConfigRule.Clamp(nameof(RunFrontClearanceMeters),
+                    RunFrontClearanceMeters, 0f, 0.2f, d.RunFrontClearanceMeters, warnings),
             };
         }
     }

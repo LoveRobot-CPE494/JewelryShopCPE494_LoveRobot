@@ -4,6 +4,22 @@ status: accepted
 
 # The Staff Avatar's head and eyes follow a target, with a Staff toggle
 
+## Staff Console controls amendment (#174)
+
+- **8** toggles Camera Look-At. **F** independently toggles Focus. With no Inspector Interest
+  Target, Focus holds the solid surface under the center of the camera when F was pressed
+  so a passing Customer cannot interrupt that selection. Otherwise it uses the Customer
+  within the existing range limits, then the Inspector Interest Target. With no Focus target,
+  the camera takes over if Look-At is on.
+- Cheryll holds her heading while a gesture plays. After it ends, she steps back toward the
+  camera heading. **R** uses the same yaw-only turn while standing, up to 135 degrees per
+  second. Running, walking and jumping take priority over the return turn.
+- The Look-At status uses one row for key 8 and a separate row for F. The Focus row shows its
+  selected target or why a target is unavailable. The movement hints identify **V** for Camera
+  View and **R** for Reset Look.
+
+## Original decision
+
 Cheryll now shows a face with each gesture ([ADR-0019](0019-staff-avatar-gesture-expressions.md)), but her head and eyes stay fixed. A head that follows what the Staff Console camera faces reads as more alive. It also lets her glance at the Customer.
 
 Decided:

@@ -17,3 +17,5 @@ MonoBehaviour:
     FlareDegrees: 8
     FlareSpeedDegreesPerSecond: 80
     BowUprightWeight: 0.8
+    RunFlareDegrees: 22
+    RunFrontClearanceMeters: 0.2

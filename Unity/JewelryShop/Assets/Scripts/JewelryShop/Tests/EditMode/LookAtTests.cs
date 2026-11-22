@@ -168,30 +168,20 @@ namespace JewelryShop.Tests
         }
 
         [Test]
-        public void StatusText_OffAndOn_MatchesTicketStrings()
+        public void StatusText_LookAtAndFocus_DisplaysIndependentRows()
         {
             var focus = new LookAtFocus();
-            Assert.That(LookAt.StatusText(false, focus, false, LookAtTarget.Camera, ""),
-                Is.EqualTo("Look-At: OFF"));
             Assert.That(LookAt.StatusText(true, focus, false, LookAtTarget.Camera, ""),
-                Is.EqualTo("Look-At: ON · Focus: OFF · Target: camera"));
-            Assert.That(LookAt.StatusText(true, focus, false, LookAtTarget.Interest, "Display_01"),
-                Is.EqualTo("Look-At: ON · Focus: OFF · Target: Display_01"));
-        }
+                Is.EqualTo("Look-At: ON\nF   Focus: OFF"));
 
-        [Test]
-        public void StatusText_FocusOn_NamesCustomerOrTheFallbackReason()
-        {
-            var focus = new LookAtFocus();
-            focus.Tick(true, true, false, 0f, s_defaults);
-            Assert.That(LookAt.StatusText(true, focus, false, LookAtTarget.Camera, ""),
-                Is.EqualTo("Look-At: ON · Focus: ON (no customer) · Target: camera"));
-            focus.Tick(true, false, true, 3.8f, s_defaults);
-            Assert.That(LookAt.StatusText(true, focus, true, LookAtTarget.Interest, "Display_01"),
-                Is.EqualTo("Look-At: ON · Focus: ON (out of range) · Target: Display_01"));
-            focus.Tick(true, false, true, 2f, s_defaults);
+            focus.Tick(true, false, 0f, s_defaults);
+            Assert.That(LookAt.StatusText(false, focus, false, LookAtTarget.Camera, ""),
+                Is.EqualTo("Look-At: OFF\nF   Focus: ON · No target"));
+            Assert.That(LookAt.StatusText(false, focus, true, LookAtTarget.Interest, "Display_01"),
+                Is.EqualTo("Look-At: OFF\nF   Focus: ON · Display_01"));
+            focus.Tick(false, true, 2f, s_defaults);
             Assert.That(LookAt.StatusText(true, focus, true, LookAtTarget.Customer, "Display_01"),
-                Is.EqualTo("Look-At: ON · Focus: ON · Target: Customer"));
+                Is.EqualTo("Look-At: ON\nF   Focus: ON · Customer"));
         }
 
         [TestCase(true, true, LookAtTarget.Customer)]
@@ -203,32 +193,11 @@ namespace JewelryShop.Tests
             Assert.That(LookAt.PickTarget(latched, interest), Is.EqualTo(expected));
 
         [Test]
-        public void Focus_WhileLookAtOff_PressDoesNothing()
-        {
-            var focus = new LookAtFocus();
-            focus.Tick(false, true, true, 1f, s_defaults);
-            Assert.That(focus.IsOn, Is.False);
-            Assert.That(focus.InRange, Is.False);
-        }
-
-        [Test]
-        public void Focus_LookAtTurnedOff_TurnsFocusOff_AndStaysOffWhenBackOn()
-        {
-            var focus = new LookAtFocus();
-            focus.Tick(true, true, true, 1f, s_defaults);
-            Assert.That(focus.InRange, Is.True);
-            focus.Tick(false, false, true, 1f, s_defaults);
-            Assert.That(focus.IsOn, Is.False);
-            focus.Tick(true, false, true, 1f, s_defaults);
-            Assert.That(focus.IsOn, Is.False);
-        }
-
-        [Test]
         public void Focus_PressTwice_TogglesOff()
         {
             var focus = new LookAtFocus();
-            focus.Tick(true, true, true, 1f, s_defaults);
-            focus.Tick(true, true, true, 1f, s_defaults);
+            focus.Tick(true, true, 1f, s_defaults);
+            focus.Tick(true, true, 1f, s_defaults);
             Assert.That(focus.IsOn, Is.False);
             Assert.That(focus.InRange, Is.False);
         }
@@ -237,17 +206,17 @@ namespace JewelryShop.Tests
         public void Focus_Hysteresis_EnterAt35_ExitPast40()
         {
             var focus = new LookAtFocus();
-            focus.Tick(true, true, true, 5f, s_defaults);
+            focus.Tick(true, true, 5f, s_defaults);
             Assert.That(focus.InRange, Is.False);
-            focus.Tick(true, false, true, 3.6f, s_defaults);
+            focus.Tick(false, true, 3.6f, s_defaults);
             Assert.That(focus.InRange, Is.False);
-            focus.Tick(true, false, true, 3.5f, s_defaults);
+            focus.Tick(false, true, 3.5f, s_defaults);
             Assert.That(focus.InRange, Is.True);
-            focus.Tick(true, false, true, 4.0f, s_defaults);
+            focus.Tick(false, true, 4.0f, s_defaults);
             Assert.That(focus.InRange, Is.True);
-            focus.Tick(true, false, true, 4.01f, s_defaults);
+            focus.Tick(false, true, 4.01f, s_defaults);
             Assert.That(focus.InRange, Is.False);
-            focus.Tick(true, false, true, 3.8f, s_defaults);
+            focus.Tick(false, true, 3.8f, s_defaults);
             Assert.That(focus.InRange, Is.False);
         }
 
@@ -255,7 +224,7 @@ namespace JewelryShop.Tests
         public void Focus_SwitchedOnBetweenDistances_StartsOutOfRange()
         {
             var focus = new LookAtFocus();
-            focus.Tick(true, true, true, 3.8f, s_defaults);
+            focus.Tick(true, true, 3.8f, s_defaults);
             Assert.That(focus.IsOn, Is.True);
             Assert.That(focus.InRange, Is.False);
         }
@@ -264,10 +233,10 @@ namespace JewelryShop.Tests
         public void Focus_CustomerGoneThenBack_MustReenterAtEnterDistance()
         {
             var focus = new LookAtFocus();
-            focus.Tick(true, true, true, 1f, s_defaults);
-            focus.Tick(true, false, false, 0f, s_defaults);
+            focus.Tick(true, true, 1f, s_defaults);
+            focus.Tick(false, false, 0f, s_defaults);
             Assert.That(focus.InRange, Is.False);
-            focus.Tick(true, false, true, 3.8f, s_defaults);
+            focus.Tick(false, true, 3.8f, s_defaults);
             Assert.That(focus.InRange, Is.False);
         }
 
@@ -333,91 +302,37 @@ namespace JewelryShop.Tests
         }
 
         [Test]
-        public void Gesture_NoBodyTurnWhileItPlays_TurnStartsAtTheEnd_WithoutAJump()
+        public void Gesture_End_ReturnsToTheCameraHeadingOverSeveralFrames()
         {
             var g = new GestureLook();
-            Assert.That(g.Tick(true, true), Is.False, "nothing to latch at the start");
-            Assert.That(g.Tick(true, true), Is.False);
-            Assert.That(g.Turning, Is.False);
-            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.EqualTo(0f), "no turn mid-gesture");
-            Assert.That(g.Tick(false, true), Is.True, "latch on the end frame");
-            Assert.That(g.Tick(false, true), Is.False, "no second latch");
-            Assert.That(g.Turning, Is.True);
-            var step = g.Step(90f, 0f, 0.016f, s_defaults);
-            Assert.That(step, Is.GreaterThan(0f).And.LessThan(90f));
+            g.Tick(true);
+            Assert.That(g.Step(90f, 0.016f, s_defaults), Is.Zero);
+            g.Tick(false);
+
+            var step = g.Step(90f, 0.016f, s_defaults);
+            Assert.That(step, Is.GreaterThan(0f).And.LessThan(3f));
             var yaw = 90f - step;
-            for (var i = 0; i < 60 && g.Turning; i++) yaw -= g.Step(yaw, 0f, 0.016f, s_defaults);
-            Assert.That(g.Turning, Is.False, "done after the turn time");
-            Assert.That(yaw, Is.EqualTo(0f).Within(0.2f));
-            Assert.That(g.Step(yaw, 0f, 0.016f, s_defaults), Is.EqualTo(0f), "stays put");
+            for (var i = 0; i < 120 && g.Resetting; i++)
+                yaw -= g.Step(yaw, 0.016f, s_defaults);
+
+            Assert.That(g.Resetting, Is.False);
+            Assert.That(yaw, Is.EqualTo(0f).Within(0.1f));
+            Assert.That(g.Step(yaw, 0.016f, s_defaults), Is.Zero);
+            Assert.That(g.IsBodyFollowPaused, Is.True);
+            g.ResumeBodyFollow();
+            Assert.That(g.IsBodyFollowPaused, Is.False);
         }
 
         [Test]
-        public void Gesture_TurnTakesTheShortestWayRound()
+        public void Gesture_NewGestureDuringReturn_CancelsTheTurn()
         {
             var g = new GestureLook();
-            g.Tick(true, true);
-            g.Tick(false, true);
-            Assert.That(g.Step(-100f, 0f, 0.016f, s_defaults), Is.LessThan(0f));
-        }
-
-        [Test]
-        public void Gesture_BodyTurnIgnoresTargetHeight()
-        {
-            var above = LookAt.RawAngles(1f, 5f, 1f).Yaw;
-            var below = LookAt.RawAngles(1f, -5f, 1f).Yaw;
-            Assert.That(above, Is.EqualTo(below));
-        }
-
-        [Test]
-        public void Gesture_LookAtOff_NoPostGestureTurn_NoLatch()
-        {
-            var g = new GestureLook();
-            g.Tick(true, false);
-            Assert.That(g.Tick(false, false), Is.False);
-            Assert.That(g.Turning, Is.False);
-            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.EqualTo(0f));
-        }
-
-        [Test]
-        public void Gesture_LookAtOffMidGesture_NoTurnAfter_HeadStaysAtZero()
-        {
-            var g = new GestureLook();
-            var head = new LookAtHead();
-            for (var i = 0; i < 100; i++) head.Tick(0.016f, true, 0f, 0f, s_defaults);
-            g.Tick(true, true);
-            g.Tick(true, false);
-            LookAtPose pose = default;
-            for (var i = 0; i < 100; i++) pose = head.Tick(0.016f, false, 0f, 0f, s_defaults, true);
-            Assert.That(pose.Weight, Is.EqualTo(0f));
-            Assert.That(g.Tick(false, false), Is.False);
-            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.EqualTo(0f));
-        }
-
-        [Test]
-        public void Gesture_LookAtOffDuringThePostTurn_StopsItWhereItIs()
-        {
-            var g = new GestureLook();
-            g.Tick(true, true);
-            g.Tick(false, true);
-            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.GreaterThan(0f));
-            g.Tick(false, false);
-            Assert.That(g.Turning, Is.False);
-            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.EqualTo(0f));
-            g.Tick(false, true);
-            Assert.That(g.Turning, Is.False, "turning Look-At back on does not resume it");
-        }
-
-        [Test]
-        public void Gesture_NewGestureDuringThePostTurn_CancelsIt()
-        {
-            var g = new GestureLook();
-            g.Tick(true, true);
-            g.Tick(false, true);
-            Assert.That(g.Turning, Is.True);
-            g.Tick(true, true);
-            Assert.That(g.Turning, Is.False);
-            Assert.That(g.Step(90f, 0f, 0.016f, s_defaults), Is.EqualTo(0f));
+            g.Tick(true);
+            g.Tick(false);
+            Assert.That(g.Step(-100f, 0.016f, s_defaults), Is.LessThan(0f));
+            g.Tick(true);
+            Assert.That(g.Resetting, Is.False);
+            Assert.That(g.Step(-100f, 0.016f, s_defaults), Is.Zero);
         }
 
         [Test]
@@ -451,39 +366,38 @@ namespace JewelryShop.Tests
         }
 
         [Test]
-        public void ResetLook_TurnsToTheCameraDirection_WithLookAtOnOrOff()
+        public void ResetLook_LargeTurn_ClosesTheAngleGradually()
         {
             var g = new GestureLook();
-            g.Tick(false, false); // Look-At OFF
             g.RequestReset();
             Assert.That(g.Resetting, Is.True);
-            var yaw = 60f;
-            var first = g.Step(0f, yaw, 0.016f, s_defaults);
-            Assert.That(first, Is.GreaterThan(0f).And.LessThan(60f));
+            var yaw = 170f;
+            var first = g.Step(yaw, 0.016f, s_defaults);
+            Assert.That(first, Is.GreaterThan(0f).And.LessThan(3f));
             yaw -= first;
-            for (var i = 0; i < 200 && g.Resetting; i++) yaw -= g.Step(0f, yaw, 0.016f, s_defaults);
+            for (var i = 0; i < 200 && g.Resetting; i++) yaw -= g.Step(yaw, 0.016f, s_defaults);
             Assert.That(g.Resetting, Is.False);
             Assert.That(yaw, Is.EqualTo(0f).Within(0.2f));
-            Assert.That(g.Step(0f, yaw, 0.016f, s_defaults), Is.EqualTo(0f), "one-shot: done");
+            Assert.That(g.Step(yaw, 0.016f, s_defaults), Is.EqualTo(0f), "one-shot: done");
         }
 
         [Test]
         public void ResetLook_DuringAGesture_DoesNothing_AndAGestureStartCancelsIt()
         {
             var g = new GestureLook();
-            g.Tick(true, true);
+            g.Tick(true);
             g.RequestReset();
             Assert.That(g.Resetting, Is.False);
-            g.Tick(false, true);
+            g.Tick(false);
             g.RequestReset();
             Assert.That(g.Resetting, Is.True);
-            g.Tick(true, true);
+            g.Tick(true);
             Assert.That(g.Resetting, Is.False);
             g.RequestReset();
-            g.Tick(false, true);
+            g.Tick(false);
             g.RequestReset();
             g.CancelReset();
-            Assert.That(g.Step(0f, 60f, 0.016f, s_defaults), Is.EqualTo(0f));
+            Assert.That(g.Step(60f, 0.016f, s_defaults), Is.EqualTo(0f));
         }
 
         [Test]

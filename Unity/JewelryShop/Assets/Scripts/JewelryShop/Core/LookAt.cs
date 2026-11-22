@@ -185,18 +185,16 @@ namespace JewelryShop.Core
             hasInterest ? LookAtTarget.Interest : LookAtTarget.Camera;
 
         /// <summary>
-        /// The panel status line; <paramref name="interestName"/> names the Interest Target.
+        /// The Look-At and Focus rows; <paramref name="interestName"/> names the Interest Target.
         /// </summary>
         public static string StatusText(bool isOn, LookAtFocus focus, bool hasCustomer,
             LookAtTarget target, string interestName)
         {
-            if (!isOn) return "Look-At: OFF";
-            var name = target == LookAtTarget.Customer ? "Customer" :
-                target == LookAtTarget.Interest ? interestName : "camera";
-            var focusText = !focus.IsOn ? "OFF" :
-                !hasCustomer ? "ON (no customer)" :
-                !focus.InRange ? "ON (out of range)" : "ON";
-            return $"Look-At: ON · Focus: {focusText} · Target: {name}";
+            var focusText = target == LookAtTarget.Customer ? "ON · Customer" :
+                target == LookAtTarget.Interest ? $"ON · {interestName}" :
+                hasCustomer ? "ON · Out of range" : "ON · No target";
+            return $"Look-At: {(isOn ? "ON" : "OFF")}\nF   Focus: " +
+                (focus.IsOn ? focusText : "OFF");
         }
     }
 
@@ -217,14 +215,12 @@ namespace JewelryShop.Core
         public bool InRange { get; private set; }
 
         /// <summary>
-        /// One frame. Focus works only while Look-At is on and turns off with it; a switch-on
-        /// starts out of range, so a Customer between the two distances is not latched.
+        /// One frame. Switching on starts out of range until the Customer reaches the enter limit.
         /// </summary>
-        public void Tick(bool lookAtOn, bool togglePressed, bool hasCustomer,
-            float distanceMeters, LookAtSettings s)
+        public void Tick(bool togglePressed, bool hasCustomer, float distanceMeters,
+            LookAtSettings s)
         {
-            if (!lookAtOn) IsOn = false;
-            else if (togglePressed) IsOn = !IsOn;
+            if (togglePressed) IsOn = !IsOn;
 
             if (!IsOn || !hasCustomer) InRange = false;
             else if (InRange) InRange = distanceMeters <= s.FocusExitMeters;
@@ -258,39 +254,30 @@ namespace JewelryShop.Core
     }
 
     /// <summary>
-    /// Body turns that are not Body Follow (ADR-0020): toward the target latched when a gesture
-    /// ends (Look-At ON only; the body never turns during a gesture), and Reset Look toward
-    /// the camera's direction (R).
+    /// Turns back to the camera heading after a gesture or on Reset Look (ADR-0020).
     /// </summary>
     public sealed class GestureLook
     {
         // A turn counts as done inside this many degrees (the ease never quite arrives).
         private const float DoneDegrees = 0.1f;
+        private const float MaxTurnDegreesPerSecond = 135f;
 
         /// <summary>A gesture is playing.</summary>
         public bool InGesture { get; private set; }
-        /// <summary>The body is turning toward the target latched at the gesture's end.</summary>
-        public bool Turning { get; private set; }
         /// <summary>A Reset Look turn is under way.</summary>
         public bool Resetting { get; private set; }
 
-        /// <summary>
-        /// One frame. Returns true on the frame a gesture ends with Look-At ON: the caller
-        /// latches the winning target now. A new gesture cancels the turns; Look-At OFF stops
-        /// the post-gesture turn where it is.
-        /// </summary>
-        public bool Tick(bool isGesture, bool lookAtOn)
+        /// <summary>Whether a reset turn is holding the heading from Body Follow.</summary>
+        public bool IsBodyFollowPaused { get; private set; }
+
+        /// <summary>A new gesture cancels the reset and its end starts a return turn.</summary>
+        public void Tick(bool isGesture)
         {
-            var ended = !isGesture && InGesture;
-            if (isGesture && !InGesture)
-            {
-                Turning = false;
+            if (isGesture)
                 Resetting = false;
-            }
+            else if (InGesture)
+                Resetting = true;
             InGesture = isGesture;
-            if (ended) Turning = lookAtOn;
-            if (!lookAtOn) Turning = false;
-            return ended && lookAtOn;
         }
 
         /// <summary>R: does nothing while a gesture plays.</summary>
@@ -299,25 +286,29 @@ namespace JewelryShop.Core
             if (!InGesture) Resetting = true;
         }
 
-        /// <summary>Walking owns the heading, so it ends a Reset Look.</summary>
+        /// <summary>Locomotion owns the heading, so it ends a Reset Look.</summary>
         public void CancelReset() => Resetting = false;
 
-        /// <summary>
-        /// Degrees to turn the body this frame. Yaws are body-local, to the latched target and
-        /// to the camera's facing direction.
-        /// </summary>
-        public float Step(float targetYaw, float cameraYaw, float deltaSeconds, LookAtSettings s)
-        {
-            if (!Turning && !Resetting) return 0f;
+        /// <summary>New operator aim or locomotion lets Body Follow turn again.</summary>
+        public void ResumeBodyFollow() => IsBodyFollowPaused = false;
 
-            var yaw = LookAt.Normalize(Turning ? targetYaw : cameraYaw);
-            if (Math.Abs(yaw) < DoneDegrees)
-            {
-                if (Turning) Turning = false;
-                else Resetting = false;
-                return yaw;
-            }
-            return LookAt.BodyStep(yaw, deltaSeconds, s);
+        /// <summary>
+        /// Degrees to turn the body this frame, toward the camera's facing direction.
+        /// </summary>
+        public float Step(float cameraYawDegrees, float deltaSeconds, LookAtSettings settings)
+        {
+            if (!Resetting || deltaSeconds <= 0f) return 0f;
+
+            var yawDegrees = LookAt.Normalize(cameraYawDegrees);
+            var maxStepDegrees = MaxTurnDegreesPerSecond * deltaSeconds;
+            IsBodyFollowPaused |= Math.Abs(yawDegrees) >= DoneDegrees;
+            var desiredStepDegrees = Math.Abs(yawDegrees) < DoneDegrees ? yawDegrees :
+                LookAt.BodyStep(yawDegrees, deltaSeconds, settings);
+            var stepDegrees = Math.Max(-maxStepDegrees,
+                Math.Min(maxStepDegrees, desiredStepDegrees));
+            if (Math.Abs(yawDegrees - stepDegrees) < DoneDegrees)
+                Resetting = false;
+            return stepDegrees;
         }
     }
 

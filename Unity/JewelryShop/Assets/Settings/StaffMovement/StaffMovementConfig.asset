@@ -14,6 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::JewelryShop.StaffConsole.StaffMovementConfig
   _settings:
     WalkSpeedMetersPerSecond: 1.5
+    RunSpeedMetersPerSecond: 2.7
+    RunBlendSeconds: 0.16
+    RunPlaybackRate: 1
     AccelerationMetersPerSecondSquared: 8
     TurnDegreesPerSecond: 540
     GravityMetersPerSecondSquared: 12
