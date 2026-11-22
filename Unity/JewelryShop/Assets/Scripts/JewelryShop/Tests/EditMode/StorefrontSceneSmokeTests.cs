@@ -46,7 +46,9 @@ namespace JewelryShop.Tests
         [TestCase(Slots)]
         [TestCase("Storefront/Checkout")]
         [TestCase("Storefront/Checkout/CheckoutCounter")]
-        [TestCase("Storefront/Checkout/CardReader")]
+        [TestCase("Storefront/Checkout/CardTerminal")]
+        [TestCase("Storefront/Checkout/CardTerminal/TapZone")]
+        [TestCase("Storefront/Checkout/PaymentCard")]
         [TestCase("Storefront/StaffCallButton")]
         [TestCase("Storefront/StaffSpot")]
         public void Storefront_HasRequiredObject(string path) =>

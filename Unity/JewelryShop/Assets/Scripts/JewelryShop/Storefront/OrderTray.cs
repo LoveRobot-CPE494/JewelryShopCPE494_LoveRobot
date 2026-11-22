@@ -47,8 +47,8 @@ namespace JewelryShop.Storefront
         /// <summary>Display name of a Gem dropped in this tray, or null if never dropped (#80).</summary>
         public string NameOf(GemKey key) => _gemNamesByKey.TryGetValue(key, out var name) ? name : null;
 
-        /// <summary>For the Checkout (#12): payment succeeded, so lower Stock Counts and empty the Order.</summary>
-        [ContextMenu("Checkout succeeded (Editor test)")] // temporary human trigger until #12 exists
+        /// <summary>Payment succeeded (CheckoutBehaviour calls it on Approved): lower Stock Counts and empty the Order.</summary>
+        [ContextMenu("Checkout succeeded (Editor test)")]
         public void CheckoutSucceeded() => Order.CheckoutSucceeded(_stock);
 
         private void Awake()
