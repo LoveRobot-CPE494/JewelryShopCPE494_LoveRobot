@@ -167,6 +167,31 @@ namespace JewelryShop.Tests
         }
 
         [Test]
+        public void Accepted_RaisesApprovedOnce_AfterCheckoutSucceeded()
+        {
+            int raised = 0, linesAtRaise = -1;
+            _flow.Approved += () => { raised++; linesAtRaise = _order.Lines.Count; };
+            TapToProcessing();
+            _submitter.Reply(SubmitReply.Accepted);
+            _flow.Tick(1.5f);
+            _flow.Tick(2f);
+            Assert.That(raised, Is.EqualTo(1));
+            Assert.That(linesAtRaise, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Declined_DoesNotRaiseApproved()
+        {
+            var raised = 0;
+            _flow.Approved += () => raised++;
+            TapToProcessing();
+            _submitter.Reply(SubmitReply.Declined);
+            _flow.Tick(1.5f);
+            _flow.Tick(2f);
+            Assert.That(raised, Is.EqualTo(0));
+        }
+
+        [Test]
         public void StandIn_DeclinesWhenSwitched()
         {
             var reply = (SubmitReply?)null;
