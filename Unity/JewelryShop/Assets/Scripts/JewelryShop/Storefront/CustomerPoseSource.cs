@@ -61,7 +61,7 @@ namespace JewelryShop.Storefront
             pose.GemCode = GemKeyCode.None;
             if (_rightInteractor != null && _rightInteractor.hasSelection
                 && _rightInteractor.firstInteractableSelected is Component held
-                && held.TryGetComponent(out GemModel gem) && gem.TryGetKey(out var key))
+                && held.GetComponentInParent<GemModel>() is { } gem && gem.TryGetKey(out var key))
                 pose.GemCode = GemKeyCode.Encode(key);
             return true;
         }

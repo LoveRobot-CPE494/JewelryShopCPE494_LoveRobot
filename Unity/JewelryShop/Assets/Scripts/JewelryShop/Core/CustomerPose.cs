@@ -107,6 +107,8 @@ namespace JewelryShop.Core
             public float X, Y, Z;
             /// <summary>Yaw in degrees.</summary>
             public float YawDegrees;
+            /// <summary>True when this step snapped (first sample or teleport) instead of gliding.</summary>
+            public bool IsSnap;
         }
 
         private Result _current;
@@ -129,9 +131,10 @@ namespace JewelryShop.Core
             // Floor distance only: the avatar's feet ignore height.
             var isSnap = !_hasValue || dx * dx + dz * dz > TeleportSnapMeters * TeleportSnapMeters;
             if (isSnap)
-                _current = new Result { X = x, Y = y, Z = z, YawDegrees = yawDegrees };
+                _current = new Result { X = x, Y = y, Z = z, YawDegrees = yawDegrees, IsSnap = true };
             else
             {
+                _current.IsSnap = false;
                 var t = 1f - (float)Math.Exp(-FollowRatePerSecond * Math.Max(0f, deltaSeconds));
                 _current.X += dx * t;
                 _current.Y += dy * t;
@@ -141,6 +144,79 @@ namespace JewelryShop.Core
             }
             _hasValue = true;
             return _current;
+        }
+    }
+
+    /// <summary>
+    /// Turns the smoothed body placement into the Animator's walk inputs: speed from the XZ
+    /// movement, low-passed, with a dead zone. A snap (teleport) counts as no movement.
+    /// </summary>
+    public sealed class CustomerGait
+    {
+        /// <summary>Smoothed speed above this starts walking.</summary>
+        public const float StartSpeedMetersPerSecond = 0.15f;
+        /// <summary>Smoothed speed below this stops walking (lower than start: no flicker).</summary>
+        public const float StopSpeedMetersPerSecond = 0.08f;
+        /// <summary>Speed low-pass rate in 1/s (higher follows faster).</summary>
+        private const float SmoothRatePerSecond = 8f;
+        private readonly float _walkSpeedMetersPerSecond;
+
+        /// <summary>The walk inputs for the Animator.</summary>
+        public struct Output
+        {
+            /// <summary>True while walking.</summary>
+            public bool IsMoving;
+            /// <summary>Walk blend along the body's facing, -1 to 1.</summary>
+            public float Forward;
+            /// <summary>Walk blend to the body's right, -1 to 1.</summary>
+            public float Right;
+        }
+
+        /// <param name="walkSpeedMetersPerSecond">Speed that maps to a full walk blend; pass the
+        /// Staff Avatar's walk speed so one value tunes both.</param>
+        public CustomerGait(float walkSpeedMetersPerSecond) =>
+            _walkSpeedMetersPerSecond = Math.Max(0.01f, walkSpeedMetersPerSecond);
+
+        private float _lastX, _lastZ, _velocityX, _velocityZ;
+        private bool _hasValue, _isMoving;
+
+        /// <summary>Forget the last placement; the next <see cref="Step"/> reports no walk.</summary>
+        public void Reset()
+        {
+            _hasValue = false;
+            _velocityX = _velocityZ = 0f;
+            _isMoving = false;
+        }
+
+        /// <summary>One frame of the smoothed body placement.</summary>
+        public Output Step(in CustomerPoseSmoother.Result body, float deltaSeconds)
+        {
+            if (!_hasValue || body.IsSnap)
+            {
+                _velocityX = _velocityZ = 0f;
+                _isMoving = false;
+            }
+            else if (deltaSeconds > 0f)
+            {
+                var t = 1f - (float)Math.Exp(-SmoothRatePerSecond * deltaSeconds);
+                _velocityX += ((body.X - _lastX) / deltaSeconds - _velocityX) * t;
+                _velocityZ += ((body.Z - _lastZ) / deltaSeconds - _velocityZ) * t;
+                var speed = (float)Math.Sqrt(_velocityX * _velocityX + _velocityZ * _velocityZ);
+                _isMoving = speed > (_isMoving ? StopSpeedMetersPerSecond : StartSpeedMetersPerSecond);
+            }
+            _lastX = body.X;
+            _lastZ = body.Z;
+            _hasValue = true;
+            if (!_isMoving) return default;
+
+            var yaw = body.YawDegrees * (float)Math.PI / 180f;
+            var sin = (float)Math.Sin(yaw);
+            var cos = (float)Math.Cos(yaw);
+            var forward = (_velocityX * sin + _velocityZ * cos) / _walkSpeedMetersPerSecond;
+            var right = (_velocityX * cos - _velocityZ * sin) / _walkSpeedMetersPerSecond;
+            var length = (float)Math.Sqrt(forward * forward + right * right);
+            if (length > 1f) { forward /= length; right /= length; }
+            return new Output { IsMoving = true, Forward = forward, Right = right };
         }
     }
 }
