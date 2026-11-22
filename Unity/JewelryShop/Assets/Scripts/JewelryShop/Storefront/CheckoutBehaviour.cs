@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using JewelryShop.Core;
 using TMPro;
 using UnityEngine;
@@ -14,6 +15,8 @@ namespace JewelryShop.Storefront
         [SerializeField] private TMP_Text _screen;
         [Tooltip("Optional: spinner, Approved animation, beep and haptic.")]
         [SerializeField] private CheckoutFeedback _feedback;
+        [Tooltip("Optional: the Receipt slip that slides out on Approved.")]
+        [SerializeField] private ReceiptSlip _receipt;
         [Tooltip("Least seconds Processing… shows, even when the reply is instant.")]
         [SerializeField] private float _minProcessingSeconds = 1.5f;
         [Tooltip("Seconds Approved ✓ shows before the screen goes idle.")]
@@ -37,7 +40,7 @@ namespace JewelryShop.Storefront
             _flow = new CheckoutFlow(_tray.Order, _submitter, _tray.CheckoutSucceeded,
                 _minProcessingSeconds, _approvedSeconds, _noticeSeconds);
             _flow.Changed += ShowScreen;
-            if (_feedback != null) _flow.Approved += _feedback.PlayApproved;
+            _flow.Approved += OnApproved;
             _tapZone.Tapped += _flow.Tap;
             ShowScreen();
         }
@@ -46,7 +49,7 @@ namespace JewelryShop.Storefront
         {
             if (_flow == null) return;
             _flow.Changed -= ShowScreen;
-            if (_feedback != null) _flow.Approved -= _feedback.PlayApproved;
+            _flow.Approved -= OnApproved;
             _tapZone.Tapped -= _flow.Tap;
             _flow.Detach();
             _flow = null;
@@ -58,10 +61,17 @@ namespace JewelryShop.Storefront
             _flow?.Tick(Time.deltaTime);
         }
 
+        private void OnApproved(IReadOnlyList<OrderLine> sold)
+        {
+            if (_feedback != null) _feedback.PlayApproved();
+            if (_receipt != null) _receipt.Show(ReceiptText.Build(sold, _tray.NameOf));
+        }
+
         private void ShowScreen()
         {
             _screen.text = _flow.ScreenText;
             if (_feedback != null) _feedback.StateChanged(_flow.State);
+            if (_receipt != null && _flow.State == CheckoutState.Processing) _receipt.Hide(); // next Checkout begins
         }
     }
 }
