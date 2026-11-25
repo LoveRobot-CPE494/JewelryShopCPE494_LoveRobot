@@ -1,8 +1,9 @@
 # LAN setup: three PCs on one network
 
-The **Host PC** (Staff Console, Hub), the **Robot PC** (cabled to the MG400, runs the Teleop Bridge)
-and the **Client PCs** (the Mac, the Host PC when it logs in elsewhere) talk over one LAN. This guide
-is filled in role by role. The `host` role section arrives with ticket 018-02.
+The **Host PC** (Staff Console, Hub, Unity with the Quest on Quest Link), the **Robot PC** (cabled to
+the MG400, runs the Teleop Bridge) and the **Client PCs** (the Mac, the Host PC when it logs in
+elsewhere) talk over one LAN. This guide covers all three: the Robot PC in section 4, the Host PC in
+section 8, the two Quest modes in section 9, undo in section 10 and troubleshooting in section 7.
 
 Decisions: [ADR-0023](../adr/0023-lan-host-address-and-udp-discovery.md),
 [ADR-0024](../adr/0024-robot-panel-presets-and-robot-status.md),
@@ -65,17 +66,7 @@ Rules it creates (display names are fixed):
 - `LoveRobot - Teleop UDP 9000`
 - `LoveRobot - ICMP echo`
 
-**Undo** (administrator PowerShell; removes exactly those rules):
-
-```powershell
-Remove-NetFirewallRule -DisplayName 'LoveRobot - SSH TCP 22','LoveRobot - Teleop UDP 9000','LoveRobot - ICMP echo'
-```
-
-To also turn SSH off (this also closes Windows' own port 22 rule, which is not ours):
-```powershell
-Stop-Service sshd; Set-Service sshd -StartupType Disabled
-Disable-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue
-```
+To undo them, see section 10.
 
 Human task (ticket 018-03): run the script on the real Robot PC and check it with the hand-check list
 there. The script has no automated test.
@@ -126,6 +117,97 @@ safety rule exempts it. Stop with Ctrl+C. Running without `--dry-run` falls unde
   Check with `Get-WindowsCapability -Online -Name 'OpenSSH.Server*'` (want `Installed`).
 - `ssh` asks for a password you do not have: copy your key as in section 5 step 2.
 - `ssh` times out: ping first (section 2); run the setup script `-DryRun` on the Robot PC; check the
-  address with `ipconfig`.
+  address with `ipconfig`. SSH is on the Robot PC only: the Host PC does not install it, so `ssh`
+  to the Host PC will not work.
 - Key refused for an admin user: the `administrators_authorized_keys` pitfall in section 5.
-- Teleop packets do not arrive: look for an inbound Block rule on Python (the script lists them).
+- Teleop packets do not arrive: look for an inbound Block rule on Python on the Robot PC (the script
+  lists them).
+- No Robot Status on the Host PC: run `setup-lan.ps1 -Role host -DryRun` on the Host PC (section 8)
+  and check the three rules show `[done]`. Check the Robot PC is running the Teleop Bridge and that
+  the Quest's Robot Address (section 8) is the Robot PC's current address. Check that no inbound
+  Block rule for Unity is listed (next bullet).
+- The script listed a Block rule for Unity: an inbound Block rule can stop UDP 7777, 9001 or 7778
+  on the Host PC. The script lists it and never removes it. If it is wrong, delete it yourself in
+  Windows Defender Firewall, then run the host role again.
+- A PC's address changed: a DHCP address can change after a restart or a new network. Run `ipconfig`
+  on that PC, then type its new address in the headset's Settings: the Robot Address for the Robot
+  PC, the Host Address for the Host PC if Automatic IP in LAN is not ticked. With Automatic IP in
+  LAN ticked, the Host Address is found again from the Host PC's beacon. To stop this happening, set
+  a DHCP reservation (section 3).
+
+## 8. Host PC setup
+
+The Host PC runs the Staff Console and Unity with the Quest. On the Host PC, open PowerShell **as
+administrator** at the repo root:
+
+```powershell
+# Look first: prints each step and whether it is done; changes nothing, needs no admin.
+powershell -ExecutionPolicy Bypass -File Dobot\scripts\setup-lan.ps1 -Role host -DryRun
+# Do it:
+powershell -ExecutionPolicy Bypass -File Dobot\scripts\setup-lan.ps1 -Role host
+```
+
+It allows inbound UDP 7777 (Staff Link), UDP 9001 (Robot Status) and UDP 7778 (Host Discovery) on
+every network profile. It opens no other port. It does not install OpenSSH Server and adds no ping
+rule: the Host PC is not an SSH target. Run it again any time: done steps are reported and skipped,
+and a failing step is reported while the rest still run (exit code 1).
+
+It also lists any enabled inbound **Block** rule for Unity (those can silently stop the three UDP
+ports). It never removes one: delete it yourself in Windows Defender Firewall if it is wrong.
+
+Rules it creates (display names are fixed):
+
+- `LoveRobot - Staff Link UDP 7777`
+- `LoveRobot - Robot Status UDP 9001`
+- `LoveRobot - Discovery UDP 7778`
+
+Then in the headset's Settings, type the Robot PC's address (section 3) as the **Robot Address**
+(ticket #217). The Host Address is the Host PC's address; with **Automatic IP in LAN** ticked it is
+found from the Host PC's beacon, otherwise type the Host PC's address too.
+
+The script prints the Host PC's LAN address at the end: use it when you type the Host Address.
+
+Human task (ticket 018-03): run the script on the real Host PC and check it with the hand-check list
+there. The script has no automated test.
+
+## 9. Quest modes
+
+- **Quest Link on the Host PC (the demo mode).** The headset is tethered to the Host PC, so the Host
+  PC takes the headset's place on the network: the Staff Link, Robot Status and beacons all reach the
+  Host PC, and the host role (section 8) must be run there.
+- **Standalone headset over Wi-Fi.** This mode stays supported (tickets 016 and 017) when the network
+  lets the Quest connect to the PCs. If the venue network blocks device-to-device traffic, it cannot
+  reach them: use the phone hotspot or our own router (section 2), or use Quest Link.
+
+## 10. Undo
+
+Undo needs an administrator PowerShell. Each command removes only the project's rules: they all start
+with the prefix `LoveRobot - `. Run the first line on the PC whose rules you want gone; it removes
+the robot and host rules alike.
+
+```powershell
+# Remove every rule the project created (by prefix), on this PC.
+Get-NetFirewallRule -DisplayName 'LoveRobot - *' -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+```
+
+Or remove the named rules one by one. The robot role uses:
+
+```powershell
+Remove-NetFirewallRule -DisplayName 'LoveRobot - SSH TCP 22','LoveRobot - Teleop UDP 9000','LoveRobot - ICMP echo'
+```
+
+The host role uses:
+
+```powershell
+Remove-NetFirewallRule -DisplayName 'LoveRobot - Staff Link UDP 7777','LoveRobot - Robot Status UDP 9001','LoveRobot - Discovery UDP 7778'
+```
+
+To also turn SSH off on a Robot PC (this also closes Windows' own port 22 rule, which is not ours):
+
+```powershell
+Stop-Service sshd; Set-Service sshd -StartupType Disabled
+Disable-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue
+```
+
+The script never removes Block rules, so undo does not touch them. Delete one in Windows Defender
+Firewall yourself if it is wrong.
