@@ -35,7 +35,7 @@ from the first use. Any other pattern needs a new ADR.
 | State | Packing Sequence (Dobot); UNO Bag Closer sequence |
 | Command | One typed message per Quest to Hub command |
 | Adapter | Around the Dobot SDK and around the serial port |
-| Proxy | Safety limiter on every motion: workspace bounds, minimum Z, speed caps, Deadman |
+| Proxy | Safety limiter on every motion: workspace bounds, minimum Z, speed caps, Engage |
 | Facade | Unity's single networking class |
 | Observer | C# events |
 

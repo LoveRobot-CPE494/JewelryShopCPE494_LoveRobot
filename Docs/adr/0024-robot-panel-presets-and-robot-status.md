@@ -4,6 +4,8 @@ status: accepted
 
 # Robot Panel: button commands and Preset Actions over the Teleop link, with Robot Status sent back
 
+Amended by [ADR-0026](0026-teleop-controls-engage-toggle-pump-hand-menus.md): the Robot Panel is the left Hand Menu (radial, picked with the left stick) instead of a ray-pressed wrist panel. Jog and typed move-to are dropped, Scale is added, and Robot Status shows on the HUD.
+
 Decided (grill, 2026-11-25). The Maintenance Operator can drive the arm only with the right Controller (Teleop, [ADR-0017](0017-teleop-udp-bridge-relative-mapping.md)). Checking the arm before a demo, clearing an error, or trying a short move needs buttons, and the Quest cannot tell whether the arm is enabled, in error or where it is, because UDP 9000 is one-way.
 
 - **The Robot PC is not the Staff Console's PC.** The MG400 is wired to its own PC on the same LAN, running the Teleop Bridge. The Quest reaches it by a separate **Robot Address** ([ADR-0023](0023-lan-host-address-and-udp-discovery.md), amended).

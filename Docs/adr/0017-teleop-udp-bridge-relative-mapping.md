@@ -8,6 +8,8 @@ Amended by [ADR-0023](0023-lan-host-address-and-udp-discovery.md): Teleop sends 
 
 Amended by [ADR-0024](0024-robot-panel-presets-and-robot-status.md): the Teleop Bridge runs on its own Robot PC and Teleop sends to the Robot Address; the bridge also takes Robot Panel commands, sends Robot Status back on UDP 9001, and latches Stop for every motion (closing the `joint`/`calibrate` gap below); it moves into `Dobot/src/hub`.
 
+Amended by [ADR-0026](0026-teleop-controls-engage-toggle-pump-hand-menus.md): A toggles Engage instead of the Grip-held Deadman, forward follows the head's yaw at Engage, Scale (up to 1×) is sent with Engage, and suction becomes a two-mode `pump` message that works only while Engaged.
+
 A teammate's working Teleop (2026-11-18) is now in the repo. On the Quest, `MG400Teleop.cs` (kept in `Dobot/teleop/unity/` until it is brought into the Unity project with its own Teleop scene) reads the right Controller. It sends the Controller's position and buttons as one JSON message per UDP packet to port 9000 on the PC. `mg400_bridge.py` (`Dobot/teleop/`) maps the position to MG400 coordinates, clamps it to the safe workspace and drives the arm over TCP through `mg400_control.py`. `pc_sender.py` sends the same messages from the PC, so the bridge can be tested without the headset. The test guide is `Docs/teleop/teleop-test-guide-th.pdf`.
 
 Decided:

@@ -15,3 +15,5 @@ The MG400's end effector is a suction cup + air pump/solenoid valve, switched on
 
 - The suction cup must be smaller than the table face of the smallest gem.
 - A gem that lands upside down or on its side (table face not facing up) may not be suckable; this must be tested and written up in the report.
+
+**Amended (2026-11-25, [ADR-0026](0026-teleop-controls-engage-toggle-pump-hand-menus.md)):** the pump has two outputs, suck on DO9 and blow on DO10, never on together. Stopping the pump keeps the Gem Piece held; blowing releases it.
