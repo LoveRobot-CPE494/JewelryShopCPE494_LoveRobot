@@ -1,0 +1,34 @@
+{
+    "name": "GemDetails",
+    "maps": [
+        {
+            "name": "Storefront",
+            "id": "6f1d2c1e-6a43-4b0e-9a51-3c7e0b6d9a01",
+            "actions": [
+                {
+                    "name": "Gem Details",
+                    "type": "Button",
+                    "id": "b4a3f0d2-2f7e-4c8a-8d0e-5e9c1a7b3f02",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "c9e8d7a6-1b2c-4d3e-8f4a-0b1c2d3e4f03",
+                    "path": "<XRController>{RightHand}/primaryButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Gem Details",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
