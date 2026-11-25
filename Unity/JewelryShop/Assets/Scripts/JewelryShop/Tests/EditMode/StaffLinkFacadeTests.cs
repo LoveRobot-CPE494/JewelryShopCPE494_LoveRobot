@@ -16,12 +16,30 @@ namespace JewelryShop.Tests
             public bool IsConnecting { get; set; }
             public int Connects;
             public int Disconnects;
+            public string ServerAddress;
+            public void SetServerAddress(string address) => ServerAddress = address;
             public void Connect() => Connects++;
             public void Disconnect() { Disconnects++; IsConnected = false; IsConnecting = false; }
             public event System.Action<StaffCallMessage> MessageReceived;
             public readonly List<StaffCallMessage> Sent = new List<StaffCallMessage>();
             public void Send(StaffCallMessage message) => Sent.Add(message);
             public void Receive(StaffCallMessage message) => MessageReceived?.Invoke(message);
+        }
+
+        [Test]
+        public void Reconnect_SetsAddressBetweenDisconnectAndNextAttempt()
+        {
+            var link = new FakeLink { IsConnected = true };
+            var facade = Wanted(link);
+            facade.Tick(0);
+
+            facade.Reconnect("10.0.0.7");
+
+            Assert.That(link.Disconnects, Is.EqualTo(1));
+            Assert.That(link.ServerAddress, Is.EqualTo("10.0.0.7"));
+            var connectsBefore = link.Connects;
+            facade.Tick(10);
+            Assert.That(link.Connects, Is.EqualTo(connectsBefore + 1));
         }
 
         [Test]

@@ -17,6 +17,9 @@ namespace JewelryShop.Core
         /// <summary>Drop the link and abort any attempt in flight.</summary>
         void Disconnect();
 
+        /// <summary>Client: the host address the next Connect uses.</summary>
+        void SetServerAddress(string address);
+
         /// <summary>Send one message to the other end; dropped when not connected.</summary>
         void Send(StaffCallMessage message);
 

@@ -30,7 +30,7 @@ namespace JewelryShop.Networking
         private const string MessageName = "StaffCall";
         private readonly NetworkManager _networkManager;
         private readonly UnityTransport _transport;
-        private readonly StaffLinkSettings _settings;
+        private StaffLinkSettings _settings;
 
         public NetcodeStaffLink(
             NetworkManager networkManager, UnityTransport transport, StaffLinkSettings settings)
@@ -43,6 +43,9 @@ namespace JewelryShop.Networking
             _transport.ConnectTimeoutMS = settings.ConnectTimeoutMilliseconds;
             _transport.MaxConnectAttempts = settings.MaxConnectAttempts;
         }
+
+        /// <inheritdoc />
+        public void SetServerAddress(string address) => _settings.ServerAddress = address;
 
         /// <summary>Raised when the host cannot start (e.g. port in use).</summary>
         public event Action<string> Failed;

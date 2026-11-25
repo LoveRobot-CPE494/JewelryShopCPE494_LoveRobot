@@ -53,6 +53,14 @@ namespace JewelryShop.Core
             Poll();
         }
 
+        /// <summary>Drop the link, point it at a new host address, and connect again.</summary>
+        public void Reconnect(string serverAddress)
+        {
+            Disconnect();
+            _link.SetServerAddress(serverAddress);
+            Connect();
+        }
+
         /// <summary>Call every frame with a monotonic clock in seconds.</summary>
         public void Tick(double nowSeconds)
         {

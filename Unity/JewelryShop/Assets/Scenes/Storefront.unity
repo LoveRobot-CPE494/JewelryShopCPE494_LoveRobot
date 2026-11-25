@@ -727,9 +727,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: JewelryShop.Networking::JewelryShop.Networking.StaffLinkBehaviour
   _role: 1
-  _serverAddress: 127.0.0.1
+  _hostAddressConfig: {fileID: 11400000, guid: e4d2522bea4243a4eb826c49398ff19a, type: 2}
   _port: 7777
-  _hostListenAddress: 0.0.0.0
+  _hostListenAddress: 192.168.1.10
   _disconnectTimeoutSeconds: 3
   _connectTimeoutMilliseconds: 1000
   _maxConnectAttempts: 3
