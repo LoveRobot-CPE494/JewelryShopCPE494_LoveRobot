@@ -21,8 +21,8 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-# shortcut: teleop/ is the teammate's working Teleop scripts, kept as-is; bring it up to
-# standard (and add safety-rule tests) when it moves into src/hub (ADR-0017).
+# shortcut: teleop/ is the teammate's original Teleop scripts, kept as-is as a reference now that
+# the Teleop Bridge runs from src/hub/teleop (ADR-0017); delete it once that is proven on the arm.
 extend-exclude = ["teleop"]
 
 [tool.ruff.lint]
