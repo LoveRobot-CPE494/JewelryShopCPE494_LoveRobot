@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b929085655813a438e7fecb0b7a29e6, type: 3}
   m_Name: HostAddressConfig
   m_EditorClassIdentifier: JewelryShop.Networking::JewelryShop.Networking.HostAddressConfig
-  _defaultHostAddress: 127.0.0.1
+  _defaultHostAddress: 192.168.56.1
   _staffLinkPort: 7777
   _discoveryPort: 7778

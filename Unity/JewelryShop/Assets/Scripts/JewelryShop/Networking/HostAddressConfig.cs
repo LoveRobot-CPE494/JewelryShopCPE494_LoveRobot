@@ -10,7 +10,8 @@ namespace JewelryShop.Networking
         [Tooltip("Used until the Customer types one. A placeholder: "
             + "set the Staff Console PC's LAN IP.")]
         [SerializeField] private string _defaultHostAddress = "192.168.1.10";
-        // shortcut: ports unread, StaffLinkBehaviour._port drives; wire in Host Discovery (#206).
+        // shortcut: Staff Link port unread, StaffLinkBehaviour._port drives it; upgrade by
+        // reading it there. The discovery port is read by the Host Beacon.
         [SerializeField] private ushort _staffLinkPort = 7777;
         [SerializeField] private ushort _discoveryPort = 7778;
 
