@@ -707,6 +707,7 @@ GameObject:
   - component: {fileID: 350033154}
   - component: {fileID: 350033156}
   - component: {fileID: 350033157}
+  - component: {fileID: 350033158}
   m_Layer: 0
   m_Name: Staff Link
   m_TagString: Untagged
@@ -797,6 +798,23 @@ MonoBehaviour:
   _head: {fileID: 1217203839}
   _rightController: {fileID: 1614837440}
   _rightInteractor: {fileID: 1614837437}
+--- !u!114 &350033158
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 350033153}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb32a3a2f757aa74dbee02dab9352a91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JewelryShop.Networking::JewelryShop.Networking.VoiceChatBehaviour
+  _link: {fileID: 350033154}
+  _call: {fileID: 350033156}
+  _config: {fileID: 11400000, guid: 878cc63e8dc373a4ca32caed20f6af9f, type: 2}
+  _staffAvatar: {fileID: 0}
+  _muteKey: 27
 --- !u!1 &379709328
 GameObject:
   m_ObjectHideFlags: 0

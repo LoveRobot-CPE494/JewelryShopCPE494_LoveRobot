@@ -25,9 +25,11 @@ namespace JewelryShop.Networking
     /// The only class that drives Netcode: the Staff Console hosts, the Quest connects as a client.
     /// The host counts as connected only while a client is attached, never merely for listening.
     /// </summary>
-    internal sealed class NetcodeStaffLink : IStaffLink
+    internal sealed class NetcodeStaffLink : IStaffLink, IVoiceChannel
     {
         private const string MessageName = "StaffCall";
+        private const string VoiceMessageName = "StaffVoice";
+        private byte[] _voiceBuffer = new byte[OpusVoiceCodec.MaxPacketBytes];
         private readonly NetworkManager _networkManager;
         private readonly UnityTransport _transport;
         private readonly StaffLinkSettings _settings;
@@ -85,9 +87,47 @@ namespace JewelryShop.Networking
             _networkManager.CustomMessagingManager.SendNamedMessage(MessageName, target, writer);
         }
 
+        /// <inheritdoc />
+        public event Action<byte[], int> PacketReceived;
+
+        /// <inheritdoc />
+        public void Send(byte[] packet, int length)
+        {
+            if (!IsConnected || !TryGetPeerId(out var target)) return;
+            using var writer = new FastBufferWriter(length + 2, Allocator.Temp);
+            writer.WriteValueSafe((ushort)length);
+            writer.WriteBytesSafe(packet, length);
+            // Unreliable: a late voice packet is worthless, so never retransmit.
+            _networkManager.CustomMessagingManager.SendNamedMessage(
+                VoiceMessageName, target, writer, NetworkDelivery.Unreliable);
+        }
+
         // The messaging manager is rebuilt on every start, so register after each one.
-        private void RegisterMessageHandler() => _networkManager.CustomMessagingManager
-            .RegisterNamedMessageHandler(MessageName, OnMessage);
+        private void RegisterMessageHandler()
+        {
+            _networkManager.CustomMessagingManager.RegisterNamedMessageHandler(MessageName, OnMessage);
+            _networkManager.CustomMessagingManager.RegisterNamedMessageHandler(
+                VoiceMessageName, OnVoice);
+        }
+
+        private void OnVoice(ulong senderId, FastBufferReader reader)
+        {
+            // Trust boundary: a truncated or hostile packet is dropped, never thrown on.
+            try
+            {
+                const int headerBytes = sizeof(ushort);
+                if (reader.Length - reader.Position < headerBytes) return;
+                reader.ReadValueSafe(out ushort length);
+                if (length == 0 || length > _voiceBuffer.Length
+                    || reader.Length - reader.Position < length) return;
+                reader.ReadBytesSafe(ref _voiceBuffer, length);
+                PacketReceived?.Invoke(_voiceBuffer, length);
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogWarning($"Staff voice: dropped a bad packet: {e.Message}");
+            }
+        }
 
         private void OnMessage(ulong senderId, FastBufferReader reader)
         {
@@ -114,6 +154,7 @@ namespace JewelryShop.Networking
         {
             if (!_networkManager.IsListening) return;
             _networkManager.CustomMessagingManager?.UnregisterNamedMessageHandler(MessageName);
+            _networkManager.CustomMessagingManager?.UnregisterNamedMessageHandler(VoiceMessageName);
             _networkManager.Shutdown();
         }
     }

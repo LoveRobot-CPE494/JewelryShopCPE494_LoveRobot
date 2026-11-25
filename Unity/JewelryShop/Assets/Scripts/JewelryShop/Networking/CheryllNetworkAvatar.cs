@@ -35,6 +35,9 @@ namespace JewelryShop.Networking
         private Transform _sourceHead;
         private Transform _head;
 
+        /// <summary>Quest copy: her head bone, where her voice plays from (null on the host).</summary>
+        public Transform HeadBone => _head;
+
         /// <summary>Host only: the Staff's own Cheryll that this copy follows.</summary>
         public void Follow(Transform source)
         {
