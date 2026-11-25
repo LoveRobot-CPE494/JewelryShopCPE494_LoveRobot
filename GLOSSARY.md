@@ -11,7 +11,7 @@ The jewelry store in the virtual world where a Customer browses and buys through
 _Avoid_: AR shop, shop scene, AR storefront
 
 **Controller**:
-The Quest 3's hand controllers, left and right (the team first thought it had only a right one), used as the "hands" of the Customer. The right Controller is also the Maintenance Operator's hand that drives the arm in Teleop; the left plays no part in Teleop ([ADR-0021](Docs/adr/0021-two-controllers-in-the-storefront.md))
+The Quest 3's hand controllers, left and right (the team first thought it had only a right one), used as the "hands" of the Customer. The right Controller is also the Maintenance Operator's hand that drives the arm in Teleop; the left plays no part in driving the arm, but carries the Robot Panel in the Teleop scene ([ADR-0021](Docs/adr/0021-two-controllers-in-the-storefront.md))
 _Avoid_: gripper (that word means the arm's end effector, see Suction Cup), joystick, hand
 
 **Customer**:
@@ -147,15 +147,15 @@ A Customer's request for the Staff to come and serve them live in the Storefront
 _Avoid_: call button, help
 
 **Host Address**:
-The LAN address of the PC (running the Staff Console and the Hub) that the Quest connects to, typed in the headset or found by Host Discovery. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
+The LAN address of the Staff Console's PC that the Quest's Staff Link connects to, typed in the headset or found by Host Discovery. Teleop uses the Robot Address instead. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
 _Avoid_: server IP, PC IP
 
 **Host Discovery**:
-The Staff Console's UDP broadcast in the LAN that lets the Quest find the Host Address without typing it. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
+The UDP broadcast in the LAN that lets the Quest find the Host Address (from the Staff Console) and the Robot Address (from the Robot PC) without typing them. Each beacon carries its role, `staff` or `robot`. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
 _Avoid_: auto IP, pairing
 
 **Host Beacon**:
-One Host Discovery packet: the Staff Console's IPv4 address and Staff Link port, broadcast about once a second. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
+One Host Discovery packet: its sender's role (`staff` or `robot`), IPv4 address and port (Staff Link or Teleop), broadcast about once a second. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
 _Avoid_: ping, announce packet
 
 **Incoming**:
@@ -220,8 +220,28 @@ The mode in which the Maintenance Operator's Controller position is mapped to th
 _Avoid_: remote control, manual mode
 
 **Teleop Bridge**:
-The PC program that receives Teleop messages from the Quest over UDP, clamps them to the safe workspace and drives the MG400 (`Dobot/teleop/mg400_bridge.py`)
+The Robot PC program that receives Teleop and Robot Panel messages from the Quest over UDP, clamps them to the safe workspace, drives the MG400 and sends Robot Status back (`Dobot/teleop/`, moving to `Dobot/src/hub` in #216; [ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
 _Avoid_: relay, teleop server
+
+**Robot PC**:
+The PC wired to the MG400, running the Teleop Bridge. It is not the Staff Console's PC, but shares its LAN ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
+_Avoid_: Dobot PC, robot server
+
+**Robot Address**:
+The LAN address of the Robot PC that the Quest sends Teleop and Robot Panel commands to, typed in the headset or found from the Robot PC's beacon. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
+_Avoid_: Dobot IP, MG400 IP (that is the arm's own address, set only on the Robot PC)
+
+**Robot Panel**:
+The wrist panel on the left Controller in the Teleop scene, with buttons that send commands and Preset Actions to the Teleop Bridge and a readout of the Robot Status ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
+_Avoid_: control page, dashboard (that is the MG400's port 29999), robot UI
+
+**Preset Action**:
+A named, numbered list of arm steps (move, suction, wait, home) kept in a file on the Robot PC, checked against the safe workspace when loaded and run by the Teleop Bridge when the Robot Panel sends its id. "Preset" alone means the same ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
+_Avoid_: macro, script, routine
+
+**Robot Status**:
+The packet the Teleop Bridge sends back to the Quest a few times a second: robot mode, error, pose, suction, Stop latch, last command result, the Preset list and the running Preset's progress ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
+_Avoid_: feedback (that is the MG400's port 30004), telemetry, ack
 
 **Dropped Gem**:
 A Gem Piece lying on the MG400's table or on the Gem Stock but not in any Stock Slot
