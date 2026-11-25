@@ -146,6 +146,14 @@ _Avoid_: player model, buyer avatar
 A Customer's request for the Staff to come and serve them live in the Storefront
 _Avoid_: call button, help
 
+**Host Address**:
+The LAN address of the PC (running the Staff Console and the Hub) that the Quest connects to, typed in the headset or found by Host Discovery. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
+_Avoid_: server IP, PC IP
+
+**Host Discovery**:
+The Staff Console's UDP broadcast in the LAN that lets the Quest find the Host Address without typing it. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
+_Avoid_: auto IP, pairing
+
 **Incoming**:
 The Staff Console state while a Staff Call rings and has not been answered yet
 

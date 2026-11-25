@@ -4,6 +4,8 @@ status: accepted
 
 # Teleop: the Quest sends UDP to a Teleop Bridge on the PC, and the arm follows relative moves
 
+Amended by [ADR-0023](0023-lan-host-address-and-udp-discovery.md): Teleop sends to the shared Host Address instead of its own PC IP field.
+
 A teammate's working Teleop (2026-11-18) is now in the repo. On the Quest, `MG400Teleop.cs` (kept in `Dobot/teleop/unity/` until it is brought into the Unity project with its own Teleop scene) reads the right Controller. It sends the Controller's position and buttons as one JSON message per UDP packet to port 9000 on the PC. `mg400_bridge.py` (`Dobot/teleop/`) maps the position to MG400 coordinates, clamps it to the safe workspace and drives the arm over TCP through `mg400_control.py`. `pc_sender.py` sends the same messages from the PC, so the bridge can be tested without the headset. The test guide is `Docs/teleop/teleop-test-guide-th.pdf`.
 
 Decided:
