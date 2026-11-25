@@ -61,12 +61,16 @@ namespace JewelryShop.Networking
         private NetcodeCustomerPoseSpawner _customerPoseSpawner;
         private GameObject _managerObject;
         private ICheryllSpawner _cheryllSpawner = new NullCheryllSpawner();
+        private IVoiceChannel _voice = new NullVoiceChannel();
 
         /// <summary>The link's Facade: connect, disconnect and the connection event.</summary>
         public StaffLinkFacade Facade => _facade;
 
         /// <summary>The Customer's latest pose: the Quest scene writes it, the Staff Console reads it.</summary>
         public CustomerPoseMailbox CustomerPose { get; } = new CustomerPoseMailbox();
+
+        /// <summary>Unreliable voice packets over the same link; a no-op until Awake has run.</summary>
+        public IVoiceChannel Voice => _voice;
 
         /// <summary>True on the Staff Console.</summary>
         public bool IsHost => _role == LinkRole.Host;
@@ -137,6 +141,7 @@ namespace JewelryShop.Networking
                 ConnectTimeoutMilliseconds = _connectTimeoutMilliseconds,
                 MaxConnectAttempts = _maxConnectAttempts,
             });
+            _voice = link;
             link.Failed += OnFailed;
             // An attempt that outlives its own handshake budget (plus a second of slack) is stuck.
             var attemptBudgetSeconds =
