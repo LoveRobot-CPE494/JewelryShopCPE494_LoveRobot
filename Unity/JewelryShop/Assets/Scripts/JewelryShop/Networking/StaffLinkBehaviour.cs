@@ -22,8 +22,8 @@ namespace JewelryShop.Networking
         public enum LinkRole { Host, Client }
 
         [SerializeField] private LinkRole _role = LinkRole.Client;
-        [Tooltip("Client only: supplies the default Host Address (ADR-0023); "
-            + "the typed one is saved on the headset.")]
+        [Tooltip("Client: supplies the default Host Address (ADR-0023); the typed one is saved on "
+            + "the headset. Host: supplies the discovery port for the Host Beacon.")]
         [SerializeField] private HostAddressConfig _hostAddressConfig;
         [SerializeField] private ushort _port = 7777;
         [Tooltip("Host only: the address to listen on (0.0.0.0 = every network card).")]
@@ -38,6 +38,9 @@ namespace JewelryShop.Networking
         [SerializeField] private bool _isRunningInBackground;
         [Tooltip("Optional; shows 'connected' / 'not connected'.")]
         [SerializeField] private TMP_Text _statusText;
+        [Tooltip("Host only, optional: shows the Staff Console's LAN IP to read out and type "
+            + "into the headset.")]
+        [SerializeField] private TMP_Text _hostAddressText;
         [SerializeField] private UnityEvent<bool> _onConnectionChanged;
 
         [Header("Cheryll (Staff Avatar)")]
@@ -61,6 +64,7 @@ namespace JewelryShop.Networking
         private NetcodeCustomerPoseSpawner _customerPoseSpawner;
         private GameObject _managerObject;
         private bool _hasHostAddress;
+        private HostBeaconSender _beacon;
         private ICheryllSpawner _cheryllSpawner = new NullCheryllSpawner();
 
         /// <summary>The link's Facade: connect, disconnect and the connection event.</summary>
@@ -72,6 +76,9 @@ namespace JewelryShop.Networking
         /// <summary>True on the Staff Console.</summary>
         public bool IsHost => _role == LinkRole.Host;
 
+        /// <summary>The IPv4 the Host announces; null on the Client or if none found.</summary>
+        public string LocalAddress => _beacon?.LocalAddress;
+
         /// <summary>Spawns Cheryll on the host; a no-op when the prefab is not wired.</summary>
         public ICheryllSpawner CheryllSpawner => _cheryllSpawner;
 
@@ -79,7 +86,9 @@ namespace JewelryShop.Networking
         {
             if (_statusText == null)
                 Debug.LogWarning("StaffLinkBehaviour: status text not wired; state is only logged.", this);
-            if (_isRunningInBackground) Application.runInBackground = true;
+            // The Host must keep broadcasting its beacon while its window is unfocused.
+            if (_isRunningInBackground || _role == LinkRole.Host)
+                Application.runInBackground = true;
 
             // Inactive while assembling so NetworkManager.Awake sees its transport.
             // Stays at the scene root: Netcode refuses a NetworkManager nested under a parent.
@@ -150,6 +159,28 @@ namespace JewelryShop.Networking
             if (_role == LinkRole.Host) _facade.ConnectionChanged += SetCheryllPresent;
             Show(false);
             if (_role == LinkRole.Client) HostAddressStore.Changed += OnHostAddressChanged;
+            if (_role == LinkRole.Host) StartBeacon();
+        }
+
+        private void StartBeacon()
+        {
+            ShowHostAddress(null);
+            // Port 0 keeps the sender quiet, but it still finds the address for the label.
+            ushort discoveryPort = 0;
+            if (_hostAddressConfig == null)
+                Debug.LogWarning("StaffLinkBehaviour: Host Address Config not wired; no Host "
+                    + "Beacon is broadcast, so the Quest cannot find this PC by itself.", this);
+            else if (_hostAddressConfig.DiscoveryPort == 0)
+                Debug.LogWarning("StaffLinkBehaviour: Host Address Config has Discovery Port 0; "
+                    + "no Host Beacon is broadcast. Set a port such as 7778.", this);
+            else discoveryPort = _hostAddressConfig.DiscoveryPort;
+            _beacon = new HostBeaconSender(_port, discoveryPort);
+            _beacon.LocalAddressChanged += ShowHostAddress;
+        }
+
+        private void ShowHostAddress(string address)
+        {
+            if (_hostAddressText != null) _hostAddressText.text = address ?? "no LAN IP";
         }
 
         private void Start()
@@ -180,11 +211,13 @@ namespace JewelryShop.Networking
         {
             _facade.Tick(Time.realtimeSinceStartupAsDouble);
             _customerPoseSpawner?.Tick();
+            _beacon?.Tick(Time.realtimeSinceStartupAsDouble);
         }
 
         private void OnDestroy()
         {
             HostAddressStore.Changed -= OnHostAddressChanged;
+            _beacon?.Dispose();
             if (_facade == null) return;
             _facade.ConnectionChanged -= Show;
             _facade.ConnectionChanged -= SetCheryllPresent;

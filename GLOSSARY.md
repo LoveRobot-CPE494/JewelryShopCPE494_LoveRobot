@@ -154,6 +154,10 @@ _Avoid_: server IP, PC IP
 The Staff Console's UDP broadcast in the LAN that lets the Quest find the Host Address without typing it. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
 _Avoid_: auto IP, pairing
 
+**Host Beacon**:
+One Host Discovery packet: the Staff Console's IPv4 address and Staff Link port, broadcast about once a second. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
+_Avoid_: ping, announce packet
+
 **Incoming**:
 The Staff Console state while a Staff Call rings and has not been answered yet
 

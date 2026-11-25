@@ -28,6 +28,17 @@ namespace JewelryShop.Core
             return true;
         }
 
+        /// <summary>
+        /// A host address worth announcing: valid IPv4 that is not 0.0.0.0, broadcast or loopback
+        /// (127.x), since none of those lets a headset reach the PC.
+        /// </summary>
+        public static bool IsUsableAddress(string address)
+        {
+            if (!IsValidIPv4(address)) return false;
+            return address != "0.0.0.0" && address != "255.255.255.255"
+                && !address.StartsWith("127.", System.StringComparison.Ordinal);
+        }
+
         /// <summary>The address to connect to, or null when nothing valid is available.</summary>
         public static string Resolve(string typed, bool automatic, string discovered)
         {
