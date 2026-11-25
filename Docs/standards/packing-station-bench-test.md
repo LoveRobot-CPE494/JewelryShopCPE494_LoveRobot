@@ -49,12 +49,15 @@ again.
 - [ ] Pass
 - [ ] Fail. Note: ____
 
-## 2. Deadman stops Teleop motion
+## 2. Ending Engage stops Teleop motion
 
-- **Setup:** Start Teleop. Hold Grip and move the arm slowly in an open area.
-- **Action:** Release Grip while the arm is moving.
+Until [ADR-0026](../adr/0026-teleop-controls-engage-toggle-pump-hand-menus.md) is built, Engage is
+Grip held, and ending it is releasing Grip.
+
+- **Setup:** Start Teleop. Press A to Engage and move the arm slowly in an open area.
+- **Action:** Press A again while the arm is moving.
 - **Expected:** The arm stops immediately. It does not keep following the Controller. Moving the
-  Controller with Grip released does not move the arm.
+  Controller after Engage has ended does not move the arm.
 
 - [ ] Pass
 - [ ] Fail. Note: ____

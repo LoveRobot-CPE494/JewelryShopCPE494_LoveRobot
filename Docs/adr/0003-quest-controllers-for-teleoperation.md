@@ -22,3 +22,5 @@ In remote maintenance mode (item 4b) the operator uses the controllers that ship
 - After a Dropped Gem is sucked up, the Maintenance Operator uses Teleop to put it back into the correct Stock Slot themselves. The system does not need to know that piece's Cut + Color (automatic put-back may be added later if time allows).
 
 **Amended (2026-11-22):** the Quest 3 has both Controllers, not only the right one ([ADR-0021](0021-two-controllers-in-the-storefront.md)). The table above is for the right Controller. The left Controller plays no part in Teleop. **Amended (2026-11-25, [ADR-0024](0024-robot-panel-presets-and-robot-status.md)):** the left Controller carries the Robot Panel in the Teleop scene (its menu button shows or hides it); it still does not drive the arm.
+
+**Amended (2026-11-25, [ADR-0026](0026-teleop-controls-engage-toggle-pump-hand-menus.md)):** the button table is replaced. A toggles Engage (no held Deadman), Trigger held sucks and Grip held blows (only while Engaged), B stays the software stop, and a stick click opens that hand's Hand Menu. The left Hand Menu is the Robot Panel, in AR Mode only; it still does not drive the arm.

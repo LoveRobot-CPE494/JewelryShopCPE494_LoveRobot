@@ -11,7 +11,7 @@ The jewelry store in the virtual world where a Customer browses and buys through
 _Avoid_: AR shop, shop scene, AR storefront
 
 **Controller**:
-The Quest 3's hand controllers, left and right (the team first thought it had only a right one), used as the "hands" of the Customer. The right Controller is also the Maintenance Operator's hand that drives the arm in Teleop; the left plays no part in driving the arm, but carries the Robot Panel in the Teleop scene ([ADR-0021](Docs/adr/0021-two-controllers-in-the-storefront.md))
+The Quest 3's hand controllers, left and right (the team first thought it had only a right one), used as the "hands" of the Customer. The right Controller is also the Maintenance Operator's hand that drives the arm in Teleop; the left plays no part in driving the arm, but opens the Robot Panel in AR Mode ([ADR-0021](Docs/adr/0021-two-controllers-in-the-storefront.md), [ADR-0026](Docs/adr/0026-teleop-controls-engage-toggle-pump-hand-menus.md))
 _Avoid_: gripper (that word means the arm's end effector, see Suction Cup), joystick, hand
 
 **Customer**:
@@ -232,7 +232,7 @@ The LAN address of the Robot PC that the Quest sends Teleop and Robot Panel comm
 _Avoid_: Dobot IP, MG400 IP (that is the arm's own address, set only on the Robot PC)
 
 **Robot Panel**:
-The wrist panel on the left Controller in the Teleop scene, with buttons that send commands and Preset Actions to the Teleop Bridge and a readout of the Robot Status ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
+The left Hand Menu in AR Mode, whose slots send commands and Preset Actions to the Teleop Bridge ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md), [ADR-0026](Docs/adr/0026-teleop-controls-engage-toggle-pump-hand-menus.md))
 _Avoid_: control page, dashboard (that is the MG400's port 29999), robot UI
 
 **Preset Action**:
@@ -240,13 +240,25 @@ A named, numbered list of arm steps (move, suction, wait, home) kept in a file o
 _Avoid_: macro, script, routine
 
 **Robot Status**:
-The packet the Teleop Bridge sends back to the Quest a few times a second: robot mode, error, pose, suction, Stop latch, last command result, the Preset list and the running Preset's progress ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
+The packet the Teleop Bridge sends back to the Quest a few times a second: robot mode, error, pose, pump state, Stop latch, last command result, the Preset list and the running Preset's progress ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
 _Avoid_: feedback (that is the MG400's port 30004), telemetry, ack
 
 **Dropped Gem**:
 A Gem Piece lying on the MG400's table or on the Gem Stock but not in any Stock Slot
 _Avoid_: lost gem, fallen item
 
-**Deadman**:
-The press-and-hold the Maintenance Operator must keep up for the arm to follow Teleop. Release it and the arm stops immediately
-_Avoid_: enable button, safety button
+**Engage**:
+The state in which the arm follows the Maintenance Operator's right Controller in AR Mode ([ADR-0026](Docs/adr/0026-teleop-controls-engage-toggle-pump-hand-menus.md))
+_Avoid_: Deadman (the retired press-and-hold), enable (that is the MG400's Enable), control mode
+
+**Hand Menu**:
+A radial menu at one Controller. The right one switches between AR Mode and Game Mode; the left one, in AR Mode only, is the Robot Panel ([ADR-0026](Docs/adr/0026-teleop-controls-engage-toggle-pump-hand-menus.md))
+_Avoid_: action menu, pie menu, wheel, wrist panel
+
+**AR Mode**:
+The headset showing the real room through its cameras, where the Maintenance Operator drives the arm in Teleop. Not the Storefront ([ADR-0026](Docs/adr/0026-teleop-controls-engage-toggle-pump-hand-menus.md))
+_Avoid_: AR shop, AR storefront, maintenance scene
+
+**Game Mode**:
+The headset showing the Storefront to a Customer; "Game" is its label in the Hand Menu ([ADR-0026](Docs/adr/0026-teleop-controls-engage-toggle-pump-hand-menus.md))
+_Avoid_: VR mode, shop mode
