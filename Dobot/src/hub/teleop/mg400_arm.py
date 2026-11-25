@@ -26,6 +26,17 @@ MODE_NAMES = {
     10: "PAUSE",
     11: "JOG",
 }
+# Robot Status modes (ADR-0024); PAUSE counts as error because it needs a clear to move again.
+# Any other mode (INIT, BRAKE_OPEN, BACKDRIVE, unreadable) is reported as "unknown".
+_STATUS_MODES = {
+    4: "disabled",
+    5: "enabled",
+    7: "enabled",
+    8: "enabled",
+    11: "enabled",
+    9: "error",
+    10: "error",
+}
 _MODE_DISABLED, _MODE_IDLE, _MODE_RUNNING, _MODE_ERROR, _MODE_PAUSE = 4, 5, 7, 9, 10
 _START_GRACE_S = 0.3  # a move that never shows RUNNING counts as done after this
 _RECOVER_SETTLE_S = 0.3
@@ -88,7 +99,25 @@ class MG400Arm:
 
     def get_pose(self) -> list[float] | None:
         """Return X, Y, Z, R and the rest of GetPose(); empty or None when the reply has none."""
-        return _parse_values(self._send_dashboard("GetPose()"))
+        # Quiet: the Robot Status thread asks a few times a second.
+        return _parse_values(self._send_dashboard("GetPose()", is_verbose=False))
+
+    def get_robot_mode(self) -> str:
+        """Return "enabled", "disabled", "error" or "unknown" from RobotMode()."""
+        return _STATUS_MODES.get(self._robot_mode(), "unknown")
+
+    def get_error_id(self) -> int | None:
+        """Return the first active id from GetErrorID(), 0 when none, None when unreadable."""
+        reply = self._send_dashboard("GetErrorID()", is_verbose=False)
+        match = re.search(r"\{(.*)\}", reply)
+        if not _is_ok(reply) or not match:
+            return None
+        ids = re.findall(r"-?\d+", match.group(1))
+        return int(ids[0]) if ids else 0
+
+    def clear_error(self) -> None:
+        """Clear the arm's alarm (ClearError)."""
+        self._send_dashboard("ClearError()")
 
     def set_digital_output(self, index: int, is_on: bool) -> None:
         """Switch one digital output."""

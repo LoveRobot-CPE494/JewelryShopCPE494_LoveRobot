@@ -225,3 +225,47 @@ def test_second_failure_is_raised(arm: MG400Arm, fake_mg400: FakeMG400) -> None:
 
     with pytest.raises(ConnectionError):
         arm.get_pose()
+
+
+def test_clear_error_sends_clear_error(arm: MG400Arm, fake_mg400: FakeMG400) -> None:
+    arm.clear_error()
+
+    assert fake_mg400.received == ["ClearError()"]
+
+
+@pytest.mark.parametrize(
+    ("reply", "mode"),
+    [
+        (IDLE, "enabled"),
+        (RUNNING, "enabled"),
+        (DISABLED, "disabled"),
+        (ERROR, "error"),
+        ("0,{10},RobotMode();", "error"),  # PAUSE: stopped after a hit, needs a clear
+        ("0,{1},RobotMode();", "unknown"),
+        ("0,{},RobotMode();", "unknown"),
+    ],
+)
+def test_get_robot_mode_maps_the_mg400_mode(
+    arm: MG400Arm, fake_mg400: FakeMG400, reply: str, mode: str
+) -> None:
+    fake_mg400.script("RobotMode", reply)
+
+    assert arm.get_robot_mode() == mode
+
+
+@pytest.mark.parametrize(
+    ("reply", "error_id"),
+    [
+        ("0,{[[],[],[],[],[],[],[]]},GetErrorID();", 0),
+        ("0,{[[22,23],[],[],[],[],[],[]]},GetErrorID();", 22),
+        ("0,{[[],[],[],[],[],[],[115]]},GetErrorID();", 115),
+        ("-1,{},GetErrorID();", None),
+        ("0,GetErrorID();", None),
+    ],
+)
+def test_get_error_id_returns_the_first_active_error(
+    arm: MG400Arm, fake_mg400: FakeMG400, reply: str, error_id: int | None
+) -> None:
+    fake_mg400.script("GetErrorID", reply)
+
+    assert arm.get_error_id() == error_id

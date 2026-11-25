@@ -1,0 +1,62 @@
+{
+  "commands": [
+    {"type": "engage", "x": 0.0, "y": 1.0, "z": 0.3},
+    {"type": "pose", "frame": "headset", "x": 0.02, "y": 1.01, "z": 0.33},
+    {"type": "pose", "frame": "headset", "x": 0.02, "y": 1.01, "z": 0.33, "grip": 1},
+    {"type": "pose", "frame": "robot", "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0},
+    {"type": "release"},
+    {"type": "calibrate", "x": 0.0, "y": 1.0, "z": 0.3},
+    {"type": "grip", "value": 1},
+    {"type": "grip", "value": 0},
+    {"type": "home"},
+    {"type": "stop"},
+    {"type": "resume"},
+    {"type": "joint", "j1": 10.0, "j2": 20.0, "j3": 30.0, "j4": 0.0},
+    {"type": "speed", "value": 30},
+    {"type": "enable"},
+    {"type": "disable"},
+    {"type": "clear_error"},
+    {"type": "jog", "axis": "x", "step": 10},
+    {"type": "jog", "axis": "z", "step": -1},
+    {"type": "jog", "axis": "y", "step": 50},
+    {"type": "move_to", "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0}
+  ],
+  "status": [
+    {
+      "type": "status",
+      "mode": "enabled",
+      "error_id": 0,
+      "pose": {"x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0},
+      "is_suction_on": false,
+      "is_stop_latched": false,
+      "last_command": {"type": "jog", "result": "done", "reason": ""}
+    },
+    {
+      "type": "status",
+      "mode": "error",
+      "error_id": 22,
+      "pose": {"x": 250.5, "y": -10.0, "z": 20.0, "r": 5.0},
+      "is_suction_on": true,
+      "is_stop_latched": false,
+      "last_command": {"type": "move_to", "result": "refused", "reason": "arm error: arm went ERROR during the move (hit or limit)"}
+    },
+    {
+      "type": "status",
+      "mode": "disabled",
+      "error_id": 0,
+      "pose": {"x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0},
+      "is_suction_on": null,
+      "is_stop_latched": true,
+      "last_command": {"type": "home", "result": "refused", "reason": "stop latched"}
+    },
+    {
+      "type": "status",
+      "mode": "unknown",
+      "error_id": null,
+      "pose": null,
+      "is_suction_on": null,
+      "is_stop_latched": false,
+      "last_command": null
+    }
+  ]
+}

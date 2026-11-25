@@ -1,6 +1,7 @@
 """Teleop Bridge core: messages and the clock in, `Arm` calls out; no sockets, no threads.
 
-The only safety point for Teleop (ADR-0017): every move is clamped and filtered here.
+The only safety point for Teleop and the Robot Panel (ADR-0017, ADR-0024): every move is
+clamped and filtered here.
 """
 
 import json
@@ -14,12 +15,16 @@ from typing import Any, Protocol
 logger = logging.getLogger(__name__)
 
 UDP_PORT = 9000
+STATUS_PORT = 9001  # Robot Status goes back to the last sender on this port (ADR-0024)
 CONTROL_HZ = 10  # ticks per second; a tick sends at most one move, the newest pose wins
 DEADBAND_MM = 3.0  # smaller moves are not sent (jitter)
 R_DEADBAND_DEG = 2.0
 SMOOTHING = 0.5  # 0 = no filter, near 1 = smooth but slow to follow
 STALE_S = 0.5  # a pose older than this is not followed
 SUCTION_DO_INDEX = 1  # the Suction Cup's digital output (ADR-0002)
+JOG_STEPS_MM = (1.0, 10.0, 50.0)  # the Robot Panel's jog steps, either sign
+# Refused while Stop is latched (ADR-0024); Preset Actions (#219) join this set.
+MOTION_COMMANDS = frozenset({"calibrate", "home", "jog", "move_to", "joint"})
 
 # Safe workspace: estimates, narrow them at the station. The one reach limit for Teleop.
 MIN_REACH_MM = 170.0
@@ -47,6 +52,10 @@ class RobotError(Exception):
     """The arm refused a command or alarmed mid-move; it has been recovered and takes new ones."""
 
 
+class _RefusedError(Exception):
+    """A well-formed command the core will not run right now, such as a move while stopped."""
+
+
 class Arm(Protocol):
     """What the core drives: the MG400 adapter, a dry-run printer, or a test fake."""
 
@@ -67,6 +76,21 @@ class Arm(Protocol):
 
     def set_speed(self, percent: int) -> None:
         """Set the speed factor, 1-100 %."""
+
+    def enable(self) -> None:
+        """Clear errors and enable the motors."""
+
+    def disable(self) -> None:
+        """Disable the motors."""
+
+    def clear_error(self) -> None:
+        """Clear the arm's alarm."""
+
+    def get_robot_mode(self) -> str:
+        """Return "enabled", "disabled", "error" or "unknown"."""
+
+    def get_error_id(self) -> int | None:
+        """Return the active error id, 0 when none, None when unknown."""
 
 
 def clamp_workspace(x_mm: float, y_mm: float, z_mm: float, r_deg: float) -> Pose:
@@ -92,12 +116,14 @@ class TeleopCore:
         """Drive `arm`; `clock` gives the current time in seconds."""
         self._arm = arm
         self._clock = clock
-        # receive() runs on the shell's UDP thread, tick() on its control loop: deque appends
-        # and pops and one reference assignment are atomic, so no lock is needed.
+        # receive() runs on the shell's UDP thread, tick() on its control loop and status() on
+        # its status thread: deque appends and pops and one reference assignment are atomic,
+        # so no lock is needed.
         self._events: deque[dict[str, Any]] = deque()
         self._latest_pose: tuple[dict[str, Any], float] | None = None
         self._is_engaged = False  # headset poses are followed only after engage
-        self._is_stopped = False  # after stop nothing moves until the next engage
+        self._is_stopped = False  # the Stop latch: nothing moves until resume or engage
+        self._last_command: dict[str, str] | None = None
         self._last_sent: Pose | None = None
         self._filtered: Pose | None = None
         self._is_suction_on: bool | None = None
@@ -111,9 +137,11 @@ class TeleopCore:
             message = json.loads(data.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
             logger.warning("[UDP] malformed message skipped: %r", data[:60])
+            self._last_command = _command_result("", "malformed message")
             return
         if not isinstance(message, dict):
             logger.warning("[UDP] non-object message skipped: %r", data[:60])
+            self._last_command = _command_result("", "malformed message")
             return
         kind = message.get("type")
         if kind == "stop":
@@ -129,7 +157,9 @@ class TeleopCore:
     def tick(self) -> None:
         """Run the queued events, then follow the newest pose if it is fresh."""
         while self._events:
-            self._safe(self._handle_event, self._events.popleft())
+            event = self._events.popleft()
+            reason = self._safe(self._handle_event, event)
+            self._last_command = _command_result(str(event.get("type", "")), reason)
         pose = self._latest_pose
         if pose and self._clock() - pose[1] < STALE_S:
             self._safe(self._follow, pose[0])
@@ -142,9 +172,25 @@ class TeleopCore:
             self.tick()
             sleep(max(0.0, period_s - (self._clock() - start)))
 
+    def status(self) -> dict[str, Any]:
+        """Return the Robot Status (ADR-0024); never raises, so any thread may call it."""
+        values = _read_or(self._arm.get_pose, None)
+        pose = None
+        if values and len(values) >= 4:
+            pose = dict(zip("xyzr", (float(value) for value in values[:4]), strict=True))
+        return {
+            "type": "status",
+            "mode": _read_or(self._arm.get_robot_mode, "unknown"),
+            "error_id": _read_or(self._arm.get_error_id, None),
+            "pose": pose,
+            "is_suction_on": self._is_suction_on,
+            "is_stop_latched": self._is_stopped,
+            "last_command": self._last_command,
+        }
+
     def _emergency_stop(self) -> None:
         self._halt()
-        logger.warning("[STOP] emergency stop; press Grip again to drive")
+        logger.warning("[STOP] emergency stop; press Grip or Resume to drive")
         try:
             self._arm.reset()
         except OSError as error:
@@ -172,6 +218,25 @@ class TeleopCore:
     def _restart_motion(self) -> None:
         self._last_sent = self._filtered = None
 
+    def _move_once(self, pose: Sequence[float]) -> None:
+        # A Robot Panel move ends Teleop following, like home does.
+        if not all(math.isfinite(value) for value in pose):
+            raise ValueError("non-finite coordinate")
+        self._is_engaged = False
+        self._restart_motion()
+        self._last_sent = clamp_workspace(*pose)  # the next jog's base
+        self._arm.move_to(*self._last_sent)
+
+    def _jog(self, event: dict[str, Any]) -> None:
+        axis, step_mm = event["axis"], float(event["step"])
+        if axis not in ("x", "y", "z"):
+            raise ValueError(f"jog axis must be x, y or z, not {axis!r}")
+        if abs(step_mm) not in JOG_STEPS_MM:
+            raise ValueError(f"jog step must be 1, 10 or 50 mm, not {step_mm}")
+        pose = list(self._current_robot_pose())
+        pose["xyz".index(axis)] += step_mm
+        self._move_once(pose)
+
     def _start_following(
         self, event: dict[str, Any], robot_origin_mm: tuple[float, float, float]
     ) -> None:
@@ -183,6 +248,8 @@ class TeleopCore:
 
     def _handle_event(self, event: dict[str, Any]) -> None:
         kind = event.get("type")
+        if kind in MOTION_COMMANDS and self._is_stopped:
+            raise _RefusedError("stop latched")
         if kind == "engage":
             pose = self._current_robot_pose()
             self._start_following(event, pose[:3])
@@ -199,15 +266,18 @@ class TeleopCore:
             self._halt()  # the arm was reset in receive()
         elif kind == "grip":
             self._set_suction(event["value"])
+        elif kind == "resume":
+            self._is_stopped = False
+            logger.info("[resume] Stop latch released")
         elif kind == "home":
-            if self._is_stopped:
-                logger.warning("[home] emergency stop is on; not moving")
-                return
             self._is_engaged = False
             self._arm.move_joints(0, 0, 0, 0)
             self._restart_motion()
+        elif kind == "jog":
+            self._jog(event)
+        elif kind == "move_to":
+            self._move_once([float(event[axis]) for axis in "xyzr"])
         elif kind == "joint":
-            # ADR-0017 known gap: joint still moves after stop.
             self._arm.move_joints(
                 float(event["j1"]),
                 float(event["j2"]),
@@ -217,8 +287,15 @@ class TeleopCore:
             self._restart_motion()
         elif kind == "speed":
             self._arm.set_speed(int(event["value"]))
+        elif kind == "enable":
+            self._arm.enable()
+        elif kind == "disable":
+            self._is_engaged = False  # following disabled motors would only queue alarms
+            self._arm.disable()
+        elif kind == "clear_error":
+            self._arm.clear_error()
         else:
-            logger.warning("[?] unknown type: %s", kind)
+            raise _RefusedError(f"unknown type: {kind}")
 
     def _map_controller_to_robot(
         self, x_m: float, y_m: float, z_m: float
@@ -279,13 +356,34 @@ class TeleopCore:
         if "grip" in message:
             self._set_suction(message["grip"])
 
-    def _safe(self, handler: Callable[[dict[str, Any]], None], message: dict[str, Any]) -> None:
+    def _safe(
+        self, handler: Callable[[dict[str, Any]], None], message: dict[str, Any]
+    ) -> str | None:
+        """Run `handler`; return None when it is done, or why the message was refused."""
         try:
             handler(message)
+        except _RefusedError as error:
+            logger.warning("[refused] %s: %s", message.get("type"), error)
+            return str(error)
         except (KeyError, ValueError, TypeError) as error:
             logger.warning("[!] bad message skipped: %s (%r)", message, error)
+            return f"bad message: {error!r}"
         except RobotError as error:
             logger.warning("[arm error] %s; skipped, waiting for the next value", error)
             self._filtered = None
+            return f"arm error: {error}"
         except OSError as error:
             logger.warning("[link] %s; retrying next tick", error)
+            return f"link error: {error}"
+        return None
+
+
+def _command_result(kind: str, reason: str | None) -> dict[str, str]:
+    return {"type": kind, "result": "refused" if reason else "done", "reason": reason or ""}
+
+
+def _read_or[T, F](read: Callable[[], T], fallback: F) -> T | F:
+    try:
+        return read()
+    except (OSError, RobotError, ValueError):
+        return fallback
