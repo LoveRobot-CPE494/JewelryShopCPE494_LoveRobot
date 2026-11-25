@@ -22,9 +22,9 @@ namespace JewelryShop.Networking
         public enum LinkRole { Host, Client }
 
         [SerializeField] private LinkRole _role = LinkRole.Client;
-        [Tooltip("Client only: the Staff Console's address (127.0.0.1 for one-PC testing). "
-            + "The default is a placeholder.")]
-        [SerializeField] private string _serverAddress = "192.168.1.10";
+        [Tooltip("Client only: supplies the default Host Address (ADR-0023); "
+            + "the typed one is saved on the headset.")]
+        [SerializeField] private HostAddressConfig _hostAddressConfig;
         [SerializeField] private ushort _port = 7777;
         [Tooltip("Host only: the address to listen on (0.0.0.0 = every network card).")]
         [SerializeField] private string _hostListenAddress = "0.0.0.0";
@@ -60,6 +60,7 @@ namespace JewelryShop.Networking
         private StaffLinkFacade _facade;
         private NetcodeCustomerPoseSpawner _customerPoseSpawner;
         private GameObject _managerObject;
+        private bool _hasHostAddress;
         private ICheryllSpawner _cheryllSpawner = new NullCheryllSpawner();
 
         /// <summary>The link's Facade: connect, disconnect and the connection event.</summary>
@@ -127,10 +128,12 @@ namespace JewelryShop.Networking
             }
             _managerObject.SetActive(true);
 
+            var serverAddress = _role == LinkRole.Client ? ResolveHostAddress() : null;
+            _hasHostAddress = serverAddress != null;
             var link = new NetcodeStaffLink(networkManager, transport, new StaffLinkSettings
             {
                 IsHost = _role == LinkRole.Host,
-                ServerAddress = _serverAddress,
+                ServerAddress = serverAddress,
                 ListenAddress = _hostListenAddress,
                 Port = _port,
                 DisconnectTimeoutMilliseconds = (int)(_disconnectTimeoutSeconds * 1000f),
@@ -146,9 +149,32 @@ namespace JewelryShop.Networking
             if (_customerPoseSpawner != null) _facade.ConnectionChanged += _customerPoseSpawner.SetConnected;
             if (_role == LinkRole.Host) _facade.ConnectionChanged += SetCheryllPresent;
             Show(false);
+            if (_role == LinkRole.Client) HostAddressStore.Changed += OnHostAddressChanged;
         }
 
-        private void Start() => _facade.Connect();
+        private void Start()
+        {
+            if (_role == LinkRole.Host || _hasHostAddress) _facade.Connect();
+        }
+
+        // shortcut: typed address only (automatic=false, discovered=null); Host Discovery (#206).
+        private string ResolveHostAddress()
+        {
+            var typed = HostAddressStore.Typed(_hostAddressConfig);
+            var address = HostAddressResolver.Resolve(typed, false, null);
+            if (address == null)
+                Debug.LogWarning("StaffLinkBehaviour: no valid Host Address (wire a Host "
+                    + "Address Config or type one); the Staff Link will not connect.", this);
+            return address;
+        }
+
+        private void OnHostAddressChanged()
+        {
+            var address = ResolveHostAddress();
+            if (address == null) return;
+            _hasHostAddress = true;
+            _facade.Reconnect(address);
+        }
 
         private void Update()
         {
@@ -158,6 +184,7 @@ namespace JewelryShop.Networking
 
         private void OnDestroy()
         {
+            HostAddressStore.Changed -= OnHostAddressChanged;
             if (_facade == null) return;
             _facade.ConnectionChanged -= Show;
             _facade.ConnectionChanged -= SetCheryllPresent;

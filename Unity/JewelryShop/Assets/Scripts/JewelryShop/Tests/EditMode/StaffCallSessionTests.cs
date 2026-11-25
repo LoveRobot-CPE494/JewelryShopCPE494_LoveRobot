@@ -14,6 +14,8 @@ namespace JewelryShop.Tests
             public bool IsConnecting => false;
             public readonly List<StaffCallMessage> Sent = new List<StaffCallMessage>();
             public event Action<StaffCallMessage> MessageReceived;
+            public string ServerAddress;
+            public void SetServerAddress(string address) => ServerAddress = address;
             public void Connect() { }
             public void Disconnect() { IsConnected = false; }
             public void Send(StaffCallMessage message) => Sent.Add(message);

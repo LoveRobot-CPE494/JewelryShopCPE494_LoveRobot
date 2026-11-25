@@ -34,6 +34,7 @@ namespace JewelryShop.Tests
             // Off the default port, so a real Staff Console can stay up while this runs.
             SetField(behaviour, "_port", (ushort)7799);
             LogAssert.Expect(LogType.Warning, new Regex("status text"));
+            LogAssert.Expect(LogType.Error, new Regex("Customer pose prefab not wired"));
             LogAssert.Expect(LogType.Log, new Regex("Staff link"));
 
             _linkObject.SetActive(true);
@@ -55,9 +56,10 @@ namespace JewelryShop.Tests
             _linkObject.SetActive(false);
             var behaviour = _linkObject.AddComponent<StaffLinkBehaviour>();
             SetField(behaviour, "_role", StaffLinkBehaviour.LinkRole.Client);
-            SetField(behaviour, "_serverAddress", "127.0.0.1");
+            SetField(behaviour, "_hostAddressConfig", LocalhostConfig());
             SetField(behaviour, "_port", (ushort)7797);
             LogAssert.Expect(LogType.Warning, new Regex("status text"));
+            LogAssert.Expect(LogType.Error, new Regex("Customer pose prefab not wired"));
             LogAssert.Expect(LogType.Log, new Regex("Staff link"));
 
             _linkObject.SetActive(true);
@@ -80,9 +82,10 @@ namespace JewelryShop.Tests
             _linkObject.SetActive(false);
             var behaviour = _linkObject.AddComponent<StaffLinkBehaviour>();
             SetField(behaviour, "_role", StaffLinkBehaviour.LinkRole.Client);
-            SetField(behaviour, "_serverAddress", "127.0.0.1");
+            SetField(behaviour, "_hostAddressConfig", LocalhostConfig());
             SetField(behaviour, "_port", (ushort)7798); // nobody hosts here: the attempt stays pending
             LogAssert.Expect(LogType.Warning, new Regex("status text"));
+            LogAssert.Expect(LogType.Error, new Regex("Customer pose prefab not wired"));
             LogAssert.Expect(LogType.Log, new Regex("Staff link"));
 
             _linkObject.SetActive(true);
@@ -94,6 +97,42 @@ namespace JewelryShop.Tests
 
             Assert.That(GameObject.Find(ManagerName), Is.Null);
             // An exception logged by Netcode's shutdown fails the test by default.
+        }
+
+        // Start guard: with no valid Host Address the client warns and never starts connecting.
+        [UnityTest]
+        public IEnumerator Client_NoValidHostAddress_WarnsAndDoesNotConnect()
+        {
+            _linkObject = new GameObject("Staff Link");
+            _linkObject.SetActive(false);
+            var behaviour = _linkObject.AddComponent<StaffLinkBehaviour>();
+            SetField(behaviour, "_role", StaffLinkBehaviour.LinkRole.Client);
+            var config = LocalhostConfig();
+            SetField(config, "_defaultHostAddress", "not an ip");
+            SetField(behaviour, "_hostAddressConfig", config);
+            SetField(behaviour, "_port", (ushort)7796);
+            LogAssert.Expect(LogType.Warning, new Regex("status text"));
+            LogAssert.Expect(LogType.Error, new Regex("Customer pose prefab not wired"));
+            LogAssert.Expect(LogType.Warning, new Regex("no valid Host Address"));
+            LogAssert.Expect(LogType.Log, new Regex("Staff link"));
+
+            _linkObject.SetActive(true);
+            yield return null;
+            yield return null;
+
+            var manager = GameObject.Find(ManagerName).GetComponent("NetworkManager");
+            var isListening = (bool)manager.GetType().GetProperty("IsListening").GetValue(manager);
+            Assert.That(isListening, Is.False);
+        }
+
+        // Default 127.0.0.1; the PlayerPrefs key is swapped so a saved address never leaks in.
+        private static HostAddressConfig LocalhostConfig()
+        {
+            HostAddressStore.Key = "JewelryShop.Tests.HostAddress";
+            PlayerPrefs.DeleteKey(HostAddressStore.Key);
+            var config = ScriptableObject.CreateInstance<HostAddressConfig>();
+            SetField(config, "_defaultHostAddress", "127.0.0.1");
+            return config;
         }
 
         private static void SetField(object target, string name, object value) =>
