@@ -6,6 +6,7 @@
         "JewelryShop.Networking",
         "JewelryShop.StaffConsole",
         "JewelryShop.Storefront",
+        "JewelryShop.Teleop",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Unity.XR.Interaction.Toolkit",

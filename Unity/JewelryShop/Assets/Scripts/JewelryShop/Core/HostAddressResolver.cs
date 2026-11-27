@@ -1,5 +1,16 @@
 namespace JewelryShop.Core
 {
+    /// <summary>Where a resolved address came from (ADR-0023).</summary>
+    public enum AddressState
+    {
+        /// <summary>Automatic is off: the typed address is used.</summary>
+        Manual,
+        /// <summary>Automatic is on and a fresh beacon supplied the address.</summary>
+        Discovered,
+        /// <summary>Automatic on, no fresh beacon: the typed address stays in force.</summary>
+        HostNotFound,
+    }
+
     /// <summary>
     /// Picks one address the Quest connects to (ADR-0023): the discovered address when Automatic
     /// is on and one was found, else the typed address. Only IPv4 literals pass. Called once per
@@ -38,6 +49,28 @@ namespace JewelryShop.Core
             if (!IsValidIPv4(address)) return false;
             return address != "0.0.0.0" && address != "255.255.255.255"
                 && !address.StartsWith("127.", System.StringComparison.Ordinal);
+        }
+
+        /// <summary>A beacon older than this no longer counts (the PC sends about one a second).
+        /// </summary>
+        public const double StaleAfterSeconds = 3.0;
+
+        /// <summary>
+        /// Resolve with beacon freshness: a missing or stale beacon (age over
+        /// <see cref="StaleAfterSeconds"/>) with Automatic on: HostNotFound, typed address.
+        /// </summary>
+        public static string Resolve(string typed, bool automatic, string discovered,
+            double discoveredAgeSeconds, out AddressState state)
+        {
+            if (!automatic)
+            {
+                state = AddressState.Manual;
+                return Resolve(typed, false, null);
+            }
+            var fresh = discovered != null && discoveredAgeSeconds <= StaleAfterSeconds;
+            state = fresh && IsValidIPv4(discovered)
+                ? AddressState.Discovered : AddressState.HostNotFound;
+            return Resolve(typed, true, state == AddressState.Discovered ? discovered : null);
         }
 
         /// <summary>The address to connect to, or null when nothing valid is available.</summary>

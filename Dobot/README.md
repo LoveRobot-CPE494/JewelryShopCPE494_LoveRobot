@@ -53,7 +53,7 @@ The teammate's original scripts, kept as a reference and left out of ruff. Do no
 - `pc_sender.py`: sends the same messages as the headset, for testing without it. Still in use: `python teleop/pc_sender.py` against the new program.
 
 Step-by-step test guide (Thai): [`Docs/teleop/teleop-test-guide-th.pdf`](../Docs/teleop/teleop-test-guide-th.pdf). It predates the move: where it says `python mg400_bridge.py`, run `python -m hub.teleop` from `Dobot/`.
-- `unity/MG400Teleop.cs`: the Quest-side script, kept here as the Dobot-side owner's reference. It is not in the Unity project yet; copying it in, wiring it into a Teleop scene and bringing it up to the C# standard is a Unity ticket.
+- `unity/MG400Teleop.cs`: moved into the Unity project (016-04, #210): `Unity/JewelryShop/Assets/Scripts/JewelryShop/Teleop/MG400Teleop.cs`. See [`Docs/teleop/README.md`](../Docs/teleop/README.md).
 
 ## LAN setup
 

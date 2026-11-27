@@ -65,6 +65,8 @@ namespace JewelryShop.Networking
         private GameObject _managerObject;
         private bool _hasHostAddress;
         private HostBeaconSender _beacon;
+        private HostDiscovery _discovery;
+        private string _connectedAddress;
         private ICheryllSpawner _cheryllSpawner = new NullCheryllSpawner();
 
         /// <summary>The link's Facade: connect, disconnect and the connection event.</summary>
@@ -137,8 +139,14 @@ namespace JewelryShop.Networking
             }
             _managerObject.SetActive(true);
 
+            if (_role == LinkRole.Client)
+            {
+                _discovery = new HostDiscovery(_hostAddressConfig);
+                _discovery.Refresh(Time.realtimeSinceStartupAsDouble);
+            }
             var serverAddress = _role == LinkRole.Client ? ResolveHostAddress() : null;
             _hasHostAddress = serverAddress != null;
+            _connectedAddress = serverAddress;
             var link = new NetcodeStaffLink(networkManager, transport, new StaffLinkSettings
             {
                 IsHost = _role == LinkRole.Host,
@@ -158,7 +166,7 @@ namespace JewelryShop.Networking
             if (_customerPoseSpawner != null) _facade.ConnectionChanged += _customerPoseSpawner.SetConnected;
             if (_role == LinkRole.Host) _facade.ConnectionChanged += SetCheryllPresent;
             Show(false);
-            if (_role == LinkRole.Client) HostAddressStore.Changed += OnHostAddressChanged;
+            if (_role == LinkRole.Client) _discovery.Changed += OnHostAddressChanged;
             if (_role == LinkRole.Host) StartBeacon();
         }
 
@@ -188,11 +196,9 @@ namespace JewelryShop.Networking
             if (_role == LinkRole.Host || _hasHostAddress) _facade.Connect();
         }
 
-        // shortcut: typed address only (automatic=false, discovered=null); Host Discovery (#206).
         private string ResolveHostAddress()
         {
-            var typed = HostAddressStore.Typed(_hostAddressConfig);
-            var address = HostAddressResolver.Resolve(typed, false, null);
+            var address = _discovery.HostAddress;
             if (address == null)
                 Debug.LogWarning("StaffLinkBehaviour: no valid Host Address (wire a Host "
                     + "Address Config or type one); the Staff Link will not connect.", this);
@@ -202,8 +208,10 @@ namespace JewelryShop.Networking
         private void OnHostAddressChanged()
         {
             var address = ResolveHostAddress();
-            if (address == null) return;
+            // A state-only change (same address) must not drop a working link.
+            if (address == null || address == _connectedAddress) return;
             _hasHostAddress = true;
+            _connectedAddress = address;
             _facade.Reconnect(address);
         }
 
@@ -212,11 +220,13 @@ namespace JewelryShop.Networking
             _facade.Tick(Time.realtimeSinceStartupAsDouble);
             _customerPoseSpawner?.Tick();
             _beacon?.Tick(Time.realtimeSinceStartupAsDouble);
+            _discovery?.Tick(Time.realtimeSinceStartupAsDouble);
         }
 
         private void OnDestroy()
         {
-            HostAddressStore.Changed -= OnHostAddressChanged;
+            if (_discovery != null) _discovery.Changed -= OnHostAddressChanged;
+            _discovery?.Dispose();
             _beacon?.Dispose();
             if (_facade == null) return;
             _facade.ConnectionChanged -= Show;

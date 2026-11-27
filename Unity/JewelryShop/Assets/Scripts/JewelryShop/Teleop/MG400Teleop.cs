@@ -13,12 +13,15 @@
 //   G ค้าง = Grip, T ค้าง = Trigger, H = Home, Space = Stop, R / F = ขึ้น / ลง
 //   (ตำแหน่งยังมาจาก Right Controller ที่ Simulator ขยับให้)
 
-// shortcut: teammate's working Teleop, kept as-is; naming, typed messages (ADR-0008) and
-// tests are owed when it is brought up to standard (ADR-0017).
+// shortcut: teammate's Teleop, ported with its controls unchanged (#210); the message text
+// lives in Core/TeleopMessages (pinned by tests). Naming and typed messages (ADR-0008) are
+// owed when it is brought up to standard (ADR-0017); the controls change in #237.
 
-using System.Globalization;
+using System;
 using System.Net.Sockets;
 using System.Text;
+using JewelryShop.Core;
+using JewelryShop.Networking;
 using UnityEngine;
 using UnityEngine.XR;
 // หมายเหตุ: ไม่ using UnityEngine.InputSystem เพราะมีชื่อ InputDevice / CommonUsages ซ้ำกับ UnityEngine.XR
@@ -27,10 +30,10 @@ namespace JewelryShop.Teleop
 {
 public class MG400Teleop : MonoBehaviour
 {
-    [Header("ปลายทาง: คอมที่รัน mg400_bridge.py")]
-    [Tooltip("IP ฝั่ง Wi-Fi ของคอม (ถ้ากด Play ผ่าน Quest Link บนคอมเครื่องเดียวกัน ใช้ 127.0.0.1)")]
-    public string pcIp = "192.168.0.10";
-    public int pcPort = 9000;
+    [Header("ปลายทาง: Robot PC ที่รัน mg400_bridge.py")]
+    [Tooltip("Robot Address and Teleop port come from here (ADR-0023/0024); the address is the "
+        + "discovered or typed Robot Address, never a field on this script.")]
+    [SerializeField] HostAddressConfig hostAddressConfig;
     [Range(5, 60)] public float sendHz = 20f;
 
     [Header("Controller ขวา")]
@@ -44,7 +47,25 @@ public class MG400Teleop : MonoBehaviour
     [Header("แสดงสถานะ (ไม่ใส่ก็ได้)")]
     public TMPro.TMP_Text statusText;
 
+    const int FallbackTeleopPort = 9000;
+
     UdpClient udp;
+    HostDiscovery discovery;   // own one: the Teleop scene has no Staff Link
+    string target;           // address udp is connected to, null when none
+    bool targetChosen;
+    readonly TeleopSendTracker sendTracker = new TeleopSendTracker();
+
+    /// <summary>Clock for the "has sent" window (tests may swap it).</summary>
+    public Func<double> Clock { get; set; } = () => Time.realtimeSinceStartupAsDouble;
+
+    /// <summary>A packet left in the last second. "Sent" only: UDP has no acknowledgement.
+    /// </summary>
+    public bool HasSentRecently => sendTracker.HasSentRecently(Clock());
+
+    /// <summary>When the last packet left (Clock time); meaningless before the first send.
+    /// </summary>
+    public double LastSentTime => sendTracker.LastSentTime;
+
     InputDevice right;
     float nextSend;
     bool engaged, lastGrip, lastTrigger, lastA, lastB;
@@ -53,14 +74,53 @@ public class MG400Teleop : MonoBehaviour
 
     void Start()
     {
+        if (hostAddressConfig == null)
+            Debug.LogWarning("[MG400] Host Address Config not wired; using Teleop port "
+                + FallbackTeleopPort + " and the saved Robot Address only.", this);
+        discovery = new HostDiscovery(hostAddressConfig);
+        discovery.Refresh(Time.realtimeSinceStartupAsDouble);
+        Retarget();
+    }
+
+    /// <summary>The one place Teleop learns where to send: the resolved Robot Address.</summary>
+    // Discovered (Automatic on, fresh robot beacon) or typed; null when neither is valid.
+    string ResolveRobotAddress() => discovery.RobotAddress;
+
+    int TeleopPort => hostAddressConfig != null && hostAddressConfig.TeleopPort != 0
+        ? hostAddressConfig.TeleopPort : FallbackTeleopPort;
+
+    // Picks up a changed Robot Address (typed or discovered) without restarting the app.
+    void Retarget()
+    {
+        var address = ResolveRobotAddress();
+        if (targetChosen && address == target) return;
+        targetChosen = true;
+
+        if (udp != null)
+        {
+            if (engaged) Send(TeleopMessages.Release);   // ไม่ทิ้งแขนค้างไว้ที่ปลายทางเก่า
+            udp.Close();
+            udp = null;
+        }
+        engaged = false;
+        target = address;
+
+        if (address == null)
+        {
+            // Logged once per change to "no address", not every frame.
+            Debug.LogWarning("[MG400] no valid Robot Address; Teleop is not sending.", this);
+            return;
+        }
         udp = new UdpClient();
-        udp.Connect(pcIp, pcPort);
-        Debug.Log($"[MG400] ส่งไปที่ {pcIp}:{pcPort}");
-        Send("{\"type\":\"release\"}");   // บอก bridge ว่าเริ่มแบบยังไม่บังคับ
+        udp.Connect(address, TeleopPort);
+        Debug.Log($"[MG400] ส่งไปที่ {address}:{TeleopPort}");
+        Send(TeleopMessages.Release);   // บอก bridge ว่าเริ่มแบบยังไม่บังคับ
     }
 
     void Update()
     {
+        discovery.Tick(Time.realtimeSinceStartupAsDouble);
+        Retarget();
         if (!right.isValid)
             right = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
 
@@ -79,7 +139,7 @@ public class MG400Teleop : MonoBehaviour
         // ----- B: หยุดฉุกเฉิน (ส่ง 3 ครั้งกัน UDP หาย) -----
         if (b && !lastB)
         {
-            for (int i = 0; i < 3; i++) Send("{\"type\":\"stop\"}");
+            for (int i = 0; i < 3; i++) Send(TeleopMessages.Stop);
             engaged = false;
             Haptic(1f, 0.3f);
             SetStatus("หยุดฉุกเฉิน — ปล่อย Grip แล้วกดใหม่เพื่อบังคับต่อ");
@@ -88,7 +148,7 @@ public class MG400Teleop : MonoBehaviour
         // ----- A: กลับ Home -----
         if (a && !lastA)
         {
-            Send("{\"type\":\"home\"}");
+            Send(TeleopMessages.Home);
             engaged = false;
             SetStatus("กลับ Home — กด Grip ใหม่เพื่อบังคับต่อ");
         }
@@ -97,21 +157,21 @@ public class MG400Teleop : MonoBehaviour
         if (grip && !lastGrip)
         {
             zOffset = 0f;
-            Send($"{{\"type\":\"engage\",\"x\":{F(pos.x)},\"y\":{F(pos.y)},\"z\":{F(pos.z)}}}");
+            Send(TeleopMessages.Engage(pos.x, pos.y, pos.z));
             engaged = true;
             Haptic(0.4f, 0.1f);
             SetStatus("กำลังบังคับแขน");
         }
         else if (!grip && lastGrip && engaged)
         {
-            Send("{\"type\":\"release\"}");
+            Send(TeleopMessages.Release);
             engaged = false;
             SetStatus("ปล่อยแล้ว แขนหยุด");
         }
 
         // ----- Trigger: หัวดูด -----
         if (trigger != lastTrigger)
-            Send($"{{\"type\":\"grip\",\"value\":{(trigger ? 1 : 0)}}}");
+            Send(TeleopMessages.Grip(trigger));
 
         // ----- ส่งตำแหน่งขณะบังคับ -----
         if (engaged)
@@ -120,7 +180,7 @@ public class MG400Teleop : MonoBehaviour
             if (Time.time >= nextSend)
             {
                 nextSend = Time.time + 1f / sendHz;
-                Send($"{{\"type\":\"pose\",\"frame\":\"headset\",\"x\":{F(pos.x)},\"y\":{F(pos.y + zOffset)},\"z\":{F(pos.z)}}}");
+                Send(TeleopMessages.Pose(pos.x, pos.y + zOffset, pos.z));
             }
         }
 
@@ -168,16 +228,16 @@ public class MG400Teleop : MonoBehaviour
         status = s;
     }
 
-    static string F(float v) => v.ToString("F4", CultureInfo.InvariantCulture);
-
     void Send(string json)
     {
+        if (udp == null) return;   // no valid Robot Address (warned once in Retarget)
         try
         {
             byte[] bytes = Encoding.UTF8.GetBytes(json);
             udp.Send(bytes, bytes.Length);
+            sendTracker.MarkSent(Clock());
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
             SetStatus("ส่งไม่ได้: " + e.Message);
         }
@@ -185,10 +245,14 @@ public class MG400Teleop : MonoBehaviour
 
     void OnDisable()
     {
-        if (udp != null && engaged) Send("{\"type\":\"release\"}");
+        if (udp != null && engaged) Send(TeleopMessages.Release);
     }
 
-    void OnDestroy() => udp?.Close();
+    void OnDestroy()
+    {
+        udp?.Close();
+        discovery?.Dispose();
+    }
 
     // ----- คีย์บอร์ด (เฉพาะทดสอบใน Editor) -----
 #if ENABLE_INPUT_SYSTEM && UNITY_EDITOR
