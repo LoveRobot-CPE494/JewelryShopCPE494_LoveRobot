@@ -90,7 +90,8 @@ class MG400Arm:
 
     def get_pose(self) -> list[float] | None:
         """Return X, Y, Z, R and the rest of GetPose(); empty or None when the reply has none."""
-        return _parse_values(self._send_dashboard("GetPose()"))
+        # Quiet: Robot Status reads the pose 4 times a second.
+        return _parse_values(self._send_dashboard("GetPose()", is_verbose=False))
 
     def set_digital_output(self, index: int, is_on: bool) -> None:
         """Switch one digital output."""

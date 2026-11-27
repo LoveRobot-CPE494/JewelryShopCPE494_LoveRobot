@@ -34,6 +34,9 @@ Robot Panel:
 """
 
 
+PROMPT = "send> "
+
+
 def format_status(s):
     """Robot Status (dict) -> หลายบรรทัด อ่านง่าย; key ที่ไม่มีแสดงเป็น ?"""
     def mm(key):
@@ -72,6 +75,7 @@ def main():
     sock.bind(("0.0.0.0", a.status_port))       # Bridge ส่ง Robot Status กลับมาที่พอร์ตนี้
     dest = (a.host, a.port)
     latest = {}
+    waiting = threading.Event()                      # set ระหว่าง input(): status ที่มาตอนนั้นต้องพิมพ์ prompt ใหม่
 
     def receive_status():
         while True:
@@ -84,7 +88,8 @@ def main():
                 continue                            # ไม่ใช่ Robot Status
             text = format_status(status)
             if text != latest.get("text"):              # ปัดเป็น 0.1 mm แล้ว: ค่าสั่นเล็ก ๆ ไม่พิมพ์ซ้ำ
-                print("\n" + text)
+                prompt = PROMPT if waiting.is_set() else ""      # พิมพ์ prompt ใหม่เฉพาะตอนรอพิมพ์
+                print("\n" + text + "\n" + prompt, end="", flush=True)
             latest["text"] = text
 
     threading.Thread(target=receive_status, daemon=True).start()
@@ -112,9 +117,12 @@ def main():
     print(HELP)
     while True:
         try:
-            line = input("send> ").strip()
+            waiting.set()
+            line = input(PROMPT).strip()
         except (EOFError, KeyboardInterrupt):
             break
+        finally:
+            waiting.clear()
         if not line:
             continue
         cmd, *args = line.split()
