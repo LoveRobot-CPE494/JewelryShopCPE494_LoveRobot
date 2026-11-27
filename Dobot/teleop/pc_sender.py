@@ -34,6 +34,33 @@ Robot Panel:
 """
 
 
+def format_status(s):
+    """Robot Status (dict) -> หลายบรรทัด อ่านง่าย; key ที่ไม่มีแสดงเป็น ?"""
+    def mm(key):
+        v = s.get(key)
+        return f"{v:.1f}" if isinstance(v, (int, float)) else "?"
+
+    presets = ", ".join(
+        f"{p.get('id')} {p.get('name')}" + ("" if p.get("valid") else f" (ใช้ไม่ได้: {p.get('reason')})")
+        for p in (s.get("presets") or []) if isinstance(p, dict)
+    ) or "-"
+    last = f"{s.get('last_command') or '-'} -> {s.get('result') or '-'}"
+    if s.get("reason"):
+        last += f"  ({s['reason']})"
+    run = s.get("running_preset")
+    if isinstance(run, dict):                      # {"id": 1, "step": 2, "of": 5}
+        run = f"#{run.get('id')} step {run.get('step')}/{run.get('of')}"
+    return "\n".join([
+        "  <- Robot Status",
+        f"     mode     : {s.get('mode', '?')}   error_id: {s.get('error_id', '?')}",
+        f"     x y z r  : {mm('x')}  {mm('y')}  {mm('z')}  {mm('r')}",
+        f"     suction  : {'ON' if s.get('suction') else 'off'}",
+        f"     stop     : {'LATCHED (resume เพื่อปลด)' if s.get('stop_latched') else 'no'}",
+        f"     last     : {last}",
+        f"     preset   : {run or '-'}  |  มี: {presets}",
+    ])
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="127.0.0.1")
@@ -53,9 +80,12 @@ def main():
                 status = json.loads(data.decode("utf-8"))
             except (OSError, ValueError):
                 continue                            # Windows: ICMP unreachable -> recvfrom error
-            if status != latest.get("status"):
-                print("\n  <-", status)
-            latest["status"] = status
+            if not isinstance(status, dict):
+                continue                            # ไม่ใช่ Robot Status
+            text = format_status(status)
+            if text != latest.get("text"):              # ปัดเป็น 0.1 mm แล้ว: ค่าสั่นเล็ก ๆ ไม่พิมพ์ซ้ำ
+                print("\n" + text)
+            latest["text"] = text
 
     threading.Thread(target=receive_status, daemon=True).start()
 
@@ -122,7 +152,7 @@ def main():
             elif cmd == "mv":
                 send({"type": "move_to", "x": v[0], "y": v[1], "z": v[2], "r": v[3]})
             elif cmd == "status":
-                print("  <-", latest.get("status", "ยังไม่ได้รับ Robot Status"))
+                print(latest.get("text", "  <- ยังไม่ได้รับ Robot Status"))
             elif cmd == "help":
                 print(HELP)
             elif cmd in ("q", "quit", "exit"):
