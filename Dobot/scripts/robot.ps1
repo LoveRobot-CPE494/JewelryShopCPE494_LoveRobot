@@ -10,7 +10,7 @@
       -Find        only print the address.
     Finding the address: -Ip if given; else the Robot beacon on UDP 7778 (heard only while a
     Bridge runs); else the last address that answered, saved in scripts\.robot-ip (git-ignored);
-    else it asks. A found address is checked on TCP 22 and saved.
+    else it asks. A found address is checked on TCP 22 and saved if new (a failed save only warns).
     Use one switch at a time. -BridgeArgs takes no double quotes (Windows PowerShell 5.1
     mangles them on the way to ssh).
     Remote side: Windows OpenSSH with cmd as the shell. Over SSH, Ctrl+C does not stop the
@@ -65,6 +65,16 @@ function Read-RobotBeacon([int]$TimeoutMs) {
     return $null
 }
 
+function Read-SavedIp {
+    # '' when there is none or the file is held (OneDrive sync, a second copy of this script).
+    try {
+        if (Test-Path $IpFile) { return "$(Get-Content $IpFile -TotalCount 1 -ErrorAction Stop)".Trim() }
+    } catch {
+        Write-Host "[robot] could not read $IpFile ($($_.Exception.Message))."
+    }
+    return ''
+}
+
 function Test-Ssh([string]$Address) {
     $client = New-Object System.Net.Sockets.TcpClient
     try {
@@ -82,9 +92,9 @@ function Find-RobotIp {
     $heard = Read-RobotBeacon 2500
     if ($heard -and (Test-Ssh $heard)) { Write-Host "[robot] beacon: $heard"; return $heard }
     if ($heard) { Write-Host "[robot] beacon $heard does not answer on TCP 22." }
-    if (Test-Path $IpFile) {
-        $last = "$(Get-Content $IpFile -TotalCount 1)".Trim()
-        if ($last -and (Test-Ssh $last)) { Write-Host "[robot] last address: $last"; return $last }
+    $last = Read-SavedIp
+    if ($last) {
+        if (Test-Ssh $last) { Write-Host "[robot] last address: $last"; return $last }
         Write-Host "[robot] last address $last does not answer on TCP 22."
     }
     try {
@@ -109,7 +119,15 @@ if (-not (Test-Ssh $address)) {
     Write-Host "[robot] $address does not answer on TCP 22: same Wi-Fi? Robot PC awake? (guide, section 7)"
     exit 1
 }
-Set-Content -Path $IpFile -Value $address -Encoding ascii
+# Write only a new address, and never fail on it: "Robot: Start" runs two copies at once, and
+# OneDrive may hold the file while it syncs.
+if ((Read-SavedIp) -ne $address) {
+    try {
+        Set-Content -Path $IpFile -Value $address -Encoding ascii -ErrorAction Stop
+    } catch {
+        Write-Host "[robot] could not save the address ($($_.Exception.Message)); carrying on."
+    }
+}
 if ($Find) { $address; exit 0 }
 
 $target = "$User@$address"
