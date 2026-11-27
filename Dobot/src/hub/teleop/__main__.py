@@ -1,17 +1,25 @@
-"""Teleop Bridge shell: UDP on 9000 in, MG400 out (ADR-0017).
+"""Teleop Bridge shell: UDP on 9000 in, MG400 out, Robot Status on 9001 back (ADR-0017, 0024).
 
     python -m hub.teleop --dry-run          # no arm: log each command instead
     python -m hub.teleop --ip 192.168.1.6   # the real arm (Robot pen)
 """
 
 import argparse
+import json
 import logging
 import socket
 import threading
+import time
 from collections.abc import Sequence
 
 from hub.dashboard import TcpDashboard
-from hub.teleop.core import SUCTION_DO_INDEX, UDP_PORT, TeleopCore
+from hub.teleop.core import (
+    STATUS_HZ,
+    STATUS_PORT,
+    SUCTION_DO_INDEX,
+    UDP_PORT,
+    TeleopCore,
+)
 from hub.teleop.mg400_arm import MG400Arm
 
 logger = logging.getLogger("hub.teleop")
@@ -28,6 +36,32 @@ def _log_call(name: str, *args: object) -> None:
 
 class DryRunArm:
     """Logs each Arm call instead of moving; it has no pose, so engage uses the default."""
+
+    def __init__(self) -> None:
+        """Start enabled, as the real arm is after start-up."""
+        self._mode = "enabled"
+
+    def enable(self) -> None:
+        """Log EnableRobot."""
+        _log_call("enable")
+        self._mode = "enabled"
+
+    def disable(self) -> None:
+        """Log DisableRobot."""
+        _log_call("disable")
+        self._mode = "disabled"
+
+    def clear_error(self) -> None:
+        """Log ClearError."""
+        _log_call("clear_error")
+
+    def get_mode(self) -> str:
+        """Return the mode the last enable or disable left."""
+        return self._mode
+
+    def get_error_id(self) -> int:
+        """Return 0: a dry run has no alarms."""
+        return 0
 
     def reset(self) -> None:
         """Log ResetRobot."""
@@ -54,14 +88,28 @@ class DryRunArm:
         _log_call("set_speed", percent)
 
 
-def _receive_forever(sock: socket.socket, core: TeleopCore) -> None:
+def _receive_forever(sock: socket.socket, core: TeleopCore, last_sender: list[str]) -> None:
     senders: set[str] = set()
     while True:
         data, address = sock.recvfrom(_DATAGRAM_BYTES)
         if address[0] not in senders:
             senders.add(address[0])
             logger.info("[UDP] receiving from %s", address[0])
+        last_sender[:] = [address[0]]
         core.receive(data)
+
+
+def _send_status_forever(core: TeleopCore, last_sender: list[str]) -> None:
+    # Its own socket: on Windows an unanswered sendto breaks recvfrom on the same socket.
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    while True:
+        time.sleep(1.0 / STATUS_HZ)
+        if last_sender:
+            try:
+                data = json.dumps(core.status()).encode("utf-8")
+                sock.sendto(data, (last_sender[0], STATUS_PORT))
+            except OSError as error:
+                logger.warning("[status] not sent to %s: %s", last_sender[0], error)
 
 
 def main(argv: Sequence[str] | None = None) -> None:
@@ -88,7 +136,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", args.port))
     logger.info("[UDP] listening on port %d", args.port)
-    threading.Thread(target=_receive_forever, args=(sock, core), daemon=True).start()
+    last_sender: list[str] = []  # the receive thread writes it, the status thread reads it
+    threading.Thread(target=_receive_forever, args=(sock, core, last_sender), daemon=True).start()
+    threading.Thread(target=_send_status_forever, args=(core, last_sender), daemon=True).start()
     try:
         core.run()
     except KeyboardInterrupt:

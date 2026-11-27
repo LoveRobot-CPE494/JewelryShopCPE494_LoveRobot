@@ -1,0 +1,71 @@
+{
+  "about": "Example Teleop Bridge messages (ADR-0017, ADR-0024). Commands go to UDP 9000, one JSON object per packet; Robot Status comes back on UDP 9001. Python tests read this file; Unity tests can read it by this path from the repo root.",
+  "commands": [
+    {"name": "engage", "message": {"type": "engage", "x": 0.0, "y": 1.0, "z": 0.3}},
+    {"name": "pose_headset", "message": {"type": "pose", "frame": "headset", "x": 0.0, "y": 1.0, "z": 0.35}},
+    {"name": "pose_robot", "message": {"type": "pose", "frame": "robot", "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0}},
+    {"name": "release", "message": {"type": "release"}},
+    {"name": "calibrate", "message": {"type": "calibrate", "x": 0.0, "y": 1.0, "z": 0.3}},
+    {"name": "stop", "message": {"type": "stop"}},
+    {"name": "grip_on", "message": {"type": "grip", "value": 1}},
+    {"name": "grip_off", "message": {"type": "grip", "value": 0}},
+    {"name": "home", "message": {"type": "home"}},
+    {"name": "joint", "message": {"type": "joint", "j1": 10.0, "j2": 20.0, "j3": 30.0, "j4": 0.0}},
+    {"name": "speed", "message": {"type": "speed", "value": 30}},
+    {"name": "enable", "message": {"type": "enable"}},
+    {"name": "disable", "message": {"type": "disable"}},
+    {"name": "clear_error", "message": {"type": "clear_error"}},
+    {"name": "resume", "message": {"type": "resume"}},
+    {"name": "jog_x_plus_10", "message": {"type": "jog", "axis": "x", "step": 10}},
+    {"name": "jog_z_minus_1", "message": {"type": "jog", "axis": "z", "step": -1}},
+    {"name": "jog_y_plus_50", "message": {"type": "jog", "axis": "y", "step": 50}},
+    {"name": "move_to", "message": {"type": "move_to", "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0}}
+  ],
+  "status": [
+    {
+      "name": "idle",
+      "message": {
+        "type": "status", "mode": "enabled", "error_id": 0,
+        "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0,
+        "suction": false, "stop_latched": false,
+        "last_command": "", "result": "", "reason": ""
+      }
+    },
+    {
+      "name": "jog_done",
+      "message": {
+        "type": "status", "mode": "enabled", "error_id": 0,
+        "x": 310.0, "y": 0.0, "z": 50.0, "r": 0.0,
+        "suction": true, "stop_latched": false,
+        "last_command": "jog", "result": "done", "reason": ""
+      }
+    },
+    {
+      "name": "home_refused_after_stop",
+      "message": {
+        "type": "status", "mode": "enabled", "error_id": 0,
+        "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0,
+        "suction": false, "stop_latched": true,
+        "last_command": "home", "result": "refused", "reason": "stop latched"
+      }
+    },
+    {
+      "name": "arm_error",
+      "message": {
+        "type": "status", "mode": "error", "error_id": 22,
+        "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0,
+        "suction": false, "stop_latched": false,
+        "last_command": "move_to", "result": "refused", "reason": "arm refused MovJ"
+      }
+    },
+    {
+      "name": "arm_unreachable",
+      "message": {
+        "type": "status", "mode": "unknown", "error_id": 0,
+        "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0,
+        "suction": false, "stop_latched": false,
+        "last_command": "", "result": "", "reason": ""
+      }
+    }
+  ]
+}

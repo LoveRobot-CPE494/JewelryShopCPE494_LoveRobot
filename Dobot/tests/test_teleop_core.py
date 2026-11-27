@@ -2,9 +2,11 @@ import json
 import logging
 import math
 from collections.abc import Sequence
+from pathlib import Path
 
 import pytest
 
+from hub.teleop.__main__ import DryRunArm
 from hub.teleop.core import (
     DEFAULT_ROBOT_POSE,
     MAX_REACH_MM,
@@ -16,6 +18,10 @@ from hub.teleop.core import (
     Z_MIN_MM,
     RobotError,
     TeleopCore,
+)
+
+EXAMPLES = json.loads(
+    (Path(__file__).parents[1] / "contract" / "teleop_examples.json").read_text("utf-8")
 )
 
 
@@ -33,6 +39,9 @@ class FakeArm:
         self.pose = pose
         self.move_error: Exception | None = None
         self.reset_error: Exception | None = None
+        self.mode_error: Exception | None = None
+        self.mode = "enabled"
+        self.error_id = 0
 
     def reset(self) -> None:
         self.calls.append(("reset",))
@@ -57,6 +66,23 @@ class FakeArm:
 
     def set_speed(self, percent: int) -> None:
         self.calls.append(("set_speed", percent))
+
+    def enable(self) -> None:
+        self.calls.append(("enable",))
+
+    def disable(self) -> None:
+        self.calls.append(("disable",))
+
+    def clear_error(self) -> None:
+        self.calls.append(("clear_error",))
+
+    def get_mode(self) -> str:
+        if self.mode_error:
+            raise self.mode_error
+        return self.mode
+
+    def get_error_id(self) -> int:
+        return self.error_id
 
     @property
     def moves(self) -> list[tuple[object, ...]]:
@@ -378,3 +404,303 @@ def test_connection_error_is_logged_and_the_loop_goes_on(
     robot_pose(core, 300.0, 0.0, 50.0)
 
     assert "link down" in caplog.text
+
+
+# --- Robot Panel commands and Robot Status (017-02, ADR-0024) ---
+
+
+def test_enable_disable_and_clear_error_reach_the_arm(core: TeleopCore, arm: FakeArm) -> None:
+    send(core, type="enable")
+    send(core, type="clear_error")
+    send(core, type="disable")
+    core.tick()
+
+    assert arm.calls == [("enable",), ("clear_error",), ("disable",)]
+
+
+def test_disable_blocks_motion_until_enable(core: TeleopCore, arm: FakeArm) -> None:
+    send(core, type="disable")
+    send(core, type="move_to", x=300, y=0, z=50, r=0)
+    core.tick()
+    robot_pose(core, 300.0, 0.0, 50.0)
+
+    assert arm.moves == []
+    assert core.status()["reason"] == "disabled"
+
+    send(core, type="enable")
+    send(core, type="move_to", x=300, y=0, z=50, r=0)
+    core.tick()
+
+    assert arm.moves == [approx((300.0, 0.0, 50.0, 0.0))]
+
+
+def test_engage_is_refused_while_disabled_and_does_not_follow_after_enable(
+    core: TeleopCore, arm: FakeArm
+) -> None:
+    send(core, type="disable")
+    send(core, type="engage", x=0.0, y=1.0, z=0.3)
+    core.tick()
+    assert core.status()["reason"] == "disabled"
+
+    send(core, type="enable")
+    send(core, type="pose", frame="headset", x=0.0, y=1.0, z=0.3)
+    core.tick()
+
+    assert arm.moves == []
+
+
+def test_jog_moves_one_axis_by_the_step_from_the_arm_pose(clock: Clock) -> None:
+    arm = FakeArm(pose=(300.0, 0.0, 50.0, 5.0, 0.0, 0.0))
+    core = TeleopCore(arm, clock)
+    send(core, type="jog", axis="x", step=10)
+    send(core, type="jog", axis="y", step=-50)
+    send(core, type="jog", axis="z", step=1)
+    core.tick()
+
+    assert arm.moves == [
+        approx((310.0, 0.0, 50.0, 5.0)),
+        approx((300.0, -50.0, 50.0, 5.0)),
+        approx((300.0, 0.0, 51.0, 5.0)),
+    ]
+
+
+def test_jog_without_an_arm_pose_builds_on_the_last_target(core: TeleopCore, arm: FakeArm) -> None:
+    send(core, type="jog", axis="x", step=10)
+    send(core, type="jog", axis="x", step=10)
+    core.tick()
+
+    x0 = DEFAULT_ROBOT_POSE[0]
+    assert [move[0] for move in arm.moves] == [x0 + 10, x0 + 20]
+
+
+def test_jog_ends_engage(core: TeleopCore, arm: FakeArm) -> None:
+    send(core, type="engage", x=0.0, y=1.0, z=0.3)
+    send(core, type="jog", axis="z", step=10)
+    core.tick()
+    send(core, type="pose", frame="headset", x=0.0, y=1.2, z=0.3)
+    core.tick()
+
+    assert len(arm.moves) == 1
+
+
+@pytest.mark.parametrize(
+    ("pose", "message", "expected"),
+    [
+        ((415.0, 0.0, 50.0, 0.0), {"axis": "x", "step": 50}, (MAX_REACH_MM, 0.0, 50.0, 0.0)),
+        ((300.0, 0.0, Z_MIN_MM, 0.0), {"axis": "z", "step": -50}, (300.0, 0.0, Z_MIN_MM, 0.0)),
+        ((300.0, 0.0, Z_MAX_MM, 0.0), {"axis": "z", "step": 10}, (300.0, 0.0, Z_MAX_MM, 0.0)),
+    ],
+)
+def test_jog_is_clamped_to_the_safe_workspace(
+    clock: Clock, pose: tuple[float, ...], message: dict, expected: tuple[float, ...]
+) -> None:
+    arm = FakeArm(pose=pose)
+    core = TeleopCore(arm, clock)
+    send(core, type="jog", **message)
+    core.tick()
+
+    assert arm.moves == [approx(expected)]
+
+
+def test_move_to_goes_to_the_pose_and_is_clamped(core: TeleopCore, arm: FakeArm) -> None:
+    send(core, type="move_to", x=250, y=10, z=20, r=5)
+    send(core, type="move_to", x=600, y=0, z=-500, r=400)
+    core.tick()
+
+    assert arm.moves == [
+        approx((250.0, 10.0, 20.0, 5.0)),
+        approx((MAX_REACH_MM, 0.0, Z_MIN_MM, R_MAX_DEG)),
+    ]
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"type": "jog", "axis": "r", "step": 10},
+        {"type": "jog", "axis": "x", "step": 5},
+        {"type": "jog", "axis": "x", "step": "10"},
+        {"type": "jog", "axis": "x", "step": True},
+        {"type": "jog", "axis": "x"},
+        {"type": "jog", "step": 10},
+        {"type": "move_to", "x": 300, "y": 0, "z": 50},
+        {"type": "move_to", "x": math.nan, "y": 0, "z": 50, "r": 0},
+        {"type": "move_to", "x": 300, "y": math.inf, "z": 50, "r": 0},
+        {"type": "move_to", "x": "far", "y": 0, "z": 50, "r": 0},
+    ],
+)
+def test_bad_jog_and_move_to_are_refused_and_never_move(
+    core: TeleopCore, arm: FakeArm, message: dict
+) -> None:
+    send(core, **message)
+    core.tick()
+
+    assert arm.moves == []
+    assert core.status()["result"] == "refused"
+
+
+def test_unknown_type_is_refused_and_never_moves(core: TeleopCore, arm: FakeArm) -> None:
+    send(core, type="dance", x=300, y=0, z=50, r=0)
+    core.tick()
+
+    assert arm.calls == []
+    assert (core.status()["last_command"], core.status()["result"]) == ("dance", "refused")
+
+
+STOP_BLOCKED = [
+    {"type": "pose", "frame": "robot", "x": 300, "y": 0, "z": 50},
+    {"type": "jog", "axis": "x", "step": 10},
+    {"type": "move_to", "x": 300, "y": 0, "z": 50, "r": 0},
+    {"type": "home"},
+    {"type": "joint", "j1": 10, "j2": 20, "j3": 30},
+    {"type": "calibrate", "x": 0.0, "y": 1.0, "z": 0.3},
+]
+
+
+def _arm_moved(arm: FakeArm) -> bool:
+    return any(call[0] in ("move_to", "move_joints") for call in arm.calls)
+
+
+@pytest.mark.parametrize("message", STOP_BLOCKED, ids=lambda m: m["type"])
+def test_stop_latch_blocks_every_motion(core: TeleopCore, arm: FakeArm, message: dict) -> None:
+    send(core, type="stop")
+    core.tick()
+    send(core, **message)
+    core.tick()
+    # calibrate must not quietly start following either
+    send(core, type="pose", frame="headset", x=0.0, y=1.0, z=0.3)
+    core.tick()
+
+    assert not _arm_moved(arm)
+    assert core.status()["stop_latched"] is True
+
+
+@pytest.mark.parametrize("release", ["resume", "engage"])
+@pytest.mark.parametrize("message", STOP_BLOCKED, ids=lambda m: m["type"])
+def test_resume_or_engage_releases_the_stop_latch(
+    core: TeleopCore, arm: FakeArm, release: str, message: dict
+) -> None:
+    send(core, type="stop")
+    send(core, type=release, x=0.0, y=1.0, z=0.3)
+    core.tick()
+    assert core.status()["stop_latched"] is False
+
+    send(core, **message)
+    core.tick()
+    send(core, type="pose", frame="headset", x=0.0, y=1.0, z=0.3)  # calibrate moves on a pose
+    core.tick()
+
+    assert _arm_moved(arm)
+
+
+def test_resume_does_not_engage(core: TeleopCore, arm: FakeArm) -> None:
+    send(core, type="stop")
+    send(core, type="resume")
+    send(core, type="pose", frame="headset", x=0.0, y=1.0, z=0.3)
+    core.tick()
+
+    assert arm.moves == []
+
+
+def test_refused_command_is_reported_with_its_reason(core: TeleopCore) -> None:
+    send(core, type="stop")
+    send(core, type="home")
+    core.tick()
+
+    status = core.status()
+    assert (status["last_command"], status["result"], status["reason"]) == (
+        "home",
+        "refused",
+        "stop latched",
+    )
+
+
+def test_robot_error_is_reported_as_refused(core: TeleopCore, arm: FakeArm) -> None:
+    arm.move_error = RobotError("arm refused MovJ")
+    send(core, type="move_to", x=300, y=0, z=50, r=0)
+    core.tick()
+
+    status = core.status()
+    assert (status["result"], status["reason"]) == ("refused", "arm refused MovJ")
+
+
+def test_status_carries_mode_pose_suction_and_last_result(clock: Clock) -> None:
+    arm = FakeArm(pose=(310.0, 1.0, 50.0, 2.0, 0.0, 0.0))
+    core = TeleopCore(arm, clock)
+    send(core, type="grip", value=1)
+    send(core, type="jog", axis="x", step=10)
+    core.tick()
+
+    assert core.status() == {
+        "type": "status",
+        "mode": "enabled",
+        "error_id": 0,
+        "x": 310.0,
+        "y": 1.0,
+        "z": 50.0,
+        "r": 2.0,
+        "suction": True,
+        "stop_latched": False,
+        "last_command": "jog",
+        "result": "done",
+        "reason": "",
+    }
+
+
+def test_status_reads_the_error_id_only_in_error(core: TeleopCore, arm: FakeArm) -> None:
+    arm.error_id = 22
+    assert core.status()["error_id"] == 0
+
+    arm.mode = "error"
+    assert (core.status()["mode"], core.status()["error_id"]) == ("error", 22)
+
+
+def test_status_survives_an_unreachable_arm(clock: Clock) -> None:
+    arm = FakeArm(pose=OSError("down"))
+    arm.mode_error = OSError("down")
+    status = TeleopCore(arm, clock).status()
+
+    assert status["mode"] == "unknown"
+    assert (status["x"], status["y"], status["z"], status["r"]) == DEFAULT_ROBOT_POSE
+
+
+def test_status_matches_the_shared_examples(clock: Clock) -> None:
+    status = TeleopCore(FakeArm(pose=(300.0, 0.0, 50.0, 0.0)), clock).status()
+
+    for example in EXAMPLES["status"]:
+        message = example["message"]
+        assert message.keys() == status.keys(), example["name"]
+        for key, value in message.items():
+            assert type(value) is type(status[key]), (example["name"], key)
+
+
+@pytest.mark.parametrize("example", EXAMPLES["commands"], ids=lambda e: e["name"])
+def test_every_example_command_is_accepted(
+    core: TeleopCore, caplog: pytest.LogCaptureFixture, example: dict
+) -> None:
+    with caplog.at_level(logging.WARNING):
+        send(core, **example["message"])
+        core.tick()
+
+    assert "skipped" not in caplog.text
+    assert "unknown" not in caplog.text
+    if example["message"]["type"] != "pose":
+        assert core.status()["result"] == "done"
+
+
+@pytest.mark.parametrize("example", EXAMPLES["commands"], ids=lambda e: e["name"])
+def test_dry_run_accepts_every_example_command(clock: Clock, example: dict) -> None:
+    core = TeleopCore(DryRunArm(), clock)
+    send(core, **example["message"])
+    core.tick()
+
+    if example["message"]["type"] != "pose":
+        assert core.status()["result"] == "done"
+
+
+def test_dry_run_status_follows_enable_and_disable(clock: Clock) -> None:
+    core = TeleopCore(DryRunArm(), clock)
+    assert core.status()["mode"] == "enabled"
+
+    send(core, type="disable")
+    core.tick()
+    assert core.status()["mode"] == "disabled"
