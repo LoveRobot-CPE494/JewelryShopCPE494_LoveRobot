@@ -15,7 +15,7 @@ The PC is the hub (ADR-0001): Quest → PC → MG400 (TCP/IP) and PC → UNO (Se
   through it; out-of-bounds targets are clamped or rejected and logged.
 - **The Packing Sequence is one state machine:** Order received → conveyor runs → Gift Bag
   detected → stop → for each Gem in the Order: pick from its Stock Slot (Cut + Color) → place in
-  the bag → Bag Closer closes the bag → convey out (ADR-0005; bow undecided). Every state has a
-  timeout and an error state that stops the conveyor and the arm.
+  the bag → Bag Closer closes the bag → convey out (ADR-0005; no ribbon step, a person attaches
+  it beforehand). Every state has a timeout and an error state that stops the conveyor and the arm.
 - **Calibration** (Quest frame → MG400 frame) is data, loaded from a file the human produces at the
   station; code applies it, never hard-codes it.

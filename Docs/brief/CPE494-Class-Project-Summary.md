@@ -53,7 +53,7 @@ When a gem ends up in an unplanned position, the maintenance staff must drive th
 2. The arm picks gems from the storage according to the **cut and color the customer chose**, and places them in the box
 3. Close the box lid, **attach a ribbon**, then carry the box to the end of the conveyor
 
-> ℹ️ **Reality differs from the brief:** the instructor provided a paper bag instead of a box. The ribbon is undecided. See [ADR-0005](../adr/0005-paper-gift-bag.md)
+> ℹ️ **Reality differs from the brief:** the instructor provided a paper bag instead of a box. A person attaches the ribbon to the bag beforehand, as the instructor allows. See [ADR-0005](../adr/0005-paper-gift-bag.md)
 
 ## 6. Reports and presentation (30 points)
 
