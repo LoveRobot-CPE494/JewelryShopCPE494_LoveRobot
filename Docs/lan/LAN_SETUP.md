@@ -8,7 +8,7 @@ Three PCs talk over one LAN ([ADR-0027](../adr/0027-three-pcs-quest-staff-robot.
 | **Staff PC** (PC2) | The Staff Console (Unity) | **Host** of the Staff Link; its address is the Host Address |
 | **Robot PC** (PC3) | The Hub and the Teleop Bridge, cabled to the MG400 and the Arduino UNO | Waits for Teleop and Orders and sends replies back; its address is the Robot Address |
 
-Teammates reach the Robot PC by SSH from any **SSH Client** (a laptop such as the Mac, or one of the
+Teammates reach the Robot PC by SSH from any **SSH Client** (a teammate's own laptop, or one of the
 other two PCs). This guide covers the Robot PC in section 4, SSH in section 5, the Quest PC and the
 Staff PC in section 8, the two Quest modes in section 9, undo in section 10 and troubleshooting in
 section 7.
@@ -94,7 +94,7 @@ Replace `<user>` with the Robot PC's Windows user and `<robot-ip>` with its addr
      Add-Content C:\ProgramData\ssh\administrators_authorized_keys '<paste the .pub line>'
      icacls C:\ProgramData\ssh\administrators_authorized_keys /inheritance:r /grant 'Administrators:F' /grant 'SYSTEM:F'
      ```
-   - One key per SSH Client, one line each. From a Mac you can first send it with
+   - One key per SSH Client, one line each. From the SSH Client you can first send it with
      `scp ~/.ssh/id_ed25519.pub <user>@<robot-ip>:` (password login) and then paste it as above.
 3. **Plain ssh:** `ssh <user>@<robot-ip>`
 4. **VS Code Remote-SSH:** install the "Remote - SSH" extension, run "Remote-SSH: Connect to Host",
