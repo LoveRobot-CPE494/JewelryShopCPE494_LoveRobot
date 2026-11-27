@@ -59,6 +59,8 @@ Step-by-step test guide (Thai): [`Docs/teleop/teleop-test-guide-th.pdf`](../Docs
 
 Robot PC setup script (`scripts/setup-lan.ps1`) and SSH from an SSH Client: [`Docs/lan/LAN_SETUP.md`](../Docs/lan/LAN_SETUP.md).
 
+Daily start (section 11 there): `scripts/robot.ps1` on the SSH Client finds the Robot PC, SSHes in, and starts (`-Bridge`) or stops (`-Stop`) the Bridge through `scripts/start-bridge.cmd` and `scripts/stop-bridge.cmd`, or runs `pc_sender.py` against it (`-Sender`).
+
 ## Development setup
 
 Python 3.12 or newer. From the `Dobot/` folder:

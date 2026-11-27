@@ -1,0 +1,69 @@
+{
+  // Robot PC daily start from the SSH Client (Docs/lan/LAN_SETUP.md, section 11).
+  // Open the repo root in VS Code (Unity's external editor opens Unity/JewelryShop, whose
+  // .vscode has no Robot tasks). Terminal > Run Task... > "Robot: Start" finds the Robot PC, then
+  // opens the Bridge and pc_sender side by side.
+  // Ctrl+C does not stop the Bridge over SSH: run "Robot: Stop".
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Robot: Start",
+      "detail": "Bridge on the Robot PC and pc_sender here, side by side",
+      "dependsOn": ["Robot: Find", "Robot: Bridge and Sender"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "Robot: Find",
+      "detail": "find and save the Robot PC address once, so the two terminals do not both ask",
+      "type": "process",
+      "command": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\Dobot\\scripts\\robot.ps1", "-Find"],
+      "presentation": { "panel": "dedicated", "reveal": "always", "focus": true, "close": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Robot: Bridge and Sender",
+      "hide": true,
+      "dependsOn": ["Robot: Bridge", "Robot: Sender"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "Robot: Bridge",
+      "detail": "SSH in and run scripts\\start-bridge.cmd (stops an old Bridge first)",
+      "type": "process",
+      "command": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\Dobot\\scripts\\robot.ps1", "-Bridge"],
+      "presentation": { "panel": "dedicated", "group": "robot", "reveal": "always", "focus": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "Robot: Sender",
+      "detail": "pc_sender.py against the Robot PC; type enable first",
+      "type": "process",
+      "command": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\Dobot\\scripts\\robot.ps1", "-Sender"],
+      "presentation": { "panel": "dedicated", "group": "robot", "reveal": "always", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Robot: Stop",
+      "detail": "disable the arm, then stop the Bridge (scripts\\stop-bridge.cmd)",
+      "type": "process",
+      "command": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\Dobot\\scripts\\robot.ps1", "-Stop"],
+      "presentation": { "panel": "dedicated", "reveal": "always", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Robot: Shell",
+      "detail": "SSH into the Robot PC's Dobot folder with the venv on",
+      "type": "process",
+      "command": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\Dobot\\scripts\\robot.ps1"],
+      "presentation": { "panel": "dedicated", "reveal": "always", "focus": true },
+      "problemMatcher": []
+    }
+  ]
+}

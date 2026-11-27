@@ -2,8 +2,11 @@
 # core.autocrlf says (Git for Windows defaults it to true). Unity always writes LF, so a
 # CRLF checkout makes every Unity re-save look modified with an empty diff (#28).
 # Keep this block ABOVE the LFS rules: later lines win, and the LFS lines set -text on binaries.
-# If a Windows-only script (.bat, .cmd, .ps1) is ever added, give it an `eol=crlf` override.
+# Batch files (.bat, .cmd) get an `eol=crlf` override below; PowerShell reads LF fine.
 * text=auto eol=lf
+# cmd.exe misreads labels and goto in LF batch files: keep them CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
 
 # Unity binary assets go through Git LFS (GitHub rejects files over 100 MB).
 # Each teammate runs `git lfs install` once per machine.

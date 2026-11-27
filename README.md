@@ -137,7 +137,7 @@ Branch names: `feat/…` new work, `fix/…` bug fixes, `docs/…` documentation
 
 Once `code-review` passes, Claude ends the work with a **Handoff** block: it writes the commit message to `.git/COMMIT_MSG` and the PR body (skill `pr`) to `.git/PR_BODY.md`, then prints one PowerShell command set (`git switch -c` → `git add` file by file → `git commit -F` → `git push -u` → `gh pr create --label … --body-file`) for a human to check, copy and run. Claude does not commit or push itself (full rules are in `CLAUDE.md`, section GitHub pen)
 
-- Files Unity often changes by itself and that you should **not** commit unless you meant to: `.vscode/`, `ProjectSettings/*.asset`, `Assets/Settings/*.asset`, `Assets/InitTestScene*.unity`
+- Files Unity often changes by itself and that you should **not** commit unless you meant to: `Unity/JewelryShop/.vscode/` (the root `.vscode/tasks.json` holds the shared Robot tasks), `ProjectSettings/*.asset`, `Assets/Settings/*.asset`, `Assets/InitTestScene*.unity`
 - In a PR: have a teammate look before merging; if a conflict appears, run `git pull origin main` in your own branch and fix it first
 
 ### 4. After merging

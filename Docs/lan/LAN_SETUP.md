@@ -10,8 +10,9 @@ Three PCs talk over one LAN ([ADR-0027](../adr/0027-three-pcs-quest-staff-robot.
 
 Teammates reach the Robot PC by SSH from any **SSH Client** (a teammate's own laptop, or one of the
 other two PCs). This guide covers the Robot PC in section 4, SSH in section 5, the Quest PC and the
-Staff PC in section 8, the two Quest modes in section 9, undo in section 10 and troubleshooting in
-section 7.
+Staff PC in section 8, the two Quest modes in section 9, undo in section 10, troubleshooting in section 7,
+and the **daily start** with the scripts in section 11 (start there once the setup is
+done).
 
 Decisions: [ADR-0023](../adr/0023-lan-host-address-and-udp-discovery.md),
 [ADR-0024](../adr/0024-robot-panel-presets-and-robot-status.md),
@@ -222,3 +223,40 @@ Disable-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyConti
 
 The script never removes Block rules, so undo does not touch them. Delete one in Windows Defender
 Firewall yourself if it is wrong.
+
+## 11. Daily start (after the setup is done)
+
+Run these from the repo root on the SSH Client. `R` stands for
+`powershell -ExecutionPolicy Bypass -File Dobot\scripts\robot.ps1`.
+
+1. **Robot PC awake and on the LAN**: set Sleep to Never there once
+   (`powercfg /change standby-timeout-ac 0`; undo with a number of minutes).
+2. **Update the code on the Robot PC**: `R` opens a shell in its `Dobot` folder with the venv on.
+   Run `cd .. && git switch main && git pull`. A pull that refuses means files were copied in
+   by hand (scp): `git status`, then `git checkout -- <file>` for a changed file and `del <file>`
+   for an untracked copy. `start-bridge.cmd` warns about both; it does not fetch, so updating
+   stays this step.
+3. **Start the Bridge** (safety rule, section 1): `R -Bridge` runs `scripts\start-bridge.cmd` there.
+   It stops an old Bridge first (a leftover one holds the arm's link, so jog silently does
+   nothing), warns about local changes, and runs `python -m hub.teleop --ip 192.168.1.6 --speed 10`.
+   More arguments: `R -Bridge -BridgeArgs '--speed 20'` or `'--dry-run'`.
+4. **Drive it**: `R -Sender` runs `teleop\pc_sender.py` against the Robot PC. Send `enable` first:
+   Robot Status only comes back after a command.
+5. **Stop**: `R -Stop` in a second window. Over SSH, Ctrl+C does not stop the Bridge.
+   `scripts\stop-bridge.cmd` sends `disable`, then ends the process on UDP 9000.
+
+How `robot.ps1` finds the address: `-Ip` if given; else the Robot beacon on UDP 7778 (heard only
+while a Bridge runs); else the last address that answered, saved in `Dobot\scripts\.robot-ip`
+(git-ignored); else it asks (the Robot PC's `ipconfig`, the IPv4 that is not `192.168.1.x`). Each
+address is checked on TCP 22 first. `R -Find` only prints it. The Robot PC's user and repo path
+are `-User` and `-RemoteDobot` (defaults: `cpe kmutt` and
+`%USERPROFILE%\Desktop\FinalProject\JewelryShopCPE494_LoveRobot\Dobot`).
+
+In VS Code on the SSH Client, with the **repo root** open (not `Unity/JewelryShop`):
+**Terminal > Run Task... > Robot: Start** finds the address once, then opens the Bridge and
+pc_sender side by side (steps 3 and 4); **Robot: Stop** is step 5 and **Robot: Shell** is step 2
+(`.vscode/tasks.json`).
+
+On the Robot PC's own screen, `Dobot\scripts\start-bridge.cmd` and `stop-bridge.cmd` work the same,
+and there Ctrl+C stops the Bridge too.
+
