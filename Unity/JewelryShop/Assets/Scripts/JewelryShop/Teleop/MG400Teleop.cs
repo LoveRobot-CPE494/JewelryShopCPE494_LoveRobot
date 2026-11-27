@@ -51,8 +51,7 @@ public class MG400Teleop : MonoBehaviour
 
     UdpClient udp;
     HostDiscovery discovery;   // own one: the Teleop scene has no Staff Link
-    string target;           // address udp is connected to, null when none
-    bool targetChosen;
+    readonly TeleopTarget target = new TeleopTarget();
     readonly TeleopSendTracker sendTracker = new TeleopSendTracker();
 
     /// <summary>Clock for the "has sent" window (tests may swap it).</summary>
@@ -82,8 +81,8 @@ public class MG400Teleop : MonoBehaviour
         Retarget();
     }
 
-    /// <summary>The one place Teleop learns where to send: the resolved Robot Address.</summary>
-    // Discovered (Automatic on, fresh robot beacon) or typed; null when neither is valid.
+    // The one place Teleop learns where to send: the resolved Robot Address, discovered
+    // (Automatic on, fresh robot beacon) or typed; null when neither is valid.
     string ResolveRobotAddress() => discovery.RobotAddress;
 
     int TeleopPort => hostAddressConfig != null && hostAddressConfig.TeleopPort != 0
@@ -92,19 +91,14 @@ public class MG400Teleop : MonoBehaviour
     // Picks up a changed Robot Address (typed or discovered) without restarting the app.
     void Retarget()
     {
-        var address = ResolveRobotAddress();
-        if (targetChosen && address == target) return;
-        targetChosen = true;
+        if (!target.TryRetarget(ResolveRobotAddress(), engaged, out var releaseOld)) return;
 
-        if (udp != null)
-        {
-            if (engaged) Send(TeleopMessages.Release);   // ไม่ทิ้งแขนค้างไว้ที่ปลายทางเก่า
-            udp.Close();
-            udp = null;
-        }
+        if (releaseOld) Send(TeleopMessages.Release);   // ไม่ทิ้งแขนค้างไว้ที่ปลายทางเก่า
+        udp?.Close();
+        udp = null;
         engaged = false;
-        target = address;
 
+        var address = target.Address;
         if (address == null)
         {
             // Logged once per change to "no address", not every frame.
