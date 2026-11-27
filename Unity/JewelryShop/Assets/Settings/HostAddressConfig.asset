@@ -13,5 +13,8 @@ MonoBehaviour:
   m_Name: HostAddressConfig
   m_EditorClassIdentifier: JewelryShop.Networking::JewelryShop.Networking.HostAddressConfig
   _defaultHostAddress: 192.168.56.1
+  _defaultRobotAddress: 192.168.1.11
+  _teleopPort: 9000
+  _robotStatusPort: 9001
   _staffLinkPort: 7777
   _discoveryPort: 7778

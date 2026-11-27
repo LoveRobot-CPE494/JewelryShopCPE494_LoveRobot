@@ -9,20 +9,80 @@ namespace JewelryShop.Tests
     public class HostAddressTests
     {
         private string _realKey;
+        private string _realRobotKey;
 
         [SetUp]
         public void SetUp()
         {
             _realKey = HostAddressStore.Key;
+            _realRobotKey = HostAddressStore.RobotKey;
             HostAddressStore.Key = "JewelryShop.Tests.HostAddress";
+            HostAddressStore.RobotKey = "JewelryShop.Tests.RobotAddress";
             PlayerPrefs.DeleteKey(HostAddressStore.Key);
+            PlayerPrefs.DeleteKey(HostAddressStore.RobotKey);
         }
 
         [TearDown]
         public void TearDown()
         {
             PlayerPrefs.DeleteKey(HostAddressStore.Key);
+            PlayerPrefs.DeleteKey(HostAddressStore.RobotKey);
             HostAddressStore.Key = _realKey;
+            HostAddressStore.RobotKey = _realRobotKey;
+        }
+
+        [Test]
+        public void Resolve_OnlyStaffBeaconHeard_HostDiscoveredRobotTyped()
+        {
+            // Automatic on, only the staff beacon heard: each address is resolved on its own.
+            var host = HostAddressResolver.Resolve("10.0.0.5", true, "10.0.0.9");
+            var robot = HostAddressResolver.Resolve("10.0.0.6", true, null);
+            Assert.That(host, Is.EqualTo("10.0.0.9"));
+            Assert.That(robot, Is.EqualTo("10.0.0.6"));
+        }
+
+        [Test]
+        public void TypedRobot_SavedValueInvalid_FallsBackToConfigDefault()
+        {
+            var config = ScriptableObject.CreateInstance<HostAddressConfig>();
+            PlayerPrefs.SetString(HostAddressStore.RobotKey, "not an ip");
+            Assert.That(HostAddressStore.TypedRobot(config),
+                Is.EqualTo(config.DefaultRobotAddress));
+            Object.DestroyImmediate(config);
+        }
+
+        [Test]
+        public void TypedRobot_NothingSaved_UsesConfigDefaultAndPorts()
+        {
+            var config = ScriptableObject.CreateInstance<HostAddressConfig>();
+            Assert.That(HostAddressStore.TypedRobot(config),
+                Is.EqualTo(config.DefaultRobotAddress));
+            Assert.That(config.TeleopPort, Is.EqualTo(9000));
+            Assert.That(config.RobotStatusPort, Is.EqualTo(9001));
+            Object.DestroyImmediate(config);
+        }
+
+        [Test]
+        public void TrySetTypedRobot_Valid_SavesWithoutTouchingHostAddress()
+        {
+            var raised = 0;
+            void OnChanged() => raised++;
+            HostAddressStore.RobotChanged += OnChanged;
+            try
+            {
+                Assert.That(HostAddressStore.TrySetTypedRobot("172.16.0.9"), Is.True);
+                Assert.That(HostAddressStore.TypedRobot(null), Is.EqualTo("172.16.0.9"));
+                Assert.That(HostAddressStore.Typed(null), Is.Null);
+                Assert.That(raised, Is.EqualTo(1));
+            }
+            finally { HostAddressStore.RobotChanged -= OnChanged; }
+        }
+
+        [Test]
+        public void TrySetTypedRobot_Invalid_SavesNothing()
+        {
+            Assert.That(HostAddressStore.TrySetTypedRobot("999.1.1.1"), Is.False);
+            Assert.That(HostAddressStore.TypedRobot(null), Is.Null);
         }
 
         [TestCase("192.168.1.10", true)]

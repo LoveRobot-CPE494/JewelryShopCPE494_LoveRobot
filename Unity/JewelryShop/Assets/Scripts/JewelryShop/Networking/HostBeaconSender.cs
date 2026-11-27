@@ -86,7 +86,7 @@ namespace JewelryShop.Networking
             _socket = null;
             if (address != null && _discoveryPort != 0)
             {
-                _beacon = HostBeaconCodec.Encode(address, _staffLinkPort);
+                _beacon = HostBeaconCodec.Encode(BeaconRole.Staff, address, _staffLinkPort);
                 // Bound to the picked card so the broadcast leaves through that one.
                 _socket = new UdpClient(new IPEndPoint(IPAddress.Parse(address), 0))
                 {
