@@ -4,6 +4,8 @@ status: accepted
 
 # Robot Panel: button commands and Preset Actions over the Teleop link, with Robot Status sent back
 
+Amended (2026-11-27): reach narrowed to the measured 225–365 mm (`probe_reach`, #49).
+
 Amended (2026-11-25, [ADR-0027](0027-three-pcs-quest-staff-robot.md)): the Robot PC also runs the Hub, and the Staff Console runs on its own Staff PC, apart from the Quest PC that runs the Storefront.
 
 Amended by [ADR-0026](0026-teleop-controls-engage-toggle-pump-hand-menus.md): the Robot Panel is the left Hand Menu (radial, picked with the left stick) instead of a ray-pressed wrist panel. Jog and typed move-to are dropped, Scale is added, and Robot Status shows on the HUD.
@@ -16,7 +18,7 @@ Decided (grill, 2026-11-25). The Maintenance Operator can drive the arm only wit
 - **Stop latches until Resume.** After `stop`, every motion (pose, jog, move-to, home, joint, calibrate, Preset) is ignored until Resume or a new Grip engage. This closes the known gap in ADR-0017 where `joint` and `calibrate` still moved the arm.
 - **Robot Status comes back over UDP 9001**, a few times a second, to the address of the last sender: robot mode (enabled, disabled, error), error id, X/Y/Z/R pose, suction state, whether Stop is latched, the result of the last command, the Preset list (id and name, and why a rejected one was rejected) and the running Preset's progress (step n of m). The Robot Panel treats the link as alive when a status packet arrived in the last 2 seconds.
 - **Preset Actions live in a file on the Robot PC**, not in the APK, so a teammate edits one and tries it without a rebuild. A Preset is an ordered list of steps: move to X/Y/Z/R (mm), suction on/off, wait (ms), home. The Quest only sends the id.
-- **Presets are checked on load and rejected whole.** If any move point is outside the safe workspace (reach 170–420 mm, Z from `Z_MIN_MM` to 150 mm), the whole Preset is rejected, never clamped, because a clamped Preset goes somewhere other than what the file says. Rejected Presets show greyed out with the reason.
+- **Presets are checked on load and rejected whole.** If any move point is outside the safe workspace (reach 225–365 mm, Z from `Z_MIN_MM` to 150 mm), the whole Preset is rejected, never clamped, because a clamped Preset goes somewhere other than what the file says. Rejected Presets show greyed out with the reason.
 - **Presets run only when safe.** A Preset starts only when the arm is enabled, not in error, Stop is not latched and Teleop is not engaged. One runs at a time; a second start is ignored. Stop or a Grip engage cancels it at once. Preset moves are capped at 30 % speed whatever the speed setting. `--dry-run` runs a Preset without moving the arm.
 - **Start with three placeholder Presets** (small square at a safe height, suction test, Home), up to nine buttons. Real positions (Stock Slots, Packing Station) wait for the `Z_MIN_MM` calibration (#49).
 - **Preset ids are meant to be callable later by the Order link.** Picking a Gem Piece may become "run the Preset for this Stock Slot". This is not decided here; it belongs to Q-02 (#75).

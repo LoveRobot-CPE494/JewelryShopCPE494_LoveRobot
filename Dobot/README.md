@@ -15,7 +15,7 @@ python -m hub.teleop --ip 192.168.1.6   # the real arm (--port 9000, --speed 30 
 ```
 
 It receives UDP on port 9000 and drives the MG400:
-- `core.py`: no sockets or threads. Clamps every move to the safe workspace (reach 170-420 mm, Z, R), filters jitter, follows only fresh poses, and handles `stop`. All the Teleop limits live here.
+- `core.py`: no sockets or threads. Clamps every move to the safe workspace (reach 225-365 mm, Z, R), filters jitter, follows only fresh poses, and handles `stop`. All the Teleop limits live here.
 - `mg400_arm.py`: the MG400 adapter over the dashboard (29999) and motion (30003) ports, with the IK check and error recovery.
 - `__main__.py`: the UDP listener, the 10 Hz control loop, and Robot Status (JSON, 4 times a second) to the last sender on UDP 9001 ([ADR-0024](../Docs/adr/0024-robot-panel-presets-and-robot-status.md)).
 
@@ -37,9 +37,11 @@ The Robot Panel's Preset buttons run a Preset from [`presets.json`](presets.json
 ```
 
 - `id` is 1-9 and unique; `name` is the button label. Steps: `move` (x, y, z in mm, r in deg), `suction` (`on` true or false), `wait` (`ms`, 0-60000) and `home` (all joints to 0).
-- Checked on load: every `move` must be inside reach 170-420 mm (distance of x, y from the base), Z from `Z_MIN_MM` to 150 mm and R within +/-170. One bad step rejects the **whole** Preset (never clamped); it shows greyed out with the reason. A repeated id rejects that id (neither copy runs); an id outside 1-9 is skipped and logged; the other Presets still load.
+- Checked on load: every `move` must be inside reach 225-365 mm (distance of x, y from the base), Z from `Z_MIN_MM` to 150 mm and R within +/-170. One bad step rejects the **whole** Preset (never clamped); it shows greyed out with the reason. A repeated id rejects that id (neither copy runs); an id outside 1-9 is skipped and logged; the other Presets still load.
 - A Preset starts only when the arm is enabled and not in error, Stop is not latched and Teleop is not engaged. One runs at a time. `stop` or `engage` cancels it at once, and other moves are refused while it runs. Preset moves run at most 30 % speed whatever `--speed` says; the setting comes back when it ends.
 - `--dry-run` steps through a Preset and logs each call without moving the arm. The shipped Presets are placeholders; real positions wait for the `Z_MIN_MM` calibration (#49).
+
+Reach probe: `python -m hub.teleop.probe_reach --ip 192.168.1.6` (stop the Bridge first; nothing moves) asks the arm's `InverseSolution()` over Z_MIN_MM..Z_MAX_MM and prints the reach band per height, to set `MIN_REACH_MM` and `MAX_REACH_MM` (and the reach above) from data. Measured 2026-11-27 on y = 0: 215-375 mm at every height. The old copies in `teleop/` keep 170-420 and 440 mm; do not reuse them.
 
 `Z_MIN_MM` (provisionally 0 mm, a guess, not a measured value) must be calibrated on the real arm (#49) before running without `--dry-run`, and a person not wearing the headset holds the real E-stop during every real-arm test.
 

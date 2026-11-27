@@ -179,7 +179,7 @@ def test_control_loop_sends_at_most_10_moves_per_second(
     class OneSecondError(Exception):
         pass
 
-    x = [200.0]
+    x = [250.0]  # stays inside the reach band: poses run 250..340 mm
 
     def sleep(seconds: float) -> None:
         clock.now += seconds
