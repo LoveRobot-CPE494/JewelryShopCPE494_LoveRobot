@@ -158,6 +158,10 @@ _Avoid_: auto IP, pairing
 The PC the Meta Quest 3 is tethered to over Quest Link, home of the Storefront; a client of the Staff Link ([ADR-0027](Docs/adr/0027-three-pcs-quest-staff-robot.md))
 _Avoid_: Host PC, headset PC, PC1
 
+**Quest Link**:
+Meta's USB-C or Air Link connection that runs the Storefront on the Quest PC and streams it to the headset; the demo mode ([ADR-0027](Docs/adr/0027-three-pcs-quest-staff-robot.md), [LAN_SETUP](Docs/lan/LAN_SETUP.md))
+_Avoid_: tether, Link cable
+
 **Staff PC**:
 The PC home of the Staff Console and host of the Staff Link; its address is the Host Address ([ADR-0027](Docs/adr/0027-three-pcs-quest-staff-robot.md))
 _Avoid_: Host PC, server PC, PC2
@@ -232,12 +236,16 @@ The mode in which the Maintenance Operator's Controller position is mapped to th
 _Avoid_: remote control, manual mode
 
 **Teleop Bridge**:
-The Robot PC program that receives Teleop and Robot Panel messages from the Quest over UDP, clamps them to the safe workspace, drives the MG400 and sends Robot Status back (`Dobot/teleop/`, moving to `Dobot/src/hub` in #216; [ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
+The Robot PC program that receives Teleop and Robot Panel messages from the Quest over UDP, clamps them to the safe workspace, drives the MG400 and sends Robot Status back (`Dobot/src/hub/teleop/`; [ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
 _Avoid_: relay, teleop server
 
 **Robot PC**:
 The PC wired to the MG400 and the Arduino UNO, home of the Hub and the Teleop Bridge ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md), [ADR-0027](Docs/adr/0027-three-pcs-quest-staff-robot.md))
 _Avoid_: Dobot PC, PC3, robot server
+
+**SSH Client**:
+Any machine a teammate uses to reach the Robot PC by SSH, to run and watch the Python side: their own laptop, or the Quest PC or the Staff PC ([ADR-0027](Docs/adr/0027-three-pcs-quest-staff-robot.md), [LAN_SETUP](Docs/lan/LAN_SETUP.md))
+_Avoid_: Client PC, Host PC
 
 **Robot Address**:
 The LAN address of the Robot PC that the Quest sends Teleop and Robot Panel commands to, typed in the headset or found from the Robot PC's beacon. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)

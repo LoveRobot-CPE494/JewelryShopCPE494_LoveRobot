@@ -228,6 +228,7 @@ Firewall yourself if it is wrong.
 
 Run these from the repo root on the SSH Client. `R` stands for
 `powershell -ExecutionPolicy Bypass -File Dobot\scripts\robot.ps1`.
+คู่มือภาษาไทย / Thai guide: [DAILY_START_TH.md](DAILY_START_TH.md)
 
 1. **Robot PC awake and on the LAN**: set Sleep to Never there once
    (`powercfg /change standby-timeout-ac 0`; undo with a number of minutes).
