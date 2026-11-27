@@ -41,7 +41,7 @@ The Robot Panel's Preset buttons run a Preset from [`presets.json`](presets.json
 - A Preset starts only when the arm is enabled and not in error, Stop is not latched and Teleop is not engaged. One runs at a time. `stop` or `engage` cancels it at once, and other moves are refused while it runs. Preset moves run at most 30 % speed whatever `--speed` says; the setting comes back when it ends.
 - `--dry-run` steps through a Preset and logs each call without moving the arm. The shipped Presets are placeholders; real positions wait for the `Z_MIN_MM` calibration (#49).
 
-`Z_MIN_MM` must be calibrated on the real arm (#49) before running without `--dry-run`, and a person not wearing the headset holds the real E-stop during every real-arm test.
+`Z_MIN_MM` (provisionally 0 mm, a guess, not a measured value) must be calibrated on the real arm (#49) before running without `--dry-run`, and a person not wearing the headset holds the real E-stop during every real-arm test.
 
 ### `teleop/` (reference only)
 
