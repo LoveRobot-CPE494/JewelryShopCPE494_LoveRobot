@@ -1,8 +1,9 @@
 namespace JewelryShop.Core
 {
     /// <summary>
-    /// Picks the one Host Address the Quest connects to (ADR-0023): the discovered address when
-    /// Automatic is on and one was found, else the typed address. Only IPv4 literals pass.
+    /// Picks one address the Quest connects to (ADR-0023): the discovered address when Automatic
+    /// is on and one was found, else the typed address. Only IPv4 literals pass. Called once per
+    /// address, Host and Robot, each with the beacon of its own role.
     /// </summary>
     public static class HostAddressResolver
     {

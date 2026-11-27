@@ -12,8 +12,14 @@ namespace JewelryShop.Networking
         /// <summary>PlayerPrefs key (tests swap it so they never touch the real address).</summary>
         public static string Key { get; set; } = "JewelryShop.HostAddress";
 
-        /// <summary>Raised after a new valid address was saved.</summary>
+        /// <summary>PlayerPrefs key of the Robot Address.</summary>
+        public static string RobotKey { get; set; } = "JewelryShop.RobotAddress";
+
+        /// <summary>Raised after a new valid Host Address was saved.</summary>
         public static event Action Changed;
+
+        /// <summary>Raised after a new valid Robot Address was saved.</summary>
+        public static event Action RobotChanged;
 
         /// <summary>
         /// The saved address if it is valid IPv4, else the config default (null config: null).
@@ -32,6 +38,25 @@ namespace JewelryShop.Networking
             PlayerPrefs.SetString(Key, address);
             PlayerPrefs.Save();
             Changed?.Invoke();
+            return true;
+        }
+
+        /// <summary>The saved Robot Address if valid IPv4, else the config default.</summary>
+        public static string TypedRobot(HostAddressConfig config)
+        {
+            var saved = PlayerPrefs.GetString(RobotKey, null);
+            if (HostAddressResolver.IsValidIPv4(saved)) return saved;
+            return config != null ? config.DefaultRobotAddress : null;
+        }
+
+        /// <summary>Saves a valid IPv4 Robot Address and raises RobotChanged; false if invalid.
+        /// </summary>
+        public static bool TrySetTypedRobot(string address)
+        {
+            if (!HostAddressResolver.IsValidIPv4(address)) return false;
+            PlayerPrefs.SetString(RobotKey, address);
+            PlayerPrefs.Save();
+            RobotChanged?.Invoke();
             return true;
         }
     }
