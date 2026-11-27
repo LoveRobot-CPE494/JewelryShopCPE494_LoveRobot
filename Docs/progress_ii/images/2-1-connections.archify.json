@@ -1,0 +1,308 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Jewelry Shop Connections: three PCs on one LAN",
+    "output": ".archify/architecture-connections-v3-20261125-222539/connections-v3.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    {
+      "id": "quest",
+      "type": "frontend",
+      "label": "Meta Quest 3",
+      "sublabel": "headset",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "storefront",
+      "type": "frontend",
+      "label": "Storefront",
+      "sublabel": "Unity, client",
+      "pos": [
+        290,
+        70
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "staff",
+      "type": "frontend",
+      "label": "Staff Console",
+      "sublabel": "Unity, host",
+      "pos": [
+        290,
+        330
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "bridge",
+      "type": "backend",
+      "label": "Teleop Bridge",
+      "sublabel": "Python, safety limits",
+      "pos": [
+        680,
+        70
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "hub",
+      "type": "backend",
+      "label": "Hub",
+      "sublabel": "Packing Sequence",
+      "pos": [
+        680,
+        330
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "mg400",
+      "type": "backend",
+      "label": "Dobot MG400",
+      "sublabel": "arm + I/O",
+      "pos": [
+        1020,
+        70
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "pump",
+      "type": "external",
+      "label": "Suction Pump",
+      "sublabel": "suck / blow",
+      "pos": [
+        1260,
+        70
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "conveyor",
+      "type": "external",
+      "label": "Conveyor",
+      "sublabel": "bag transport",
+      "pos": [
+        1020,
+        330
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "sensor",
+      "type": "external",
+      "label": "Bag Sensor",
+      "sublabel": "bag-stop",
+      "pos": [
+        1260,
+        330
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "uno",
+      "type": "backend",
+      "label": "Arduino UNO",
+      "sublabel": "i-Duino R3B",
+      "pos": [
+        680,
+        550
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "closer",
+      "type": "external",
+      "label": "Bag Closer",
+      "sublabel": "servo",
+      "pos": [
+        1020,
+        550
+      ],
+      "size": [
+        150,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "LAN (one network)",
+      "wraps": [
+        "storefront",
+        "staff",
+        "bridge",
+        "hub"
+      ],
+      "pad": 56
+    },
+    {
+      "kind": "security-group",
+      "label": "PC1 Quest PC",
+      "wraps": [
+        "storefront"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "PC2 Staff PC",
+      "wraps": [
+        "staff"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "PC3 Robot PC",
+      "wraps": [
+        "bridge",
+        "hub"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "link",
+      "from": "quest",
+      "to": "storefront",
+      "label": "Quest Link"
+    },
+    {
+      "id": "stafflink",
+      "from": "storefront",
+      "to": "staff",
+      "label": "Staff Link UDP 7777"
+    },
+    {
+      "id": "teleop",
+      "from": "storefront",
+      "to": "bridge",
+      "label": "Teleop UDP 9000",
+      "variant": "emphasis"
+    },
+    {
+      "id": "status",
+      "from": "bridge",
+      "to": "storefront",
+      "label": "Robot Status UDP 9001"
+    },
+    {
+      "id": "order",
+      "from": "storefront",
+      "to": "hub",
+      "label": "Order + accept reply"
+    },
+    {
+      "id": "tcp-teleop",
+      "from": "bridge",
+      "to": "mg400",
+      "label": "TCP 29999/30003",
+      "variant": "emphasis"
+    },
+    {
+      "id": "tcp-pack",
+      "from": "hub",
+      "to": "mg400",
+      "label": "TCP (packing)"
+    },
+    {
+      "id": "vacuum",
+      "from": "mg400",
+      "to": "pump",
+      "label": "DO9 / DO10"
+    },
+    {
+      "id": "belt",
+      "from": "mg400",
+      "to": "conveyor",
+      "label": "DO1 run"
+    },
+    {
+      "id": "bagstop",
+      "from": "sensor",
+      "to": "mg400",
+      "label": "DI2 bag"
+    },
+    {
+      "id": "serial",
+      "from": "hub",
+      "to": "uno",
+      "label": "Serial USB"
+    },
+    {
+      "id": "servo",
+      "from": "uno",
+      "to": "closer",
+      "label": "PWM"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Roles on the LAN (ADR-0027)",
+      "items": [
+        "PC2 Staff PC is the host: Staff Link + Host Beacon",
+        "PC1 Quest PC is a client: Storefront on Quest Link",
+        "PC3 Robot PC waits for Teleop and Orders, replies with status",
+        "Teammates reach the Robot PC by SSH"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "MG400 I/O",
+      "items": [
+        "DO1 conveyor",
+        "DO9 pump sucks; stopping it keeps the Gem Piece held",
+        "DO10 pump blows (pressure) to release; never with DO9",
+        "DI2 Bag Sensor"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Order flow (ADR-0012)",
+      "items": [
+        "Storefront sends the Order (Cut + Color) to the Hub",
+        "Card Terminal shows Approved only after the Hub accepts",
+        "Hub runs the Packing Sequence on the MG400 and UNO"
+      ]
+    }
+  ]
+}

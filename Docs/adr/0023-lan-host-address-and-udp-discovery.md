@@ -4,6 +4,8 @@ status: accepted
 
 # The Quest finds the Staff Console's PC by one Host Address: typed in the headset or found by UDP Host Discovery
 
+Amended (2026-11-25, [ADR-0027](0027-three-pcs-quest-staff-robot.md)): three PCs. The Host Address is the **Staff PC**'s, the Robot Address the **Robot PC**'s; the Storefront runs on the **Quest PC**.
+
 Amended by [ADR-0024](0024-robot-panel-presets-and-robot-status.md) (2026-11-25): the MG400 is on its own Robot PC. Teleop reads a separate **Robot Address**, not the Host Address; Settings gains a Robot Address field and a Robot line showing whether Robot Status arrived (the Teleop Bridge now replies, which the option "Hub replies to Teleop" below left out); the Robot PC broadcasts its own beacon (role `robot`) and its firewall allows UDP 9000 in, 9001 out and the discovery port out. Where the text below says Teleop reads the Host Address, read Robot Address.
 
 Decided (grill, 2026-11-25). The Staff Link ([ADR-0010](0010-staff-call-direct-netcode-link.md), Netcode, port 7777) and Teleop ([ADR-0017](0017-teleop-udp-bridge-relative-mapping.md), UDP 9000) each held their own PC address as an Inspector field (`StaffLinkBehaviour._serverAddress`, `MG400Teleop.pcIp`), so a new Wi-Fi meant two edits and a rebuild.

@@ -4,6 +4,8 @@ status: proposed
 
 # Use a PC (Python) as the hub between the Quest, MG400 and Arduino
 
+Amended (2026-11-25, [ADR-0027](0027-three-pcs-quest-staff-robot.md)): "the PC" is the **Robot PC**, cabled to the MG400 and the Arduino; the Staff Console and the Storefront run on their own PCs.
+
 The Quest 3 does not talk to the MG400 or the Arduino directly. It sends the Order (a list of Cut + Color) and Teleop commands to a Python program on a PC over Wi-Fi (WebSocket/MQTT). The PC then drives the MG400 over TCP/IP (Dobot SDK: port 29999 dashboard, 30003 motion, 30004 feedback) and the Arduino over Serial (USB). The reasons: Unity on Android/Quest cannot open a Serial connection, the Dobot SDK already exists for Python, and the Packing Sequence ([ADR-0005](0005-paper-gift-bag.md)) should live in one state machine rather than be spread across several machines.
 
 ## Considered Options

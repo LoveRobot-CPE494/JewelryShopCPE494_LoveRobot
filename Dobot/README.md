@@ -33,7 +33,7 @@ Step-by-step test guide (Thai): [`Docs/teleop/teleop-test-guide-th.pdf`](../Docs
 
 ## LAN setup
 
-Robot PC setup script (`scripts/setup-lan.ps1`) and SSH from a Client PC: [`Docs/lan/LAN_SETUP.md`](../Docs/lan/LAN_SETUP.md).
+Robot PC setup script (`scripts/setup-lan.ps1`) and SSH from an SSH Client: [`Docs/lan/LAN_SETUP.md`](../Docs/lan/LAN_SETUP.md).
 
 ## Development setup
 
