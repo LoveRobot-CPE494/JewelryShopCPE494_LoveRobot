@@ -1,9 +1,17 @@
 # LAN setup: three PCs on one network
 
-The **Host PC** (Staff Console, Hub, Unity with the Quest on Quest Link), the **Robot PC** (cabled to
-the MG400, runs the Teleop Bridge) and the **Client PCs** (the Mac, the Host PC when it logs in
-elsewhere) talk over one LAN. This guide covers all three: the Robot PC in section 4, the Host PC in
-section 8, the two Quest modes in section 9, undo in section 10 and troubleshooting in section 7.
+Three PCs talk over one LAN ([ADR-0027](../adr/0027-three-pcs-quest-staff-robot.md)):
+
+| PC | Runs | Network role |
+|---|---|---|
+| **Quest PC** (PC1) | The Storefront (Unity), with the Meta Quest 3 on Quest Link | Client: joins the Staff Link, sends Teleop and Orders |
+| **Staff PC** (PC2) | The Staff Console (Unity) | **Host** of the Staff Link; its address is the Host Address |
+| **Robot PC** (PC3) | The Hub and the Teleop Bridge, cabled to the MG400 and the Arduino UNO | Waits for Teleop and Orders and sends replies back; its address is the Robot Address |
+
+Teammates reach the Robot PC by SSH from any **SSH Client** (a laptop such as the Mac, or one of the
+other two PCs). This guide covers the Robot PC in section 4, SSH in section 5, the Quest PC and the
+Staff PC in section 8, the two Quest modes in section 9, undo in section 10 and troubleshooting in
+section 7.
 
 Decisions: [ADR-0023](../adr/0023-lan-host-address-and-udp-discovery.md),
 [ADR-0024](../adr/0024-robot-panel-presets-and-robot-status.md),
@@ -21,7 +29,7 @@ No Preset runs on the real arm without `--dry-run` until #49 (Z_MIN calibration)
 
 ## 2. Network check
 
-All three kinds of PC must reach each other. From a Client PC, ping the Robot PC once:
+All three PCs must reach each other. From an SSH Client, ping the Robot PC once:
 
 ```
 ping <robot-ip>
@@ -33,9 +41,9 @@ traffic, fall back to a phone hotspot or our own router, and connect every PC to
 
 ## 3. Fixed addresses
 
-Addresses (example: Host PC 10.35.120.17, Robot PC 10.35.120.20) come from DHCP and may change.
+Addresses (example: Staff PC 10.35.120.17, Robot PC 10.35.120.20) come from DHCP and may change.
 
-- Best: a DHCP reservation for the Robot PC and Host PC on the router.
+- Best: a DHCP reservation for the Robot PC and the Staff PC on the router.
 - Else: at the start of every day run `ipconfig` on each PC, read the IPv4 address, and use that.
   The setup script also prints it at the end.
 
@@ -71,11 +79,11 @@ To undo them, see section 10.
 Human task (ticket 018-03): run the script on the real Robot PC and check it with the hand-check list
 there. The script has no automated test.
 
-## 5. Client PC setup
+## 5. SSH Client setup
 
 Replace `<user>` with the Robot PC's Windows user and `<robot-ip>` with its address.
 
-1. **Generate a key** (once per Client PC): `ssh-keygen -t ed25519`
+1. **Generate a key** (once per SSH Client): `ssh-keygen -t ed25519`
 2. **Copy it to the Robot PC.**
    - If `<user>` is a normal (non-admin) user, on the Robot PC append the public key to
      `C:\Users\<user>\.ssh\authorized_keys`.
@@ -86,7 +94,7 @@ Replace `<user>` with the Robot PC's Windows user and `<robot-ip>` with its addr
      Add-Content C:\ProgramData\ssh\administrators_authorized_keys '<paste the .pub line>'
      icacls C:\ProgramData\ssh\administrators_authorized_keys /inheritance:r /grant 'Administrators:F' /grant 'SYSTEM:F'
      ```
-   - One key per Client PC, one line each. From a Mac you can first send it with
+   - One key per SSH Client, one line each. From a Mac you can first send it with
      `scp ~/.ssh/id_ed25519.pub <user>@<robot-ip>:` (password login) and then paste it as above.
 3. **Plain ssh:** `ssh <user>@<robot-ip>`
 4. **VS Code Remote-SSH:** install the "Remote - SSH" extension, run "Remote-SSH: Connect to Host",
@@ -117,28 +125,30 @@ safety rule exempts it. Stop with Ctrl+C. Running without `--dry-run` falls unde
   Check with `Get-WindowsCapability -Online -Name 'OpenSSH.Server*'` (want `Installed`).
 - `ssh` asks for a password you do not have: copy your key as in section 5 step 2.
 - `ssh` times out: ping first (section 2); run the setup script `-DryRun` on the Robot PC; check the
-  address with `ipconfig`. SSH is on the Robot PC only: the Host PC does not install it, so `ssh`
-  to the Host PC will not work.
+  address with `ipconfig`. SSH is on the Robot PC only: the host role does not install it, so `ssh`
+  to the Quest PC or the Staff PC will not work.
 - Key refused for an admin user: the `administrators_authorized_keys` pitfall in section 5.
 - Teleop packets do not arrive: look for an inbound Block rule on Python on the Robot PC (the script
   lists them).
-- No Robot Status on the Host PC: run `setup-lan.ps1 -Role host -DryRun` on the Host PC (section 8)
+- No Robot Status on the Quest PC: run `setup-lan.ps1 -Role host -DryRun` on the Quest PC (section 8)
   and check the three rules show `[done]`. Check the Robot PC is running the Teleop Bridge and that
   the Quest's Robot Address (section 8) is the Robot PC's current address. Check that no inbound
   Block rule for Unity is listed (next bullet).
 - The script listed a Block rule for Unity: an inbound Block rule can stop UDP 7777, 9001 or 7778
-  on the Host PC. The script lists it and never removes it. If it is wrong, delete it yourself in
+  on the Quest PC or the Staff PC. The script lists it and never removes it. If it is wrong, delete it yourself in
   Windows Defender Firewall, then run the host role again.
 - A PC's address changed: a DHCP address can change after a restart or a new network. Run `ipconfig`
   on that PC, then type its new address in the headset's Settings: the Robot Address for the Robot
-  PC, the Host Address for the Host PC if Automatic IP in LAN is not ticked. With Automatic IP in
-  LAN ticked, the Host Address is found again from the Host PC's beacon. To stop this happening, set
+  PC, the Host Address for the Staff PC if Automatic IP in LAN is not ticked. With Automatic IP in
+  LAN ticked, the Host Address is found again from the Staff PC's beacon. To stop this happening, set
   a DHCP reservation (section 3).
 
-## 8. Host PC setup
+## 8. Quest PC and Staff PC setup
 
-The Host PC runs the Staff Console and Unity with the Quest. On the Host PC, open PowerShell **as
-administrator** at the repo root:
+Run the host role on **both** the Quest PC and the Staff PC. The Quest PC needs UDP 9001 (Robot
+Status) and 7778 (Host Discovery); the Staff PC needs UDP 7777 (Staff Link). The role opens all
+three on each; the unused port on each PC is harmless. (`host` is only the script's role name: the Quest PC is still a client on the network, and the Staff PC is the host.) On each of the two PCs, open PowerShell
+**as administrator** at the repo root:
 
 ```powershell
 # Look first: prints each step and whether it is done; changes nothing, needs no admin.
@@ -149,7 +159,7 @@ powershell -ExecutionPolicy Bypass -File Dobot\scripts\setup-lan.ps1 -Role host
 
 It allows inbound UDP 7777 (Staff Link), UDP 9001 (Robot Status) and UDP 7778 (Host Discovery) on
 every network profile. It opens no other port. It does not install OpenSSH Server and adds no ping
-rule: the Host PC is not an SSH target. Run it again any time: done steps are reported and skipped,
+rule: neither PC is an SSH target. Run it again any time: done steps are reported and skipped,
 and a failing step is reported while the rest still run (exit code 1).
 
 It also lists any enabled inbound **Block** rule for Unity (those can silently stop the three UDP
@@ -162,19 +172,20 @@ Rules it creates (display names are fixed):
 - `LoveRobot - Discovery UDP 7778`
 
 Then in the headset's Settings, type the Robot PC's address (section 3) as the **Robot Address**
-(ticket #217). The Host Address is the Host PC's address; with **Automatic IP in LAN** ticked it is
-found from the Host PC's beacon, otherwise type the Host PC's address too.
+(ticket #217). The Host Address is the Staff PC's address; with **Automatic IP in LAN** ticked it is
+found from the Staff PC's beacon, otherwise type the Staff PC's address too.
 
-The script prints the Host PC's LAN address at the end: use it when you type the Host Address.
+The script prints the PC's LAN address at the end: on the Staff PC, use it when you type the Host
+Address.
 
-Human task (ticket 018-03): run the script on the real Host PC and check it with the hand-check list
-there. The script has no automated test.
+Human task (ticket 018-03): run the script on the real Quest PC and Staff PC and check each with the
+hand-check list there. The script has no automated test.
 
 ## 9. Quest modes
 
-- **Quest Link on the Host PC (the demo mode).** The headset is tethered to the Host PC, so the Host
-  PC takes the headset's place on the network: the Staff Link, Robot Status and beacons all reach the
-  Host PC, and the host role (section 8) must be run there.
+- **Quest Link on the Quest PC (the demo mode).** The headset is tethered to the Quest PC, so the
+  Quest PC takes the headset's place on the network: Robot Status and beacons reach the Quest PC,
+  and the host role (section 8) must be run there.
 - **Standalone headset over Wi-Fi.** This mode stays supported (tickets 016 and 017) when the network
   lets the Quest connect to the PCs. If the venue network blocks device-to-device traffic, it cannot
   reach them: use the phone hotspot or our own router (section 2), or use Quest Link.

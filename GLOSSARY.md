@@ -87,7 +87,7 @@ The 3D figure in the Storefront that the Staff speaks and acts through
 _Avoid_: NPC, bot, character
 
 **Staff Console**:
-The Staff's workstation outside the Storefront, from which they serve a Customer live
+The Staff's workstation outside the Storefront, on the Staff PC, from which they serve a Customer live
 _Avoid_: staff app, admin panel, dashboard
 
 **Idle Lock**:
@@ -147,12 +147,20 @@ A Customer's request for the Staff to come and serve them live in the Storefront
 _Avoid_: call button, help
 
 **Host Address**:
-The LAN address of the Staff Console's PC that the Quest's Staff Link connects to, typed in the headset or found by Host Discovery. Teleop uses the Robot Address instead. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
+The LAN address of the Staff PC that the Quest's Staff Link connects to, typed in the headset or found by Host Discovery. Teleop uses the Robot Address instead. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
 _Avoid_: server IP, PC IP
 
 **Host Discovery**:
 The UDP broadcast in the LAN that lets the Quest find the Host Address (from the Staff Console) and the Robot Address (from the Robot PC) without typing them. Each beacon carries its role, `staff` or `robot`. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
 _Avoid_: auto IP, pairing
+
+**Quest PC**:
+The PC the Meta Quest 3 is tethered to over Quest Link, home of the Storefront; a client of the Staff Link ([ADR-0027](Docs/adr/0027-three-pcs-quest-staff-robot.md))
+_Avoid_: Host PC, headset PC, PC1
+
+**Staff PC**:
+The PC home of the Staff Console and host of the Staff Link; its address is the Host Address ([ADR-0027](Docs/adr/0027-three-pcs-quest-staff-robot.md))
+_Avoid_: Host PC, server PC, PC2
 
 **Host Beacon**:
 One Host Discovery packet: its sender's role (`staff` or `robot`), IPv4 address and port (Staff Link or Teleop), broadcast about once a second. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)
@@ -198,15 +206,19 @@ The paper bag on the conveyor. One bag receives every Gem Piece of one Order
 _Avoid_: gift box, box
 
 **Suction Cup**:
-The suction head at the end of the MG400 arm, used to pick up Gem Pieces
+The suction head at the end of the MG400 arm, used to pick up Gem Pieces. Its pump sucks on DO9 and blows on DO10 to release ({G})
 _Avoid_: gripper
+
+**Bag Sensor**:
+The sensor on MG400 input DI2 that detects a Gift Bag in front of the arm, so the conveyor stops there ([ADR-0027](Docs/adr/0027-three-pcs-quest-staff-robot.md))
+_Avoid_: bag-stop switch, proximity sensor
 
 **Bag Closer**:
 The mechanism that closes the mouth of the Gift Bag
 _Avoid_: lid servo, gripper, lid-closing hand
 
 **Hub**:
-The intermediary that receives Orders from the Quest, then commands the MG400 and the Arduino. Teleop goes to the Teleop Bridge instead
+The intermediary on the Robot PC that receives Orders from the Quest, then commands the MG400 and the Arduino. Teleop goes to the Teleop Bridge instead ([ADR-0027](Docs/adr/0027-three-pcs-quest-staff-robot.md))
 _Avoid_: server, orchestrator, backend
 
 ### Remote maintenance
@@ -224,8 +236,8 @@ The Robot PC program that receives Teleop and Robot Panel messages from the Ques
 _Avoid_: relay, teleop server
 
 **Robot PC**:
-The PC wired to the MG400, running the Teleop Bridge. It is not the Staff Console's PC, but shares its LAN ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md))
-_Avoid_: Dobot PC, robot server
+The PC wired to the MG400 and the Arduino UNO, home of the Hub and the Teleop Bridge ([ADR-0024](Docs/adr/0024-robot-panel-presets-and-robot-status.md), [ADR-0027](Docs/adr/0027-three-pcs-quest-staff-robot.md))
+_Avoid_: Dobot PC, PC3, robot server
 
 **Robot Address**:
 The LAN address of the Robot PC that the Quest sends Teleop and Robot Panel commands to, typed in the headset or found from the Robot PC's beacon. See [ADR-0023](Docs/adr/0023-lan-host-address-and-udp-discovery.md)

@@ -4,6 +4,8 @@ status: accepted
 
 # The MG400 I/O runs the conveyor and bag sensor; the UNO drives only the Bag Closer
 
+Amended (2026-11-25, [ADR-0027](0027-three-pcs-quest-staff-robot.md) and [ADR-0026](0026-teleop-controls-engage-toggle-pump-hand-menus.md)): the wiring is conveyor DO1 and Bag Sensor DI2 (ADR-0027); the pump is wired to DO9 (suck) and DO10 (blow) (ADR-0026), not DO1. The Teleop code still drives DO1 until ADR-0026 is built.
+
 Supersedes [ADR-0004](0004-arduino-owns-conveyor-and-packaging.md).
 
 The real wiring (2026-11-18) is different from ADR-0004. The duties are now split like this:
