@@ -15,6 +15,23 @@ namespace JewelryShop.Networking
         /// <summary>PlayerPrefs key of the Robot Address.</summary>
         public static string RobotKey { get; set; } = "JewelryShop.RobotAddress";
 
+        /// <summary>PlayerPrefs key of the Automatic IP in LAN flag.</summary>
+        public static string AutomaticKey { get; set; } = "JewelryShop.AutomaticAddress";
+
+        /// <summary>Raised after the Automatic flag was set.</summary>
+        public static event Action AutomaticChanged;
+
+        /// <summary>Automatic IP in LAN (ADR-0023); ON until the Customer turns it off.</summary>
+        public static bool Automatic => PlayerPrefs.GetInt(AutomaticKey, 1) != 0;
+
+        /// <summary>Saves the Automatic flag and raises AutomaticChanged.</summary>
+        public static void SetAutomatic(bool on)
+        {
+            PlayerPrefs.SetInt(AutomaticKey, on ? 1 : 0);
+            PlayerPrefs.Save();
+            AutomaticChanged?.Invoke();
+        }
+
         /// <summary>Raised after a new valid Host Address was saved.</summary>
         public static event Action Changed;
 
