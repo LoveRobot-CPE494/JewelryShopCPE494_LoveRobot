@@ -57,4 +57,32 @@ namespace JewelryShop.Core
         public bool HasSentRecently(double now) =>
             _any && now - LastSentTime <= RecentWindowSeconds;
     }
+
+    /// <summary>
+    /// Where Teleop sends: follows the resolved Robot Address and says when to reconnect.
+    /// A change while engaged releases the old target first, so the arm is never left
+    /// following a headset that has moved on. A null address is a change too (stop sending).
+    /// </summary>
+    public sealed class TeleopTarget
+    {
+        private bool _chosen;
+
+        /// <summary>The current target, or null when there is no valid Robot Address.</summary>
+        public string Address { get; private set; }
+
+        /// <summary>
+        /// True when <paramref name="resolved"/> differs from the current target (or on the
+        /// first call): the caller reconnects, or stops sending when Address is null.
+        /// <paramref name="releaseOld"/>: send Release to the old target before closing it.
+        /// </summary>
+        public bool TryRetarget(string resolved, bool engaged, out bool releaseOld)
+        {
+            releaseOld = false;
+            if (_chosen && resolved == Address) return false;
+            releaseOld = engaged && Address != null;
+            _chosen = true;
+            Address = resolved;
+            return true;
+        }
+    }
 }
