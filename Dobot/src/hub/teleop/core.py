@@ -9,6 +9,8 @@ import math
 import time
 from collections import deque
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
@@ -23,6 +25,8 @@ SMOOTHING = 0.5  # 0 = no filter, near 1 = smooth but slow to follow
 STALE_S = 0.5  # a pose older than this is not followed
 SUCTION_DO_INDEX = 1  # the Suction Cup's digital output (ADR-0002)
 JOG_STEPS_MM = (1, 10, 50)
+PRESET_MAX_SPEED_PCT = 30  # a Preset never moves faster, whatever the speed setting (ADR-0024)
+PRESET_MAX_WAIT_MS = 60_000
 
 # Safe workspace: estimates, narrow them at the station. The one reach limit for Teleop.
 MIN_REACH_MM = 170.0
@@ -87,6 +91,26 @@ class Arm(Protocol):
         """Return the arm's error id, 0 when none."""
 
 
+@dataclass(frozen=True)
+class Preset:
+    """One Preset Action; `reason` is non-empty when the load check rejected it (ADR-0024).
+
+    A step is ("move", x, y, z, r), ("suction", on), ("wait", seconds) or ("home",).
+    """
+
+    id: int
+    name: str
+    steps: tuple[tuple[Any, ...], ...] = ()
+    reason: str = ""
+
+
+@dataclass
+class _Running:
+    preset: Preset
+    index: int = 0  # the step being run
+    until: float | None = None  # clock time a wait step ends
+
+
 class RefusedError(Exception):
     """The core refused a command (Stop latched, motors disabled); nothing was sent."""
 
@@ -113,13 +137,97 @@ def _safe_target(x_mm: float, y_mm: float, z_mm: float, r_deg: float) -> Pose:
     return clamp_workspace(x_mm, y_mm, z_mm, r_deg)
 
 
+def _number(value: Any) -> float:
+    if type(value) not in (int, float) or not math.isfinite(value):
+        raise ValueError(f"not a finite number: {value!r}")
+    return float(value)
+
+
+def _parse_step(step: Any) -> tuple[Any, ...]:
+    kind = step.get("type") if isinstance(step, dict) else None
+    if kind == "move":
+        x, y, z, r = (_number(step.get(axis)) for axis in "xyzr")
+        if not MIN_REACH_MM <= math.hypot(x, y) <= MAX_REACH_MM:
+            raise ValueError(
+                f"move x={x:g} y={y:g} is outside reach {MIN_REACH_MM:g}-{MAX_REACH_MM:g} mm"
+            )
+        if not Z_MIN_MM <= z <= Z_MAX_MM:
+            raise ValueError(f"move z={z:g} is outside {Z_MIN_MM:g} to {Z_MAX_MM:g} mm")
+        if not R_MIN_DEG <= r <= R_MAX_DEG:
+            raise ValueError(f"move r={r:g} is outside {R_MIN_DEG:g} to {R_MAX_DEG:g} deg")
+        return ("move", x, y, z, r)
+    if kind == "suction":
+        if not isinstance(step.get("on"), bool):
+            raise ValueError("suction needs on: true or false")
+        return ("suction", step["on"])
+    if kind == "wait":
+        ms = _number(step.get("ms"))
+        if not 0 <= ms <= PRESET_MAX_WAIT_MS:
+            raise ValueError(f"wait ms must be 0-{PRESET_MAX_WAIT_MS}")
+        return ("wait", ms / 1000)
+    if kind == "home":
+        return ("home",)
+    raise ValueError(f"unknown step: {step!r}")
+
+
+def load_presets(path: Path) -> list[Preset]:
+    """Read the Presets file; a bad Preset is kept with a reason, never clamped or run.
+
+    A missing or unreadable file gives an empty list and a logged reason. A repeated id rejects
+    that id. An entry whose id is not 1-9 is only logged: it has no button to grey out.
+    """
+    try:
+        entries = json.loads(path.read_text("utf-8"))["presets"]
+        if not isinstance(entries, list):
+            raise TypeError("presets must be a list")
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        logger.warning("[presets] none loaded from %s: %r", path, error)
+        return []
+    presets: dict[int, Preset] = {}
+    for entry in entries:
+        preset_id = entry.get("id") if isinstance(entry, dict) else None
+        if type(preset_id) is not int or not 1 <= preset_id <= 9:
+            logger.warning("[presets] skipped entry with bad id (1-9): %r", preset_id)
+            continue
+        if preset_id in presets:
+            # Which of the two was meant is unknown, so neither runs.
+            logger.warning("[presets] %d rejected: duplicate id", preset_id)
+            presets[preset_id] = Preset(preset_id, presets[preset_id].name, reason="duplicate id")
+            continue
+        name, steps = entry.get("name"), entry.get("steps")
+        try:
+            if not isinstance(name, str) or not name:
+                raise ValueError("name must be a non-empty string")
+            if not isinstance(steps, list) or not steps:
+                raise ValueError("steps must be a non-empty list")
+            presets[preset_id] = Preset(preset_id, name, tuple(_parse_step(s) for s in steps))
+        except ValueError as error:
+            logger.warning("[presets] %d rejected: %s", preset_id, error)
+            shown = name if isinstance(name, str) else ""
+            presets[preset_id] = Preset(preset_id, shown, reason=str(error))
+    return sorted(presets.values(), key=lambda p: p.id)
+
+
 class TeleopCore:
     """Turns Teleop messages into safe arm moves."""
 
-    def __init__(self, arm: Arm, clock: Callable[[], float] = time.monotonic) -> None:
-        """Drive `arm`; `clock` gives the current time in seconds."""
+    def __init__(
+        self,
+        arm: Arm,
+        clock: Callable[[], float] = time.monotonic,
+        presets: Sequence[Preset] = (),
+        speed_percent: int = PRESET_MAX_SPEED_PCT,
+    ) -> None:
+        """Drive `arm`; `clock` gives the current time in seconds.
+
+        `speed_percent` is the arm's current speed setting, so a Preset can cap it and restore it.
+        """
         self._arm = arm
         self._clock = clock
+        self._presets = {p.id: p for p in presets}
+        self._speed = speed_percent
+        self._running: _Running | None = None  # one Preset at a time
+        self._is_speed_capped = False
         # receive() runs on the shell's UDP thread, tick() on its control loop: deque appends
         # and pops and one reference assignment are atomic, so no lock is needed.
         self._events: deque[dict[str, Any]] = deque()
@@ -169,6 +277,13 @@ class TeleopCore:
         pose = self._latest_pose
         if pose and self._clock() - pose[1] < STALE_S:
             self._safe(self._follow, pose[0])
+        reason = self._safe(self._step_preset, {"type": "preset"})
+        if reason is not None:
+            self._running = None
+            self._last_result = ("preset", "refused", reason)
+        if self._is_speed_capped and self._running is None:  # a stop cancels from the UDP thread
+            self._is_speed_capped = False
+            self._safe(lambda _: self._arm.set_speed(self._speed), {"type": "speed"})
 
     def status(self) -> dict[str, Any]:
         """Return Robot Status as a JSON-ready dict; never raises when the arm is unreachable."""
@@ -179,6 +294,7 @@ class TeleopCore:
             mode, error_id = "unknown", 0
         x, y, z, r = self._current_robot_pose()
         command, result, reason = self._last_result
+        running = self._running
         return {
             "type": "status",
             "mode": mode,
@@ -192,6 +308,16 @@ class TeleopCore:
             "last_command": command,
             "result": result,
             "reason": reason,
+            "presets": [
+                {"id": p.id, "name": p.name, "valid": not p.reason, "reason": p.reason}
+                for _, p in sorted(self._presets.items())
+            ],
+            "running_preset": running
+            and {
+                "id": running.preset.id,
+                "step": running.index + 1,
+                "of": len(running.preset.steps),
+            },
         }
 
     def run(self, sleep: Callable[[float], None] = time.sleep) -> None:
@@ -213,6 +339,7 @@ class TeleopCore:
     def _halt(self) -> None:
         self._is_stopped = True
         self._is_engaged = False
+        self._running = None  # a Preset stops at once; tick() restores the speed
 
     def _current_robot_pose(self) -> Pose:
         try:
@@ -237,6 +364,59 @@ class TeleopCore:
             raise RefusedError("stop latched")
         if self._is_disabled:
             raise RefusedError("disabled")
+        if self._running:
+            raise RefusedError("preset running")
+
+    def _start_preset(self, preset_id: Any) -> None:
+        preset = self._presets.get(preset_id) if type(preset_id) is int else None
+        if preset is None:
+            raise RefusedError(f"unknown preset {preset_id!r}")
+        if preset.reason:
+            raise RefusedError(f"preset rejected: {preset.reason}")
+        if self._running:
+            raise RefusedError("preset running")
+        if self._is_stopped:
+            raise RefusedError("stop latched")
+        if self._is_engaged:
+            raise RefusedError("teleop engaged")
+        if self._is_disabled:
+            raise RefusedError("disabled")
+        mode = self._arm.get_mode()
+        if mode != "enabled":
+            raise RefusedError(f"arm not enabled ({mode})")
+        self._restart_motion()
+        self._is_speed_capped = True  # set first: tick() restores the setting if the cap fails
+        self._arm.set_speed(min(self._speed, PRESET_MAX_SPEED_PCT))  # a failure means no Preset
+        self._running = _Running(preset)
+        logger.info("[preset] %d %s started", preset.id, preset.name)
+
+    def _step_preset(self, _: dict[str, Any]) -> None:
+        # One step per tick; a wait ends on the clock, never a sleep.
+        run = self._running
+        if run is None:
+            return
+        if run.until is not None:
+            if self._clock() < run.until:
+                return
+            run.until, run.index = None, run.index + 1
+        if run.index >= len(run.preset.steps):
+            self._running = None
+            return
+        step = run.preset.steps[run.index]
+        if self._is_stopped:  # a stop may land from the UDP thread between ticks
+            return
+        if step[0] == "move":
+            self._arm.move_to(*_safe_target(*step[1:]))
+        elif step[0] == "suction":
+            self._set_suction(step[1])
+        elif step[0] == "wait":
+            run.until = self._clock() + step[1]
+            return
+        else:
+            self._arm.move_joints(0, 0, 0, 0)
+        run.index += 1
+        if run.index >= len(run.preset.steps):
+            self._running = None
 
     def _move_once(self, x_mm: float, y_mm: float, z_mm: float, r_deg: float) -> None:
         # A Robot Panel move (jog, move_to): ends engage, then one clamped MovJ.
@@ -259,6 +439,7 @@ class TeleopCore:
     def _handle_event(self, event: dict[str, Any]) -> None:
         kind = event.get("type")
         if kind == "engage":
+            self._running = None  # engage cancels a Preset
             if self._is_disabled:
                 raise RefusedError("disabled")  # engage releases Stop, never Disable
             pose = self._current_robot_pose()
@@ -293,7 +474,10 @@ class TeleopCore:
             )
             self._restart_motion()
         elif kind == "speed":
-            self._arm.set_speed(int(event["value"]))
+            self._speed = int(event["value"])
+            self._arm.set_speed(
+                min(self._speed, PRESET_MAX_SPEED_PCT) if self._running else self._speed
+            )
         elif kind == "resume":
             self._is_stopped = False
             logger.info("[resume] stop released")
@@ -302,11 +486,14 @@ class TeleopCore:
             self._is_disabled = False
         elif kind == "disable":
             self._is_disabled, self._is_engaged = True, False
+            self._running = None
             self._arm.disable()
         elif kind == "clear_error":
             self._arm.clear_error()
         elif kind == "jog":
             self._jog(event["axis"], event["step"])
+        elif kind == "preset":
+            self._start_preset(event.get("id"))
         elif kind == "move_to":
             self._move_once(
                 float(event["x"]), float(event["y"]), float(event["z"]), float(event["r"])
@@ -347,7 +534,7 @@ class TeleopCore:
         return x0_mm + forward_mm, y0_mm + left_mm, z0_mm + up_mm
 
     def _follow(self, message: dict[str, Any]) -> None:
-        if self._is_stopped or self._is_disabled:
+        if self._is_stopped or self._is_disabled or self._running:
             return
         if message.get("frame", "robot") == "headset":
             if not self._is_engaged:

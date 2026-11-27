@@ -16,10 +16,13 @@ from hub.teleop.core import (
     SUCTION_DO_INDEX,
     Z_MAX_MM,
     Z_MIN_MM,
+    Preset,
     RobotError,
     TeleopCore,
+    load_presets,
 )
 
+PRESETS_FILE = Path(__file__).parents[1] / "presets.json"
 EXAMPLES = json.loads(
     (Path(__file__).parents[1] / "contract" / "teleop_examples.json").read_text("utf-8")
 )
@@ -101,7 +104,7 @@ def arm() -> FakeArm:
 
 @pytest.fixture
 def core(arm: FakeArm, clock: Clock) -> TeleopCore:
-    return TeleopCore(arm, clock)
+    return TeleopCore(arm, clock, load_presets(PRESETS_FILE))
 
 
 def send(core: TeleopCore, **message: object) -> None:
@@ -643,6 +646,8 @@ def test_status_carries_mode_pose_suction_and_last_result(clock: Clock) -> None:
         "last_command": "jog",
         "result": "done",
         "reason": "",
+        "presets": [],
+        "running_preset": None,
     }
 
 
@@ -670,7 +675,8 @@ def test_status_matches_the_shared_examples(clock: Clock) -> None:
         message = example["message"]
         assert message.keys() == status.keys(), example["name"]
         for key, value in message.items():
-            assert type(value) is type(status[key]), (example["name"], key)
+            if key != "running_preset":  # null when idle, an object while a Preset runs
+                assert type(value) is type(status[key]), (example["name"], key)
 
 
 @pytest.mark.parametrize("example", EXAMPLES["commands"], ids=lambda e: e["name"])
@@ -689,7 +695,7 @@ def test_every_example_command_is_accepted(
 
 @pytest.mark.parametrize("example", EXAMPLES["commands"], ids=lambda e: e["name"])
 def test_dry_run_accepts_every_example_command(clock: Clock, example: dict) -> None:
-    core = TeleopCore(DryRunArm(), clock)
+    core = TeleopCore(DryRunArm(), clock, load_presets(PRESETS_FILE))
     send(core, **example["message"])
     core.tick()
 
@@ -704,3 +710,314 @@ def test_dry_run_status_follows_enable_and_disable(clock: Clock) -> None:
     send(core, type="disable")
     core.tick()
     assert core.status()["mode"] == "disabled"
+
+
+# --- Preset Actions (ADR-0024) ---
+
+
+def write_presets(tmp_path: Path, *entries: object) -> Path:
+    path = tmp_path / "presets.json"
+    path.write_text(json.dumps({"presets": list(entries)}), "utf-8")
+    return path
+
+
+def move(x: float = 300, y: float = 0, z: float = 50, r: float = 0) -> dict:
+    return {"type": "move", "x": x, "y": y, "z": z, "r": r}
+
+
+def by_id(presets: list[Preset]) -> dict[int, Preset]:
+    return {p.id: p for p in presets}
+
+
+def test_shipped_presets_load_valid_with_the_default_z_min() -> None:
+    presets = load_presets(PRESETS_FILE)
+
+    assert [(p.id, p.name, p.reason) for p in presets] == [
+        (1, "Square", ""),
+        (2, "Suction test", ""),
+        (3, "Home", ""),
+    ]
+
+
+@pytest.mark.parametrize(
+    "bad_step",
+    [
+        move(x=500),  # beyond max reach
+        move(x=100),  # inside min reach
+        move(z=Z_MIN_MM - 1),
+        move(z=Z_MAX_MM + 1),
+        move(r=R_MAX_DEG + 1),
+        {"type": "move", "x": 300, "y": 0, "z": 50},  # no r
+        move(x="300"),
+        {"type": "suction", "on": 1},
+        {"type": "wait", "ms": -5},
+        {"type": "fly"},
+        "move",
+    ],
+)
+def test_a_bad_step_rejects_the_whole_preset_with_a_reason_and_others_still_load(
+    tmp_path: Path, bad_step: object
+) -> None:
+    path = write_presets(
+        tmp_path,
+        {"id": 1, "name": "Bad", "steps": [move(), bad_step]},
+        {"id": 2, "name": "Good", "steps": [move()]},
+    )
+
+    presets = by_id(load_presets(path))
+
+    assert presets[1].reason and presets[1].steps == ()
+    assert presets[2].reason == "" and len(presets[2].steps) == 1
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"id": 0, "name": "Zero", "steps": [move()]},
+        {"id": 10, "name": "Ten", "steps": [move()]},
+        {"id": "1", "name": "Text", "steps": [move()]},
+        {"id": True, "name": "Bool", "steps": [move()]},
+        "not an object",
+    ],
+)
+def test_a_bad_id_is_skipped_and_others_still_load(tmp_path: Path, entry: object) -> None:
+    path = write_presets(tmp_path, entry, {"id": 2, "name": "Good", "steps": [move()]})
+
+    assert [p.id for p in load_presets(path)] == [2]
+
+
+def test_a_duplicate_id_is_rejected_and_others_still_load(tmp_path: Path) -> None:
+    path = write_presets(
+        tmp_path,
+        {"id": 1, "name": "First", "steps": [move()]},
+        {"id": 1, "name": "Second", "steps": [move()]},
+        {"id": 2, "name": "Good", "steps": [move()]},
+    )
+
+    first, good = load_presets(path)
+    assert (first.id, first.name, first.reason) == (1, "First", "duplicate id")
+    assert (good.id, good.reason) == (2, "")
+
+
+@pytest.mark.parametrize(
+    "entry", [{"id": 1, "name": "", "steps": [move()]}, {"id": 1, "name": "No steps"}]
+)
+def test_malformed_preset_is_rejected_with_a_reason(tmp_path: Path, entry: dict) -> None:
+    (preset,) = load_presets(write_presets(tmp_path, entry))
+
+    assert preset.reason
+
+
+def test_a_missing_or_unreadable_file_gives_no_presets_and_logs(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json", "utf-8")
+
+    with caplog.at_level(logging.WARNING):
+        assert load_presets(tmp_path / "absent.json") == []
+        assert load_presets(broken) == []
+
+    assert caplog.text.count("none loaded") == 2
+
+
+def steps_of(*steps: dict) -> tuple[tuple[object, ...], ...]:
+    parsed = {
+        "move": lambda s: ("move", s["x"], s["y"], s["z"], s["r"]),
+        "suction": lambda s: ("suction", s["on"]),
+        "wait": lambda s: ("wait", s["ms"] / 1000),
+        "home": lambda s: ("home",),
+    }
+    return tuple(parsed[s["type"]](s) for s in steps)
+
+
+def preset_core(arm: FakeArm, clock: Clock, *steps: dict, speed: int = 30) -> TeleopCore:
+    return TeleopCore(arm, clock, [Preset(1, "Test", steps_of(*steps))], speed_percent=speed)
+
+
+def run_preset(core: TeleopCore, preset_id: int = 1) -> None:
+    send(core, type="preset", id=preset_id)
+    core.tick()
+
+
+def test_a_preset_runs_its_steps_in_order_one_per_tick(arm: FakeArm, clock: Clock) -> None:
+    core = preset_core(
+        arm, clock, move(250), {"type": "suction", "on": True}, move(300), {"type": "home"}
+    )
+
+    run_preset(core)
+    assert core.status()["running_preset"] == {"id": 1, "step": 2, "of": 4}
+    for _ in range(3):
+        core.tick()
+
+    assert [c for c in arm.calls if c[0] != "set_speed"] == [
+        ("move_to", 250, 0, 50, 0),
+        ("set_digital_output", SUCTION_DO_INDEX, True),
+        ("move_to", 300, 0, 50, 0),
+        ("move_joints", 0, 0, 0, 0),
+    ]
+    status = core.status()
+    assert status["running_preset"] is None
+    assert (status["last_command"], status["result"]) == ("preset", "done")
+
+
+def test_a_wait_step_ends_on_the_clock_not_a_sleep(arm: FakeArm, clock: Clock) -> None:
+    core = preset_core(arm, clock, {"type": "wait", "ms": 1000}, move())
+
+    run_preset(core)
+    clock.now = 0.9
+    core.tick()
+    assert arm.moves == []
+    assert core.status()["running_preset"] == {"id": 1, "step": 1, "of": 2}
+
+    clock.now = 1.0
+    core.tick()
+    assert arm.moves == [(300, 0, 50, 0)]
+    assert core.status()["running_preset"] is None
+
+
+def test_a_preset_is_refused_unless_the_arm_is_ready(arm: FakeArm, clock: Clock) -> None:
+    core = preset_core(arm, clock, move())
+
+    def refused(reason: str) -> None:
+        run_preset(core)
+        status = core.status()
+        assert (status["last_command"], status["result"], status["reason"]) == (
+            "preset",
+            "refused",
+            reason,
+        )
+        assert status["running_preset"] is None and arm.moves == []
+
+    send(core, type="disable")
+    core.tick()
+    refused("disabled")
+    send(core, type="enable")
+    arm.mode = "error"
+    refused("arm not enabled (error)")
+    arm.mode = "enabled"
+    send(core, type="engage", x=0, y=1, z=0.3)
+    core.tick()
+    refused("teleop engaged")
+    send(core, type="stop")
+    core.tick()
+    refused("stop latched")
+    run_preset(core, 7)
+    assert core.status()["reason"] == "unknown preset 7"
+
+
+def test_a_rejected_preset_is_refused(arm: FakeArm, clock: Clock) -> None:
+    core = TeleopCore(arm, clock, [Preset(1, "Far", reason="move x=600 is outside reach")])
+    run_preset(core)
+
+    assert core.status()["reason"] == "preset rejected: move x=600 is outside reach"
+    assert arm.moves == []
+
+
+def test_a_second_preset_is_refused_while_one_runs(arm: FakeArm, clock: Clock) -> None:
+    core = preset_core(arm, clock, move(), move(310), move(320))
+    run_preset(core)
+    run_preset(core)
+
+    status = core.status()
+    assert (status["result"], status["reason"]) == ("refused", "preset running")
+    assert status["running_preset"] == {"id": 1, "step": 3, "of": 3}
+
+
+@pytest.mark.parametrize("cancel", [{"type": "stop"}, {"type": "engage", "x": 0, "y": 1, "z": 0.3}])
+def test_stop_or_engage_cancels_a_running_preset_at_once(
+    arm: FakeArm, clock: Clock, cancel: dict
+) -> None:
+    core = preset_core(arm, clock, move(), move(310), move(320))
+    run_preset(core)
+    send(core, **cancel)
+    for _ in range(3):
+        core.tick()
+
+    assert arm.moves == [(300, 0, 50, 0)]
+    assert core.status()["running_preset"] is None
+
+
+def test_stop_cancels_even_before_the_tick_runs(arm: FakeArm, clock: Clock) -> None:
+    core = preset_core(arm, clock, move(), move(310))
+    run_preset(core)
+    core.receive(b'{"type": "stop"}')  # acts at once, on the UDP thread
+
+    assert core.status()["running_preset"] is None
+    core.tick()
+    assert arm.moves == [(300, 0, 50, 0)]
+
+
+@pytest.mark.parametrize(("setting", "capped"), [(80, 30), (100, 30), (10, 10)])
+def test_preset_moves_run_at_most_30_percent_and_the_setting_comes_back(
+    arm: FakeArm, clock: Clock, setting: int, capped: int
+) -> None:
+    core = preset_core(arm, clock, move(), speed=setting)
+    run_preset(core)
+
+    assert arm.calls[0] == ("set_speed", capped)
+    core.tick()
+    assert arm.calls[-1] == ("set_speed", setting)
+
+
+def test_a_speed_command_during_a_preset_stays_capped(arm: FakeArm, clock: Clock) -> None:
+    core = preset_core(arm, clock, {"type": "wait", "ms": 5000})
+    run_preset(core)
+    send(core, type="speed", value=90)
+    core.tick()
+    assert arm.calls[-1] == ("set_speed", 30)
+
+    send(core, type="stop")
+    core.tick()
+    assert arm.calls[-1] == ("set_speed", 90)
+
+
+def test_other_motion_is_refused_while_a_preset_runs(arm: FakeArm, clock: Clock) -> None:
+    core = preset_core(arm, clock, {"type": "wait", "ms": 5000})
+    run_preset(core)
+    for message in ({"type": "home"}, {"type": "move_to", "x": 300, "y": 0, "z": 50, "r": 0}):
+        send(core, **message)
+    robot_pose(core, 300, 0, 50)
+
+    assert arm.moves == [] and ("move_joints", 0, 0, 0, 0) not in arm.calls
+
+
+def test_an_arm_error_aborts_the_preset_and_is_reported(arm: FakeArm, clock: Clock) -> None:
+    core = preset_core(arm, clock, move(), move(310))
+    arm.move_error = RobotError("arm refused MovJ")
+    run_preset(core)
+
+    status = core.status()
+    assert (status["result"], status["reason"]) == ("refused", "arm refused MovJ")
+    assert status["running_preset"] is None
+
+
+def test_dry_run_steps_through_a_preset_without_the_arm(clock: Clock) -> None:
+    core = TeleopCore(DryRunArm(), clock, load_presets(PRESETS_FILE))
+    run_preset(core, 2)
+    assert core.status()["running_preset"] == {"id": 2, "step": 2, "of": 4}
+    for _ in range(4):
+        clock.now += 5.0
+        core.tick()
+
+    assert core.status()["running_preset"] is None
+    assert core.status()["suction"] is False
+
+
+def test_status_lists_presets_sorted_with_reasons_and_progress(arm: FakeArm, clock: Clock) -> None:
+    core = TeleopCore(
+        arm,
+        clock,
+        [Preset(2, "Far", reason="too far"), Preset(1, "Wait", (("wait", 1.0), ("home",)))],
+    )
+    run_preset(core)
+    status = core.status()
+    example = next(e for e in EXAMPLES["status"] if e["name"] == "preset_running")["message"]
+
+    assert status["presets"] == [
+        {"id": 1, "name": "Wait", "valid": True, "reason": ""},
+        {"id": 2, "name": "Far", "valid": False, "reason": "too far"},
+    ]
+    assert status["running_preset"] == {"id": 1, "step": 1, "of": 2}
+    assert status["running_preset"].keys() == example["running_preset"].keys()
+    assert any(not p["valid"] and p["reason"] for p in example["presets"])

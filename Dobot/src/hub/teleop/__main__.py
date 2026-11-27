@@ -11,6 +11,7 @@ import socket
 import threading
 import time
 from collections.abc import Sequence
+from pathlib import Path
 
 from hub.dashboard import TcpDashboard
 from hub.teleop.core import (
@@ -19,6 +20,7 @@ from hub.teleop.core import (
     SUCTION_DO_INDEX,
     UDP_PORT,
     TeleopCore,
+    load_presets,
 )
 from hub.teleop.mg400_arm import MG400Arm
 
@@ -26,6 +28,7 @@ logger = logging.getLogger("hub.teleop")
 
 DASHBOARD_PORT = 29999
 MOTION_PORT = 30003
+DEFAULT_PRESETS = Path(__file__).parents[3] / "presets.json"  # Dobot/presets.json
 _DATAGRAM_BYTES = 4096
 
 
@@ -122,6 +125,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--ip", default="192.168.1.6", help="MG400 address")
     parser.add_argument("--port", type=int, default=UDP_PORT, help="UDP port to listen on")
     parser.add_argument("--speed", type=int, default=30, help="speed factor, 1-100 %%")
+    parser.add_argument(
+        "--presets", type=Path, default=DEFAULT_PRESETS, help="Preset Actions file (JSON)"
+    )
     parser.add_argument("--dry-run", action="store_true", help="no arm: log each command")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -131,7 +137,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         mg400 = MG400Arm(TcpDashboard(args.ip, DASHBOARD_PORT), TcpDashboard(args.ip, MOTION_PORT))
         mg400.enable()
         mg400.set_speed(args.speed)
-    core = TeleopCore(mg400 or DryRunArm())
+    core = TeleopCore(
+        mg400 or DryRunArm(), presets=load_presets(args.presets), speed_percent=args.speed
+    )
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", args.port))

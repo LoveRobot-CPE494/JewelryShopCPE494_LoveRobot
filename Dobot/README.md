@@ -21,6 +21,24 @@ It receives UDP on port 9000 and drives the MG400:
 
 Robot Panel commands on 9000: `enable`, `disable`, `clear_error`, `resume`, `jog` (axis `x`/`y`/`z`, step ±1/10/50 mm) and `move_to` (x, y, z, r). After `stop`, every move is refused until `resume` or `engage`; after `disable`, until `enable`. Example messages for every command and Robot Status packets: [`contract/teleop_examples.json`](contract/teleop_examples.json), read by the Python tests (and meant for the Unity tests).
 
+### Preset Actions (`presets.json`)
+
+The Robot Panel's Preset buttons run a Preset from [`presets.json`](presets.json), read when the Bridge starts (`--presets <file>` to use another; a missing or unreadable file means no Presets and a logged reason). Edit it and restart the Bridge, no rebuild. The Robot Panel sends `{"type": "preset", "id": 1}`; the Bridge runs it one step per control tick and reports progress in Robot Status.
+
+```json
+{"presets": [{"id": 1, "name": "Square", "steps": [
+  {"type": "move", "x": 250, "y": -25, "z": 50, "r": 0},
+  {"type": "suction", "on": true},
+  {"type": "wait", "ms": 1000},
+  {"type": "home"}
+]}]}
+```
+
+- `id` is 1-9 and unique; `name` is the button label. Steps: `move` (x, y, z in mm, r in deg), `suction` (`on` true or false), `wait` (`ms`, 0-60000) and `home` (all joints to 0).
+- Checked on load: every `move` must be inside reach 170-420 mm (distance of x, y from the base), Z from `Z_MIN_MM` to 150 mm and R within +/-170. One bad step rejects the **whole** Preset (never clamped); it shows greyed out with the reason. A repeated id rejects that id (neither copy runs); an id outside 1-9 is skipped and logged; the other Presets still load.
+- A Preset starts only when the arm is enabled and not in error, Stop is not latched and Teleop is not engaged. One runs at a time. `stop` or `engage` cancels it at once, and other moves are refused while it runs. Preset moves run at most 30 % speed whatever `--speed` says; the setting comes back when it ends.
+- `--dry-run` steps through a Preset and logs each call without moving the arm. The shipped Presets are placeholders; real positions wait for the `Z_MIN_MM` calibration (#49).
+
 `Z_MIN_MM` must be calibrated on the real arm (#49) before running without `--dry-run`, and a person not wearing the headset holds the real E-stop during every real-arm test.
 
 ### `teleop/` (reference only)
