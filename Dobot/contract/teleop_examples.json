@@ -19,7 +19,8 @@
     {"name": "jog_x_plus_10", "message": {"type": "jog", "axis": "x", "step": 10}},
     {"name": "jog_z_minus_1", "message": {"type": "jog", "axis": "z", "step": -1}},
     {"name": "jog_y_plus_50", "message": {"type": "jog", "axis": "y", "step": 50}},
-    {"name": "move_to", "message": {"type": "move_to", "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0}}
+    {"name": "move_to", "message": {"type": "move_to", "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0}},
+    {"name": "preset_1", "message": {"type": "preset", "id": 1}}
   ],
   "status": [
     {
@@ -28,7 +29,9 @@
         "type": "status", "mode": "enabled", "error_id": 0,
         "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0,
         "suction": false, "stop_latched": false,
-        "last_command": "", "result": "", "reason": ""
+        "last_command": "", "result": "", "reason": "",
+        "presets": [{"id": 1, "name": "Square", "valid": true, "reason": ""}],
+        "running_preset": null
       }
     },
     {
@@ -37,7 +40,9 @@
         "type": "status", "mode": "enabled", "error_id": 0,
         "x": 310.0, "y": 0.0, "z": 50.0, "r": 0.0,
         "suction": true, "stop_latched": false,
-        "last_command": "jog", "result": "done", "reason": ""
+        "last_command": "jog", "result": "done", "reason": "",
+        "presets": [{"id": 1, "name": "Square", "valid": true, "reason": ""}],
+        "running_preset": null
       }
     },
     {
@@ -46,7 +51,9 @@
         "type": "status", "mode": "enabled", "error_id": 0,
         "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0,
         "suction": false, "stop_latched": true,
-        "last_command": "home", "result": "refused", "reason": "stop latched"
+        "last_command": "home", "result": "refused", "reason": "stop latched",
+        "presets": [{"id": 1, "name": "Square", "valid": true, "reason": ""}],
+        "running_preset": null
       }
     },
     {
@@ -55,7 +62,9 @@
         "type": "status", "mode": "error", "error_id": 22,
         "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0,
         "suction": false, "stop_latched": false,
-        "last_command": "move_to", "result": "refused", "reason": "arm refused MovJ"
+        "last_command": "move_to", "result": "refused", "reason": "arm refused MovJ",
+        "presets": [{"id": 1, "name": "Square", "valid": true, "reason": ""}],
+        "running_preset": null
       }
     },
     {
@@ -64,7 +73,23 @@
         "type": "status", "mode": "unknown", "error_id": 0,
         "x": 300.0, "y": 0.0, "z": 50.0, "r": 0.0,
         "suction": false, "stop_latched": false,
-        "last_command": "", "result": "", "reason": ""
+        "last_command": "", "result": "", "reason": "",
+        "presets": [{"id": 1, "name": "Square", "valid": true, "reason": ""}],
+        "running_preset": null
+      }
+    },
+    {
+      "name": "preset_running",
+      "message": {
+        "type": "status", "mode": "enabled", "error_id": 0,
+        "x": 300.0, "y": -25.0, "z": 50.0, "r": 0.0,
+        "suction": false, "stop_latched": false,
+        "last_command": "preset", "result": "done", "reason": "",
+        "presets": [
+          {"id": 1, "name": "Square", "valid": true, "reason": ""},
+          {"id": 2, "name": "Too far", "valid": false, "reason": "move x=600 y=0 is outside reach 170-420 mm"}
+        ],
+        "running_preset": {"id": 1, "step": 2, "of": 5}
       }
     }
   ]

@@ -1,0 +1,30 @@
+{
+  "presets": [
+    {
+      "id": 1,
+      "name": "Square",
+      "steps": [
+        {"type": "move", "x": 250, "y": -25, "z": 50, "r": 0},
+        {"type": "move", "x": 300, "y": -25, "z": 50, "r": 0},
+        {"type": "move", "x": 300, "y": 25, "z": 50, "r": 0},
+        {"type": "move", "x": 250, "y": 25, "z": 50, "r": 0},
+        {"type": "move", "x": 250, "y": -25, "z": 50, "r": 0}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Suction test",
+      "steps": [
+        {"type": "move", "x": 300, "y": 0, "z": 50, "r": 0},
+        {"type": "suction", "on": true},
+        {"type": "wait", "ms": 1000},
+        {"type": "suction", "on": false}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Home",
+      "steps": [{"type": "home"}]
+    }
+  ]
+}
