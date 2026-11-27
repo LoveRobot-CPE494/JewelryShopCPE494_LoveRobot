@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterator
 
 import pytest
@@ -203,6 +204,18 @@ def test_get_pose_parses_the_reply(arm: MG400Arm, fake_mg400: FakeMG400) -> None
     fake_mg400.script("GetPose", "0,{300.5,-2,50,10,0,0},GetPose();")
 
     assert arm.get_pose() == [300.5, -2.0, 50.0, 10.0, 0.0, 0.0]
+
+
+def test_get_pose_is_not_logged_at_info(
+    arm: MG400Arm, fake_mg400: FakeMG400, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Robot Status polls the pose 4 times a second: at INFO it would flood the Bridge log.
+    fake_mg400.script("GetPose", "0,{300.5,-2,50,10,0,0},GetPose();")
+
+    with caplog.at_level(logging.INFO):
+        arm.get_pose()
+
+    assert "GetPose" not in caplog.text
 
 
 def test_get_pose_without_values_is_empty(arm: MG400Arm, fake_mg400: FakeMG400) -> None:
