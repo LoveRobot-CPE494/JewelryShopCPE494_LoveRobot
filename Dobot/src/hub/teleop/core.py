@@ -32,7 +32,8 @@ PRESET_MAX_WAIT_MS = 60_000
 MIN_REACH_MM = 170.0
 MAX_REACH_MM = 420.0
 # TODO(#49): calibrate Z_MIN_MM on the real arm so the Suction Cup clears the table.
-Z_MIN_MM, Z_MAX_MM = -100.0, 150.0
+# Provisional 0 mm until then: a guess on the safe side, not a measured value.
+Z_MIN_MM, Z_MAX_MM = 0.0, 150.0
 R_MIN_DEG, R_MAX_DEG = -170.0, 170.0
 JOINT_LIMITS_DEG = {
     "j1": (-160.0, 160.0),
