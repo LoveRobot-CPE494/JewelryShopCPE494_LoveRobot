@@ -1,6 +1,7 @@
 """
-pc_sender.py  —  ส่งค่าทดสอบไปที่ mg400_bridge.py แทนแว่น
-ข้อความรูปแบบเดียวกับที่ MG400Teleop.cs (Unity) ส่ง
+pc_sender.py  —  ส่งค่าทดสอบไปที่ Teleop Bridge (python -m hub.teleop) แทนแว่น
+ข้อความรูปแบบเดียวกับที่ MG400Teleop.cs (Unity) ส่ง และคำสั่ง Robot Panel (ADR-0024)
+รับ Robot Status กลับทาง UDP 9001 แล้วพิมพ์เมื่อค่าเปลี่ยน
 
 รัน:  python pc_sender.py                     (bridge อยู่เครื่องเดียวกัน)
       python pc_sender.py --host 192.168.0.10
@@ -10,6 +11,7 @@ import argparse
 import json
 import math
 import socket
+import threading
 import time
 
 HELP = """
@@ -23,6 +25,11 @@ HELP = """
   p x y z [r]        ไปพิกัดแขน (mm)
   j j1 j2 j3 [j4]    ไปมุมข้อต่อ (องศา)
   s n                ความเร็ว %
+Robot Panel:
+  enable / disable / clear / resume
+  jog x|y|z step     ขยับทีละ step mm (+/-1, 10, 50)
+  mv x y z r         ไปพิกัดแขน (mm) แบบครั้งเดียว
+  status             พิมพ์ Robot Status ล่าสุด
   help / q
 """
 
@@ -31,10 +38,26 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=9000)
+    ap.add_argument("--status-port", type=int, default=9001)
     a = ap.parse_args()
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(("0.0.0.0", a.status_port))       # Bridge ส่ง Robot Status กลับมาที่พอร์ตนี้
     dest = (a.host, a.port)
+    latest = {}
+
+    def receive_status():
+        while True:
+            try:
+                data, _ = sock.recvfrom(4096)
+                status = json.loads(data.decode("utf-8"))
+            except (OSError, ValueError):
+                continue                            # Windows: ICMP unreachable -> recvfrom error
+            if status != latest.get("status"):
+                print("\n  <-", status)
+            latest["status"] = status
+
+    threading.Thread(target=receive_status, daemon=True).start()
 
     def send(msg, show=True):
         sock.sendto(json.dumps(msg).encode("utf-8"), dest)
@@ -66,7 +89,7 @@ def main():
             continue
         cmd, *args = line.split()
         try:
-            v = [float(x) for x in args]
+            v = [float(x) for x in args] if cmd != "jog" else []   # jog มีชื่อแกน (x|y|z)
             if cmd == "ctrl":
                 dur = v[0] if v else 8
                 controller_path(lambda t: (0.05 * math.sin(2 * math.pi * t / 4), 0.0,
@@ -90,6 +113,16 @@ def main():
                       "j4": v[3] if len(v) > 3 else 0})
             elif cmd == "s":
                 send({"type": "speed", "value": int(v[0])})
+            elif cmd in ("enable", "disable", "resume"):
+                send({"type": cmd})
+            elif cmd == "clear":
+                send({"type": "clear_error"})
+            elif cmd == "jog":
+                send({"type": "jog", "axis": args[0], "step": int(args[1])})
+            elif cmd == "mv":
+                send({"type": "move_to", "x": v[0], "y": v[1], "z": v[2], "r": v[3]})
+            elif cmd == "status":
+                print("  <-", latest.get("status", "ยังไม่ได้รับ Robot Status"))
             elif cmd == "help":
                 print(HELP)
             elif cmd in ("q", "quit", "exit"):

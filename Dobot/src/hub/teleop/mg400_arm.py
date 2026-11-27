@@ -27,6 +27,8 @@ MODE_NAMES = {
     11: "JOG",
 }
 _MODE_DISABLED, _MODE_IDLE, _MODE_RUNNING, _MODE_ERROR, _MODE_PAUSE = 4, 5, 7, 9, 10
+_MODE_INIT, _MODE_BRAKE_OPEN = 1, 2
+_MODES_ENABLED = (_MODE_IDLE, 6, _MODE_RUNNING, 8, 11)  # idle, backdrive, running, move, jog
 _START_GRACE_S = 0.3  # a move that never shows RUNNING counts as done after this
 _RECOVER_SETTLE_S = 0.3
 _ENABLE_SETTLE_S = 1.0
@@ -121,6 +123,25 @@ class MG400Arm:
     def disable(self) -> None:
         """Disable the motors."""
         self._send_dashboard("DisableRobot()")
+
+    def clear_error(self) -> None:
+        """Clear the alarm; no Continue(), so nothing left in the queue starts moving."""
+        self._send_dashboard("ClearError()")
+
+    def get_mode(self) -> str:
+        """Return "enabled", "disabled", "error" or "unknown" from RobotMode()."""
+        mode = self._robot_mode()
+        if mode in (_MODE_ERROR, _MODE_PAUSE):
+            return "error"
+        if mode in (_MODE_INIT, _MODE_BRAKE_OPEN, _MODE_DISABLED):  # motors not on
+            return "disabled"
+        return "enabled" if mode in _MODES_ENABLED else "unknown"
+
+    def get_error_id(self) -> int:
+        """Return the first id in GetErrorID(), 0 when there is none."""
+        match = re.search(r"\{(.*)\}", self._send_dashboard("GetErrorID()", is_verbose=False))
+        ids = re.findall(r"\d+", match.group(1)) if match else []
+        return int(ids[0]) if ids else 0
 
     def close(self) -> None:
         """Close both ports."""

@@ -17,7 +17,9 @@ python -m hub.teleop --ip 192.168.1.6   # the real arm (--port 9000, --speed 30 
 It receives UDP on port 9000 and drives the MG400:
 - `core.py`: no sockets or threads. Clamps every move to the safe workspace (reach 170-420 mm, Z, R), filters jitter, follows only fresh poses, and handles `stop`. All the Teleop limits live here.
 - `mg400_arm.py`: the MG400 adapter over the dashboard (29999) and motion (30003) ports, with the IK check and error recovery.
-- `__main__.py`: the UDP listener and the 10 Hz control loop.
+- `__main__.py`: the UDP listener, the 10 Hz control loop, and Robot Status (JSON, 4 times a second) to the last sender on UDP 9001 ([ADR-0024](../Docs/adr/0024-robot-panel-presets-and-robot-status.md)).
+
+Robot Panel commands on 9000: `enable`, `disable`, `clear_error`, `resume`, `jog` (axis `x`/`y`/`z`, step ±1/10/50 mm) and `move_to` (x, y, z, r). After `stop`, every move is refused until `resume` or `engage`; after `disable`, until `enable`. Example messages for every command and Robot Status packets: [`contract/teleop_examples.json`](contract/teleop_examples.json), read by the Python tests (and meant for the Unity tests).
 
 `Z_MIN_MM` must be calibrated on the real arm (#49) before running without `--dry-run`, and a person not wearing the headset holds the real E-stop during every real-arm test.
 

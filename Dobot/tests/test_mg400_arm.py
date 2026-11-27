@@ -225,3 +225,47 @@ def test_second_failure_is_raised(arm: MG400Arm, fake_mg400: FakeMG400) -> None:
 
     with pytest.raises(ConnectionError):
         arm.get_pose()
+
+
+@pytest.mark.parametrize(
+    ("reply", "expected"),
+    [(IDLE, "enabled"), (RUNNING, "enabled"), (DISABLED, "disabled"), (ERROR, "error")],
+)
+def test_get_mode_names_the_robot_mode(
+    arm: MG400Arm, fake_mg400: FakeMG400, reply: str, expected: str
+) -> None:
+    fake_mg400.script("RobotMode", reply)
+
+    assert arm.get_mode() == expected
+
+
+def test_get_mode_is_unknown_when_the_reply_has_no_value(
+    arm: MG400Arm, fake_mg400: FakeMG400
+) -> None:
+    fake_mg400.script("RobotMode", "-1,{},RobotMode();")
+    assert arm.get_mode() == "unknown"
+
+    fake_mg400.script("RobotMode", "0,{3},RobotMode();")  # not in the known table
+    assert arm.get_mode() == "unknown"
+
+
+@pytest.mark.parametrize(
+    ("reply", "expected"),
+    [
+        ("0,{[[],[],[],[],[],[],[]]},GetErrorID();", 0),
+        ("0,{[[22],[],[],[],[],[],[]]},GetErrorID();", 22),
+        ("0,{[[],[],[18,19],[],[],[],[]]},GetErrorID();", 18),
+    ],
+)
+def test_get_error_id_returns_the_first_error(
+    arm: MG400Arm, fake_mg400: FakeMG400, reply: str, expected: int
+) -> None:
+    fake_mg400.script("GetErrorID", reply)
+
+    assert arm.get_error_id() == expected
+
+
+def test_clear_error_sends_clear_error_only(arm: MG400Arm, fake_mg400: FakeMG400) -> None:
+    arm.clear_error()
+
+    assert fake_mg400.received == ["ClearError()"]
