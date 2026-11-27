@@ -87,7 +87,7 @@
         "last_command": "preset", "result": "done", "reason": "",
         "presets": [
           {"id": 1, "name": "Square", "valid": true, "reason": ""},
-          {"id": 2, "name": "Too far", "valid": false, "reason": "move x=600 y=0 is outside reach 170-420 mm"}
+          {"id": 2, "name": "Too far", "valid": false, "reason": "move x=600 y=0 is outside reach 225-365 mm"}
         ],
         "running_preset": {"id": 1, "step": 2, "of": 5}
       }

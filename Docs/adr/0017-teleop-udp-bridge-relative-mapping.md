@@ -4,6 +4,8 @@ status: accepted
 
 # Teleop: the Quest sends UDP to a Teleop Bridge on the PC, and the arm follows relative moves
 
+Amended (2026-11-27): reach narrowed to the measured 225–365 mm (`probe_reach`, #49).
+
 Amended by [ADR-0023](0023-lan-host-address-and-udp-discovery.md): Teleop sends to the shared Host Address instead of its own PC IP field.
 
 Amended by [ADR-0024](0024-robot-panel-presets-and-robot-status.md): the Teleop Bridge runs on its own Robot PC and Teleop sends to the Robot Address; the bridge also takes Robot Panel commands, sends Robot Status back on UDP 9001, and latches Stop for every motion (closing the `joint`/`calibrate` gap below); it moves into `Dobot/src/hub`.
@@ -16,7 +18,7 @@ Decided:
 
 - **UDP, not WebSocket/MQTT, for Teleop.** Only the newest position matters, so a lost packet does no harm. The bridge keeps only the latest pose and ignores one older than 0.5 s, so it sends no new move when packets stop (the move already sent still finishes). `stop` is sent three times and runs at once, even while the arm is moving. The Order link (Q-02) is still open; this ADR covers only Teleop.
 - **Relative mapping, no calibration (this answers the calibration part of Q-04).** Each time Grip is pressed, the Controller's position right then is taken as the arm's position right then (`engage`), so the arm never jumps. After that, 1 cm of Controller movement is 1 cm of arm movement in X, Y and Z. The head angle R stays where it was.
-- **The bridge is the only safety point** ([ADR-0001](0001-pc-orchestrator-hub.md)). It clamps reach to 170–420 mm and Z to `Z_MIN_MM`–150 mm, filters jitter (3 mm deadband, smoothing 0.5), sends at most 10 moves per second, and ignores poses and `home` after `stop` until Grip is pressed again. Known gap: the test-only `joint` and `calibrate` messages still move the arm after `stop`.
+- **The bridge is the only safety point** ([ADR-0001](0001-pc-orchestrator-hub.md)). It clamps reach to 225–365 mm (measured with `probe_reach`, 2026-11-27) and Z to `Z_MIN_MM`–150 mm, filters jitter (3 mm deadband, smoothing 0.5), sends at most 10 moves per second, and ignores poses and `home` after `stop` until Grip is pressed again. Known gap: the test-only `joint` and `calibrate` messages still move the arm after `stop`.
 - **Teleop runs in its own scene, not the Storefront scene.** The A button is Home in Teleop and opens the Gem Details Panel in the Storefront ([ADR-0013](0013-gem-details-extra-feature.md)).
 
 ## Considered Options

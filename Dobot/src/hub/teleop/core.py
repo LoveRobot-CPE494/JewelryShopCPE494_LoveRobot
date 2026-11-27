@@ -28,9 +28,10 @@ JOG_STEPS_MM = (1, 10, 50)
 PRESET_MAX_SPEED_PCT = 30  # a Preset never moves faster, whatever the speed setting (ADR-0024)
 PRESET_MAX_WAIT_MS = 60_000
 
-# Safe workspace: estimates, narrow them at the station. The one reach limit for Teleop.
-MIN_REACH_MM = 170.0
-MAX_REACH_MM = 420.0
+# Safe workspace. The one reach limit for Teleop. Reach is the band probe_reach measured on the
+# real MG400 on y = 0 (2026-11-27: 215-375 mm at every Z from 0 to 150) less a 10 mm margin.
+MIN_REACH_MM = 225.0
+MAX_REACH_MM = 365.0
 # TODO(#49): calibrate Z_MIN_MM on the real arm so the Suction Cup clears the table.
 # Provisional 0 mm until then: a guess on the safe side, not a measured value.
 Z_MIN_MM, Z_MAX_MM = 0.0, 150.0

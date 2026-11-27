@@ -34,11 +34,13 @@ _RECOVER_SETTLE_S = 0.3
 _ENABLE_SETTLE_S = 1.0
 
 
-def _is_ok(reply: str) -> bool:
+def is_ok_reply(reply: str) -> bool:
+    """True when a dashboard reply starts with error code 0."""
     return reply.split(",", 1)[0].strip() == "0"
 
 
-def _parse_values(reply: str) -> list[float] | None:
+def parse_values(reply: str) -> list[float] | None:
+    """Return the numbers inside the reply's first {...}, or None when there are none."""
     match = re.search(r"\{([^}]*)\}", reply)
     if not match:
         return None
@@ -91,7 +93,7 @@ class MG400Arm:
     def get_pose(self) -> list[float] | None:
         """Return X, Y, Z, R and the rest of GetPose(); empty or None when the reply has none."""
         # Quiet: Robot Status reads the pose 4 times a second.
-        return _parse_values(self._send_dashboard("GetPose()", is_verbose=False))
+        return parse_values(self._send_dashboard("GetPose()", is_verbose=False))
 
     def set_digital_output(self, index: int, is_on: bool) -> None:
         """Switch one digital output."""
@@ -173,7 +175,7 @@ class MG400Arm:
         return self._send(self._dashboard, self._dashboard_lock, command, is_verbose=is_verbose)
 
     def _robot_mode(self) -> int | None:
-        values = _parse_values(self._send_dashboard("RobotMode()", is_verbose=False))
+        values = parse_values(self._send_dashboard("RobotMode()", is_verbose=False))
         return int(values[0]) if values else None
 
     def _recover(self) -> None:
@@ -214,7 +216,7 @@ class MG400Arm:
         if self._robot_mode() in (_MODE_ERROR, _MODE_PAUSE, _MODE_DISABLED):
             self._recover()
         reply = self._send(self._motion, self._motion_lock, command, is_verbose=True)
-        if not _is_ok(reply):
+        if not is_ok_reply(reply):
             self._recover()
             raise RobotError(f"arm refused {command}: {reply}")
         if is_blocking:
@@ -227,8 +229,8 @@ class MG400Arm:
         reply = self._send_dashboard(
             f"InverseSolution({x_mm},{y_mm},{z_mm},{r_deg},0,0)", is_verbose=False
         )
-        joints = _parse_values(reply)
-        if _is_ok(reply) and joints and len(joints) >= 4:
+        joints = parse_values(reply)
+        if is_ok_reply(reply) and joints and len(joints) >= 4:
             _check_joints(*joints[:4])
         elif "not" in reply.lower() or "unknown" in reply.lower() or not reply:
             logger.info("  [i] this firmware has no InverseSolution(); InverseSolution check off")
