@@ -14,6 +14,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from hub.dashboard import TcpDashboard
+from hub.teleop.beacon import start_beacon
 from hub.teleop.core import (
     STATUS_HZ,
     STATUS_PORT,
@@ -129,6 +130,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--presets", type=Path, default=DEFAULT_PRESETS, help="Preset Actions file (JSON)"
     )
     parser.add_argument("--dry-run", action="store_true", help="no arm: log each command")
+    parser.add_argument("--beacon-ip", help="LAN address to announce (default: auto-picked)")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -147,11 +149,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     last_sender: list[str] = []  # the receive thread writes it, the status thread reads it
     threading.Thread(target=_receive_forever, args=(sock, core, last_sender), daemon=True).start()
     threading.Thread(target=_send_status_forever, args=(core, last_sender), daemon=True).start()
+    stop_beacon = start_beacon(args.port, args.ip, args.beacon_ip)
     try:
         core.run()
     except KeyboardInterrupt:
         logger.info("stopped")
     finally:
+        if stop_beacon:
+            stop_beacon.set()
         if mg400:
             try:
                 mg400.set_digital_output(SUCTION_DO_INDEX, False)
