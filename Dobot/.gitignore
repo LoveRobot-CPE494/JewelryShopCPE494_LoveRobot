@@ -3,3 +3,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
+
+# robot.ps1: last Robot PC address that answered
+scripts/.robot-ip
