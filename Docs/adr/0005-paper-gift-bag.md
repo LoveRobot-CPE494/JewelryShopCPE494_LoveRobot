@@ -10,4 +10,4 @@ Brief item 5 says "a pre-folded paper box" and "close the box lid", but the cont
 
 - There is no lid-pushing mechanism; the Bag Closer is used instead.
 - The bag mouth must be held open while the arm places items, and the bag must stand steady on the conveyor; this must be tested.
-- **The ribbon is undecided:** brief item 5 requires "attach a ribbon", and every part of item 5 must work for the 15 points. We must ask the instructor whether a ribbon is still required on the bag. Until then, no ribbon mechanism is designed.
+- **The ribbon is attached by hand beforehand** (Amended 2026-11-27, [Q-01 #15](https://github.com/LoveRobot-CPE494/JewelryShopCPE494_LoveRobot/issues/15)): brief item 5 requires "attach a ribbon", and the instructor allows a person to attach it to the Gift Bag before the bag goes onto the conveyor. The robot attaches no ribbon, so the Packing Sequence has no ribbon step and no ribbon mechanism is designed.

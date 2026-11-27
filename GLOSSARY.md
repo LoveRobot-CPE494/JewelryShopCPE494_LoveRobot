@@ -202,7 +202,7 @@ The number of Gem Pieces of one Cut + Color that the Staff say are in its Stock 
 _Avoid_: quantity, stock level
 
 **Gift Bag**:
-The paper bag on the conveyor. One bag receives every Gem Piece of one Order
+The paper bag on the conveyor. One bag receives every Gem Piece of one Order. Its ribbon is attached by hand before it goes onto the conveyor ([ADR-0005](Docs/adr/0005-paper-gift-bag.md))
 _Avoid_: gift box, box
 
 **Suction Cup**:
